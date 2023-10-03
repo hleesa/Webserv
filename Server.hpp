@@ -5,6 +5,7 @@
 
 #include <string>
 #include <map>
+#include <sstream>
 #include <vector>
 #include "Location.hpp"
 #include "CgiLocation.hpp"
@@ -25,7 +26,7 @@ private:
 public:
     Server();
 
-    Server(const std::string& server_block);
+    Server(std::istringstream& server_block);
 
     Server(const Server& other);
 

@@ -15,13 +15,14 @@
     - std::string root
     - std::vector\<std::string> index
     - long limit client body size
-    - class locations
-        - std::string path
-      - std::set\<std::string> HTTP methods
-      - std::vector\<std::string> HTTP redirection
-      - std::string root
-      - std::vector\<std::string> index
-      - bool autoindex
+    - std::map<std::string, Location> locations
+      - key - path
+      - class Location
+        - std::set\<std::string> HTTP methods
+        - std::vector\<std::string> HTTP redirection
+        - std::string root
+        - std::vector\<std::string> index
+        - bool autoindex
     - class cgi location : public location
       - std::vector\<std::string> cgi_path
       - std::vector\<std::string> cgi_ext

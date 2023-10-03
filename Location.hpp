@@ -9,7 +9,6 @@
 class Location {
 
 protected:
-    std::string path;
     std::set<std::string> http_methods;
     std::set<std::string> http_redirection;
     std::string root;

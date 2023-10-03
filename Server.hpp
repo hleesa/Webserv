@@ -18,8 +18,8 @@ private:
     std::map<int, std::string> error_page;
     std::string root;
     std::vector<std::string> index;
-    long body_size;
-    std::vector<Location> locations;
+    long limit_body_size;
+    std::map<std::string, Location> locations;
     CgiLocation cgi_location;
 
 public:

@@ -1,5 +1,6 @@
 
 #include "Location.hpp"
+#include "type.hpp"
 
 #include <iostream>
 
@@ -11,6 +12,7 @@ Location::Location(std::istringstream& location_block) {
 
 	std::string line;
 
+	return_value.first = -1;
 	while (location_block.eof() == false)
 	{
 		std::getline(location_block, line);
@@ -77,7 +79,7 @@ void Location::checkValueFormat(const std::string& value) const {
 	int size = static_cast<int>(value.size());
 
 	if (isInSemicolon && (pos < size - 1 || size == 1))
-		throw (std::invalid_argument("Error: Invalid value format"));
+		throw (std::invalid_argument("Error: Invalid value format '" + value + "'"));
 }
 
 void Location::redefineLastValue(std::string& value) const {
@@ -112,8 +114,36 @@ void Location::checkMethodFormat(std::string& method) const {
 
 void Location::parseReturnValue(std::stringstream& ss) {
 
+	std::string value;
 
+	if (return_value.first != -1)
+		throw (std::invalid_argument("Error: Too many return directive"));
+	ss >> value;
+	setReturnStatusCode(value);
+	if (ss.eof())
+		return ;
+	ss >> value;
+	if (ss.eof() == false)
+		throw (std::invalid_argument("Error: Invalid return directive line"));
+	setReturnString(value);
+	// std::cout << "status code : " << return_value.first << ", string : " << return_value.second << std::endl;
+}
 
+void Location::setReturnStatusCode(std::string& value) {
+	
+	checkValueFormat(value);
+	redefineLastValue(value);
+	if (isInteger(value) == false)
+		throw (std::invalid_argument("Error: Invalid status code '" + value + "'"));
+	std::stringstream ss(value);
+	ss >> return_value.first;
+}
+
+void Location::setReturnString(std::string& value) {
+	
+	checkValueFormat(value);
+	redefineLastValue(value);
+	return_value.second = value;
 }
 
 void Location::parseRoot(std::stringstream& ss) {

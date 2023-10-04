@@ -26,6 +26,8 @@ protected:
 
 	void checkValueFormat(const std::string& value) const;
 	void checkMethodFormat(std::string& method) const;
+	void setReturnStatusCode(std::string& value);
+	void setReturnString(std::string& value);
 	void redefineLastValue(std::string& value) const;
 
 public:

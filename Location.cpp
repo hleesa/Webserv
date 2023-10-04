@@ -101,8 +101,6 @@ void Location::parseMethod(std::stringstream& ss) {
 		checkMethodFormat(method);
 		http_methods.insert(method);
 	}
-	// for (std::set<std::string>::iterator itr = http_methods.begin(); itr != http_methods.end(); itr++)
-	// 	std::cout << *itr << std::endl;
 }
 
 void Location::checkMethodFormat(std::string& method) const {
@@ -126,7 +124,6 @@ void Location::parseReturnValue(std::stringstream& ss) {
 	if (ss.eof() == false)
 		throw (std::invalid_argument("Error: Invalid return directive line"));
 	setReturnString(value);
-	// std::cout << "status code : " << return_value.first << ", string : " << return_value.second << std::endl;
 }
 
 void Location::setReturnStatusCode(std::string& value) {
@@ -156,13 +153,21 @@ void Location::parseRoot(std::stringstream& ss) {
 	if (ss.eof() == false)
 		throw (std::invalid_argument("Error: Invalid root directive line"));
 	checkValueFormat(value);
-	redefineLastValue(value);
+	redefineLastValue(value) ;
 	root = value;
-	// std::cout << "root : " << root << std::endl;
 }
 
 void Location::parseIndex(std::stringstream& ss) {
 
+	std::string value;
+
+	while (ss.eof() == false)
+	{
+		ss >> value;
+		checkValueFormat(value);
+		redefineLastValue(value);
+		index.push_back(value);
+	}
 }
 
 void Location::parseAutoindex(std::stringstream& ss) {

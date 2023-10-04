@@ -36,7 +36,11 @@ public:
     Location(const Location& other);
 	Location& operator=(const Location& other);
     ~Location();
+
+	friend std::ostream& operator<<(std::ostream& out, Location& location);
 };
+
+std::ostream& operator<<(std::ostream& out, Location& location);
 
 
 #endif //LOCATION_HPP

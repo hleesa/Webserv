@@ -18,6 +18,7 @@ Location::Location(std::istringstream& location_block) {
 		std::getline(location_block, line);
 		parse(line);
 	}
+	std::cout << *this;
 }
 
 Location::Location(const Location &other) {
@@ -172,4 +173,19 @@ void Location::parseIndex(std::stringstream& ss) {
 
 void Location::parseAutoindex(std::stringstream& ss) {
 
+}
+
+std::ostream& operator<<(std::ostream& out, Location& l)
+{
+	out << "-----http method-----\n";
+	for (std::set<std::string>::iterator itr = l.http_methods.begin(); itr != l.http_methods.end(); itr++)
+		out << *itr << " ";
+	out << "\n-----return-----\n";
+	out << "status code : " << l.return_value.first << "\nstring : " << l.return_value.second << "\n";
+	out << "-----root-----\n" << l.root << "\n";
+	out << "-----index-----\n";
+	for (std::vector<std::string>::iterator itr = l.index.begin(); itr != l.index.end(); itr++)
+		out << *itr << " ";
+	out << "\n-----autoindex-----\n" << std::boolalpha << l.autoindex << std::endl;
+	return out;
 }

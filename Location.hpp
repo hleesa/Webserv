@@ -23,9 +23,10 @@ protected:
 	void parseRoot(std::stringstream& ss);
 	void parseIndex(std::stringstream& ss);
 	void parseAutoindex(std::stringstream& ss);
-	void checkValueFormat(const std::string& value) const;
 
+	void checkValueFormat(const std::string& value) const;
 	void checkMethodFormat(std::string& method) const;
+	void redefineLastValue(std::string& value) const;
 
 public:
     Location();

@@ -7,7 +7,7 @@ bool isHttpMethod(const std::string& method);
 
 Location::Location() {}
 
-Location::Location(std::istringstream& location_block) : root("") {
+Location::Location(std::istringstream& location_block) {
 
 	std::string line;
 
@@ -80,6 +80,12 @@ void Location::checkValueFormat(const std::string& value) const {
 		throw (std::invalid_argument("Error: Invalid value format"));
 }
 
+void Location::redefineLastValue(std::string& value) const {
+
+	if (value[value.size() - 1] == ';')
+		value.resize(value.size() - 1);
+}
+
 void Location::parseMethod(std::stringstream& ss) {
 
 	std::string method;
@@ -99,18 +105,30 @@ void Location::parseMethod(std::stringstream& ss) {
 
 void Location::checkMethodFormat(std::string& method) const {
 
-	if (method[method.size() - 1] == ';')
-		method.resize(method.size() - 1);
-	if (method == ";" || isHttpMethod(method) == false)
+	redefineLastValue(method);
+	if (isHttpMethod(method) == false)
 		throw (std::invalid_argument("Error: Invalid http methods '" + method + "'"));
 }
 
 void Location::parseReturnValue(std::stringstream& ss) {
 
+
+
 }
 
 void Location::parseRoot(std::stringstream& ss) {
 
+	std::string value;
+
+	if (root.empty() == false)
+		throw (std::invalid_argument("Error: Too many root directive"));
+	ss >> value;
+	if (ss.eof() == false)
+		throw (std::invalid_argument("Error: Invalid root directive line"));
+	checkValueFormat(value);
+	redefineLastValue(value);
+	root = value;
+	// std::cout << "root : " << root << std::endl;
 }
 
 void Location::parseIndex(std::stringstream& ss) {

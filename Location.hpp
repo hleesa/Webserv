@@ -17,12 +17,15 @@ protected:
     std::vector<std::string> index;
     bool autoindex;
 	
-	void parse(std::string& line);	
-	void parseMethod();
-	void parseReturnValue();
-	void parseRoot();
-	void parseIndex();
-	void parseAutoindex();
+	void parse(const std::string& line);
+	void parseMethod(std::stringstream& ss);
+	void parseReturnValue(std::stringstream& ss);
+	void parseRoot(std::stringstream& ss);
+	void parseIndex(std::stringstream& ss);
+	void parseAutoindex(std::stringstream& ss);
+	void checkValueFormat(const std::string& value) const;
+
+	void checkMethodFormat(std::string& method) const;
 
 public:
     Location();

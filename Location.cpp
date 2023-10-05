@@ -13,6 +13,7 @@ Location::Location(std::istringstream& location_block) {
 	std::string line;
 
 	return_value.first = -1;
+	autoindex = false;
 	while (location_block.eof() == false)
 	{
 		std::getline(location_block, line);
@@ -70,7 +71,7 @@ void Location::parse(const std::string &line) {
 		parseAutoindex(ss);
 		return ;
 	}
-	throw (std::invalid_argument("Error: Invalid directive '" + directive + "'"));
+	throw (std::invalid_argument("Error: unknown directive '" + directive + "'"));
 }
 
 void Location::checkValueFormat(const std::string& value) const {
@@ -80,7 +81,7 @@ void Location::checkValueFormat(const std::string& value) const {
 	int size = static_cast<int>(value.size());
 
 	if (isInSemicolon && (pos < size - 1 || size == 1))
-		throw (std::invalid_argument("Error: Invalid value format '" + value + "'"));
+		throw (std::invalid_argument("Error: invalid value format '" + value + "'"));
 }
 
 void Location::redefineLastValue(std::string& value) const {
@@ -173,6 +174,25 @@ void Location::parseIndex(std::stringstream& ss) {
 
 void Location::parseAutoindex(std::stringstream& ss) {
 
+	static bool duplicated;
+	std::string value;
+
+	if (duplicated == true)
+		throw (std::invalid_argument("Error: 'autoindex' directive is duplicate"));
+	ss >> value;
+	if (ss.eof() == false)
+		throw (std::invalid_argument("Error: Invalid number of arguments in 'autoindex' directive"));
+	checkAutoindexFormat(value);
+	autoindex = value == "on" ? true : false;
+	duplicated = true;
+}
+
+void Location::checkAutoindexFormat(std::string& value) const
+{
+	checkValueFormat(value);
+	redefineLastValue(value);
+	if (!(value == "on" || value == "off"))
+		throw (std::invalid_argument("Error: Invalid value '" + value + "' in 'autoindex' directive"));
 }
 
 std::ostream& operator<<(std::ostream& out, Location& l)

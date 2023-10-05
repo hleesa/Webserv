@@ -25,6 +25,8 @@ protected:
 	void parseAutoindex(std::stringstream& ss);
 
 	void checkValueFormat(const std::string& value) const;
+	void checkDuplicated(const bool& duplicated, const std::string& directive);
+	void checkInvalidNumber(const std::stringstream& ss, const std::string& directive);
 	void checkMethodFormat(std::string& method) const;
 	void setReturnCode(std::string& value);
 	void setReturnString(std::string& value);

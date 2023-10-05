@@ -49,7 +49,7 @@ void Location::parse(const std::string &line) {
 	if (line.empty())
 		return ;
 	ss >> directive;
-	std::cout << "directive : " << directive << std::endl;
+	// std::cout << "directive : " << directive << std::endl;
 	if (directive == "allow_methods") {
 		parseMethod(ss);
 		return ;
@@ -89,6 +89,18 @@ void Location::redefineLastValue(std::string& value) const {
 		value.resize(value.size() - 1);
 }
 
+void Location::checkDuplicated(const bool& duplicated, const std::string& directive)
+{
+	if (duplicated == true)
+		throw (std::invalid_argument("Error: '" + directive + "' directive is duplicate"));
+}
+
+void Location::checkInvalidNumber(const std::stringstream& ss, const std::string& directive)
+{
+	if (ss.eof() == false)
+		throw (std::invalid_argument("Error: Invalid number of arguments in '" + directive + "' directive"));
+}
+
 void Location::parseMethod(std::stringstream& ss) {
 
 	std::string method;
@@ -123,8 +135,7 @@ void Location::parseReturnValue(std::stringstream& ss) {
 	if (ss.eof())
 		return ;
 	ss >> value;
-	if (ss.eof() == false)
-		throw (std::invalid_argument("Error: Invalid number of arguments in 'return' directive"));
+	checkInvalidNumber(ss, "return");
 	setReturnString(value);
 	duplicated = true;
 }
@@ -148,13 +159,12 @@ void Location::setReturnString(std::string& value) {
 
 void Location::parseRoot(std::stringstream& ss) {
 
+	static bool duplicated = false;
 	std::string value;
 
-	if (root.empty() == false)
-		throw (std::invalid_argument("Error: 'root' directive is duplicate"));
+	checkDuplicated(duplicated, "root");
 	ss >> value;
-	if (ss.eof() == false)
-		throw (std::invalid_argument("Error: Invalid number of arguments in 'root' directive"));
+	checkInvalidNumber(ss, "root");
 	checkValueFormat(value);
 	redefineLastValue(value) ;
 	root = value;
@@ -178,11 +188,9 @@ void Location::parseAutoindex(std::stringstream& ss) {
 	static bool duplicated = false;
 	std::string value;
 
-	if (duplicated == true)
-		throw (std::invalid_argument("Error: 'autoindex' directive is duplicate"));
+	checkDuplicated(duplicated, "autoindex");
 	ss >> value;
-	if (ss.eof() == false)
-		throw (std::invalid_argument("Error: Invalid number of arguments in 'autoindex' directive"));
+	checkInvalidNumber(ss, "autoindex");
 	checkAutoindexFormat(value);
 	autoindex = value == "on" ? true : false;
 	duplicated = true;

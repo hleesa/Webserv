@@ -12,7 +12,6 @@ Location::Location(std::istringstream& location_block) {
 
 	std::string line;
 
-	return_value.first = -1;
 	autoindex = false;
 	while (location_block.eof() == false)
 	{
@@ -114,26 +113,28 @@ void Location::checkMethodFormat(std::string& method) const {
 
 void Location::parseReturnValue(std::stringstream& ss) {
 
+	static bool duplicated = false;
 	std::string value;
 
-	if (return_value.first != -1)
-		throw (std::invalid_argument("Error: Too many return directive"));
+	if (duplicated == true)
+		return ;
 	ss >> value;
-	setReturnStatusCode(value);
+	setReturnCode(value);
 	if (ss.eof())
 		return ;
 	ss >> value;
 	if (ss.eof() == false)
-		throw (std::invalid_argument("Error: Invalid return directive line"));
+		throw (std::invalid_argument("Error: Invalid number of arguments in 'return' directive"));
 	setReturnString(value);
+	duplicated = true;
 }
 
-void Location::setReturnStatusCode(std::string& value) {
+void Location::setReturnCode(std::string& value) {
 	
 	checkValueFormat(value);
 	redefineLastValue(value);
 	if (isInteger(value) == false)
-		throw (std::invalid_argument("Error: Invalid status code '" + value + "'"));
+		throw (std::invalid_argument("Error: Invalid return code '" + value + "'"));
 	std::stringstream ss(value);
 	ss >> return_value.first;
 }
@@ -150,10 +151,10 @@ void Location::parseRoot(std::stringstream& ss) {
 	std::string value;
 
 	if (root.empty() == false)
-		throw (std::invalid_argument("Error: Too many root directive"));
+		throw (std::invalid_argument("Error: 'root' directive is duplicate"));
 	ss >> value;
 	if (ss.eof() == false)
-		throw (std::invalid_argument("Error: Invalid root directive line"));
+		throw (std::invalid_argument("Error: Invalid number of arguments in 'root' directive"));
 	checkValueFormat(value);
 	redefineLastValue(value) ;
 	root = value;
@@ -174,7 +175,7 @@ void Location::parseIndex(std::stringstream& ss) {
 
 void Location::parseAutoindex(std::stringstream& ss) {
 
-	static bool duplicated;
+	static bool duplicated = false;
 	std::string value;
 
 	if (duplicated == true)

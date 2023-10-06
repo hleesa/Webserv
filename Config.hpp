@@ -4,6 +4,16 @@
 
 #include "Server.hpp"
 
+enum lineType {
+    SPACE,
+    COMMENT,
+    SERVER_OPEN,
+    SERVER_CLOSE,
+    SEMICOLON,
+    LOCATION_OPEN,
+    LOCATION_CLOSE,
+    INVALID
+};
 
 class Config {
 

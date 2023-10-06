@@ -1,6 +1,6 @@
 #include <string>
 
-bool	isInteger(const std::string& string)
+bool	isNumber(const std::string& string)
 {
 	int	idx = 0;
 	int	size = string.size();

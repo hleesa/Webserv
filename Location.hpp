@@ -22,13 +22,14 @@ protected:
 	void parseRoot(std::stringstream& ss);
 	void parseIndex(std::stringstream& ss);
 	void parseAutoindex(std::stringstream& ss);
+	void parseLimitBodySize(std::stringstream& ss);
 
 	void checkDuplicated(const bool& duplicated, const std::string& directive);
 	void checkInvalidNumber(const std::stringstream& ss, const std::string& directive);
-	void checkMethodFormat(std::string& method) const;
-	void setReturnCode(std::string& value);
-	void setReturnString(std::string& value);
-	void checkAutoindexFormat(std::string& value) const;
+	void setReturnCode(const std::string& value);
+	void setReturnString(const std::string& value);
+	void checkAutoindexFormat(const std::string& value) const;
+	void setLimitBodySize(const std::string& value);
 
 public:
     Location();

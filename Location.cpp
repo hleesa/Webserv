@@ -3,7 +3,7 @@
 
 #include <iostream>
 
-bool isInteger(const std::string& string);
+bool isNumber(const std::string& string);
 
 Location::Location() {}
 
@@ -64,6 +64,10 @@ void Location::parse(const std::string &line) {
 		parseAutoindex(ss);
 		return ;
 	}
+	if (directive == "client_max_body_size") {
+		parseLimitBodySize(ss);
+		return ;
+	}
 	throw (std::invalid_argument("Error: unknown directive '" + directive + "'"));
 }
 
@@ -92,15 +96,15 @@ void Location::parseReturnValue(std::stringstream& ss) {
 	setReturnString(value);
 }
 
-void Location::setReturnCode(std::string& value) {
+void Location::setReturnCode(const std::string& value) {
 	
-	if (isInteger(value) == false)
+	if (isNumber(value) == false)
 		throw (std::invalid_argument("Error: Invalid return code '" + value + "'"));
 	std::stringstream ss(value);
 	ss >> return_value.first;
 }
 
-void Location::setReturnString(std::string& value) {
+void Location::setReturnString(const std::string& value) {
 	
 	return_value.second = value;
 }
@@ -140,10 +144,30 @@ void Location::parseAutoindex(std::stringstream& ss) {
 	duplicated = true;
 }
 
-void Location::checkAutoindexFormat(std::string& value) const
+void Location::checkAutoindexFormat(const std::string& value) const
 {
 	if (!(value == "on" || value == "off"))
 		throw (std::invalid_argument("Error: Invalid value '" + value + "' in 'autoindex' directive"));
+}
+
+void Location::parseLimitBodySize(std::stringstream& ss)
+{
+	static bool duplicated = false;
+	std::string value;
+
+	checkDuplicated(duplicated, "client_max_body_size");
+	ss >> value;
+	checkInvalidNumber(ss, "client_max_body_size");
+	setLimitBodySize(value);
+	duplicated = true;
+}
+
+void Location::setLimitBodySize(const std::string& value)
+{
+	if (isNumber(value) == false)
+		throw (std::invalid_argument("Error: Invalid value '" + value + "' in 'client_max_body_size' directive"));
+	std::stringstream ss(value);
+	ss >> limit_body_size;
 }
 
 std::ostream& operator<<(std::ostream& out, Location& l)
@@ -155,5 +179,6 @@ std::ostream& operator<<(std::ostream& out, Location& l)
 	for (std::vector<std::string>::iterator itr = l.index.begin(); itr != l.index.end(); itr++)
 		out << *itr << " ";
 	out << "\n-----autoindex-----\n" << std::boolalpha << l.autoindex << std::endl;
+	out << "-----client max body size-----\n" << l.limit_body_size << "\n";
 	return out;
 }

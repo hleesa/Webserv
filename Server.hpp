@@ -4,10 +4,12 @@
 
 
 #include <string>
+#include <iostream>
 #include <map>
+#include <sstream>
 #include <vector>
 #include "Location.hpp"
-#include "CgiLocation.hpp"
+// #include "CgiLocation.hpp"
 
 class Server {
 
@@ -20,18 +22,22 @@ private:
     std::vector<std::string> index;
     long limit_body_size;
     std::map<std::string, Location> locations;
-    CgiLocation cgi_location;
+    // CgiLocation cgi_location;
 
 public:
-    Server();
+	Server();
 
-    Server(const std::string& server_block);
+	Server(std::istringstream& server_block);
 
-    Server(const Server& other);
+	Server(const Server& other);
 
-    Server& operator=(const Server& other);
+	Server& operator=(const Server& other);
 
-    ~Server();
+	// ~Server();
+
+	void server_token_parser(std::string key, std::stringstream& one_line);
+
+
 
 };
 

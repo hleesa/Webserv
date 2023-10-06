@@ -12,12 +12,13 @@ Location::Location(std::istringstream& location_block) {
 	std::string line;
 
 	autoindex = false;
+	limit_body_size = 1e6;
 	while (location_block.eof() == false)
 	{
 		std::getline(location_block, line);
 		parse(line);
 	}
-	std::cout << *this;
+	// std::cout << *this;
 }
 
 Location::Location(const Location &other) {

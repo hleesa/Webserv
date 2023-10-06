@@ -181,12 +181,11 @@ Config::Config(const std::string& config_file) {
     }
     std::vector<std::string> server_contents = getSeverContents(config);
 
-    /**
-     * test
-     */
     for (std::vector<std::string>::iterator it = server_contents.begin(); it != server_contents.end(); ++it) {
         std::istringstream ifs(*it);
-        print(ifs);
+		Server server(ifs);
+		servers.push_back(server);
+		// print(ifs);
     }
 
     config.close();

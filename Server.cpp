@@ -12,6 +12,7 @@
 
 Server::Server(std::istringstream& server_block) {
 	std::string line;
+	std::string d_loc_key;
 
 	//server block item read
 	while (std::getline(server_block, line)) {
@@ -19,10 +20,23 @@ Server::Server(std::istringstream& server_block) {
 		std::string key;
 		one_line >> key;
 		// std::cout << key << " | " << one_line << std::endl;
-		if (key == "location")
+		if (key == "location") {
+			one_line >> d_loc_key;
 			break;
+		}
 		server_token_parser(key, one_line);
 	}
+	std::string d_loc_val;
+	while (std::getline(server_block, line)) {
+		if (line == "}")
+			break;
+		d_loc_val.append(line + "\n");
+	}
+	std::istringstream d_ss(d_loc_val);
+	Location d_unit_loc(d_ss);
+	locations.insert(make_pair(d_loc_key, d_unit_loc));
+	std::cout << "Location : " << d_loc_key << "\n" << d_unit_loc << std::endl;
+
 	//location block read
 	while (std::getline(server_block, line)) {
 		std::stringstream one_line(line);
@@ -39,7 +53,7 @@ Server::Server(std::istringstream& server_block) {
 			}
 			std::istringstream ss(loc_val);
 			Location unit_loc(ss);
-			std::cout << "Location : " << unit_loc << std::endl;
+			std::cout << "Location : " << loc_key << "\n" << unit_loc << std::endl;
 			locations.insert(make_pair(loc_key, unit_loc));
 		}
 

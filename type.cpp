@@ -1,16 +1,4 @@
-#include "type.hpp"
-
-bool isHttpMethod(const std::string& string)
-{
-	std::string allow_methods[9] = {"GET", "POST", "PUT", \
-								"PATCH", "DELETE", "HEAD", \
-								"OPTIONS", "CONNECT", "TRACE"};
-	int idx = 0;
-
-	while (idx < 9 && string != allow_methods[idx])
-		idx++;
-	return idx != 9;
-}
+#include <string>
 
 bool	isInteger(const std::string& string)
 {

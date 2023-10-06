@@ -1,10 +1,9 @@
 
 #include "Location.hpp"
-#include "type.hpp"
 
 #include <iostream>
 
-bool isHttpMethod(const std::string& method);
+bool isInteger(const std::string& string);
 
 Location::Location() {}
 
@@ -30,7 +29,6 @@ Location &Location::operator=(const Location &other) {
 
 	if (this != &other)
 	{
-		this->http_methods = other.http_methods;
 		this->return_value = other.return_value;
 		this->root = other.root;
 		this->index = other.index;
@@ -50,10 +48,6 @@ void Location::parse(const std::string &line) {
 		return ;
 	ss >> directive;
 	// std::cout << "directive : " << directive << std::endl;
-	if (directive == "allow_methods") {
-		parseMethod(ss);
-		return ;
-	}
 	if (directive == "return") {
 		parseReturnValue(ss);
 		return ;
@@ -73,22 +67,6 @@ void Location::parse(const std::string &line) {
 	throw (std::invalid_argument("Error: unknown directive '" + directive + "'"));
 }
 
-void Location::checkValueFormat(const std::string& value) const {
-
-	int pos = value.find(";");
-	bool isInSemicolon = pos != std::string::npos;
-	int size = static_cast<int>(value.size());
-
-	if (isInSemicolon && (pos < size - 1 || size == 1))
-		throw (std::invalid_argument("Error: invalid value format '" + value + "'"));
-}
-
-void Location::redefineLastValue(std::string& value) const {
-
-	if (value[value.size() - 1] == ';')
-		value.resize(value.size() - 1);
-}
-
 void Location::checkDuplicated(const bool& duplicated, const std::string& directive)
 {
 	if (duplicated == true)
@@ -101,35 +79,10 @@ void Location::checkInvalidNumber(const std::stringstream& ss, const std::string
 		throw (std::invalid_argument("Error: Invalid number of arguments in '" + directive + "' directive"));
 }
 
-void Location::parseMethod(std::stringstream& ss) {
-
-	std::string method;
-
-	if (http_methods.size() > 0)
-		throw (std::invalid_argument("Error: Too many allow_methods directive"));
-	while (ss.eof() == false)
-	{
-		ss >> method;
-		checkValueFormat(method);
-		checkMethodFormat(method);
-		http_methods.insert(method);
-	}
-}
-
-void Location::checkMethodFormat(std::string& method) const {
-
-	redefineLastValue(method);
-	if (isHttpMethod(method) == false)
-		throw (std::invalid_argument("Error: Invalid http methods '" + method + "'"));
-}
-
 void Location::parseReturnValue(std::stringstream& ss) {
 
-	static bool duplicated = false;
 	std::string value;
 
-	if (duplicated == true)
-		return ;
 	ss >> value;
 	setReturnCode(value);
 	if (ss.eof())
@@ -137,13 +90,10 @@ void Location::parseReturnValue(std::stringstream& ss) {
 	ss >> value;
 	checkInvalidNumber(ss, "return");
 	setReturnString(value);
-	duplicated = true;
 }
 
 void Location::setReturnCode(std::string& value) {
 	
-	checkValueFormat(value);
-	redefineLastValue(value);
 	if (isInteger(value) == false)
 		throw (std::invalid_argument("Error: Invalid return code '" + value + "'"));
 	std::stringstream ss(value);
@@ -152,8 +102,6 @@ void Location::setReturnCode(std::string& value) {
 
 void Location::setReturnString(std::string& value) {
 	
-	checkValueFormat(value);
-	redefineLastValue(value);
 	return_value.second = value;
 }
 
@@ -165,8 +113,6 @@ void Location::parseRoot(std::stringstream& ss) {
 	checkDuplicated(duplicated, "root");
 	ss >> value;
 	checkInvalidNumber(ss, "root");
-	checkValueFormat(value);
-	redefineLastValue(value) ;
 	root = value;
 }
 
@@ -177,8 +123,6 @@ void Location::parseIndex(std::stringstream& ss) {
 	while (ss.eof() == false)
 	{
 		ss >> value;
-		checkValueFormat(value);
-		redefineLastValue(value);
 		index.push_back(value);
 	}
 }
@@ -198,17 +142,12 @@ void Location::parseAutoindex(std::stringstream& ss) {
 
 void Location::checkAutoindexFormat(std::string& value) const
 {
-	checkValueFormat(value);
-	redefineLastValue(value);
 	if (!(value == "on" || value == "off"))
 		throw (std::invalid_argument("Error: Invalid value '" + value + "' in 'autoindex' directive"));
 }
 
 std::ostream& operator<<(std::ostream& out, Location& l)
 {
-	out << "-----http method-----\n";
-	for (std::set<std::string>::iterator itr = l.http_methods.begin(); itr != l.http_methods.end(); itr++)
-		out << *itr << " ";
 	out << "\n-----return-----\n";
 	out << "status code : " << l.return_value.first << "\nstring : " << l.return_value.second << "\n";
 	out << "-----root-----\n" << l.root << "\n";

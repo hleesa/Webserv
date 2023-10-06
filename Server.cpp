@@ -17,9 +17,7 @@ Server::Server(std::istringstream& server_block) {
 	while (std::getline(server_block, line)) {
 		std::stringstream one_line(line);
 		one_line >> key;
-		if (key == "location")
-			break;
-
+		server_token_parser(key, one_line);
 	}
 
 }
@@ -34,11 +32,31 @@ Server::Server(const Server& other) {
         this->index = other.index;
         this->limit_body_size = other.limit_body_size;
         this->locations = other.locations;
-        this->cgi_location = other.cgi_location;
+        // this->cgi_location = other.cgi_location;
     }
 	return ;
 }
 
 Server::~Server() {}
 
+
+void Server::server_token_parser(std::string key, std::stringstream one_line) {
+	if (key == "listen") {
+		
+
+	} else if (key == "host") {
+
+	} else if (key == "name") {
+
+	} else if (key == "error_page") {
+
+	} else if (key == "root") {
+
+	} else if (key == "index") {
+
+	} else if (key == "limit_body_size") {
+
+	}
+
+}
 

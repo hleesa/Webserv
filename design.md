@@ -1,10 +1,5 @@
 ## configuration file
 ### class config 
-- user
-- worker_processes
-- error_log
-- pid
-- http block 
   - class server block
     - int port
     - std::string host
@@ -18,7 +13,6 @@
     - std::map<std::string, Location> locations
       - key - path
       - class Location
-        - std::set\<std::string> HTTP methods
         - std::vector\<std::string> HTTP redirection
         - std::string root
         - std::vector\<std::string> index
@@ -26,4 +20,6 @@
     - class cgi location : public location
       - std::vector\<std::string> cgi_path
       - std::vector\<std::string> cgi_ext
-- event block
+
+
+

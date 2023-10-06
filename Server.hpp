@@ -33,7 +33,7 @@ public:
 
 	Server& operator=(const Server& other);
 
-	~Server();
+	// ~Server();
 
 	void server_token_parser(std::string key, std::stringstream one_line);
 

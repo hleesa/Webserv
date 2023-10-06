@@ -1,9 +1,21 @@
-#include "Server.hpp"
+#include <iostream>
+#include "Config.hpp"
+// #include "Server.hpp"
 
-int main(int ac, char *av[]) {
-	std::istringstream serv_block("listen 8002");
-	Server test(serv_block);
-	
 
-	return 0;
+int main() {
+    try {
+//        Config("default.conf");
+        Config("default2.conf");
+    } catch (std::exception &exception) {
+        std::cout << exception.what() << '\n';
+        //끝
+    }
+//    std::cout << "Hello, World!" << std::endl;
+    return 0;
 }
+
+
+
+
+

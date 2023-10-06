@@ -12,7 +12,6 @@ Server::Server() {}
 Server::Server(std::istringstream& server_block) {
 	std::string line;
 	std::string key;
-	std::string value;
 
 	while (std::getline(server_block, line)) {
 		std::stringstream one_line(line);
@@ -41,16 +40,39 @@ Server::~Server() {}
 
 
 void Server::server_token_parser(std::string key, std::stringstream one_line) {
+	
 	if (key == "listen") {
-		
-
+		int value;
+		one_line >> value;
+		if (!value)
+			return ;
+		this->port = value;
 	} else if (key == "host") {
-
+		std::string value;
+		one_line >> value;
+		if (value == "")
+			return ;
+		this->host = value;
 	} else if (key == "name") {
-
+		std::string value;
+		one_line >> value;
+		if (value == "")
+			return ;
+		this->name = value;
 	} else if (key == "error_page") {
-
+		int value1;
+		std::string value2;
+		one_line >> value1;
+		if (value1 || one_line.peek())
+			return;
+		one_line >> value2;
+		if (value2 == "")
+			return;
+		this->error_page.first = value1;
+		this->error_page.second = value2;
 	} else if (key == "root") {
+		std::string value;
+		one_line >> value;
 
 	} else if (key == "index") {
 

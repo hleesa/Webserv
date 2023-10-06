@@ -142,6 +142,7 @@ std::vector<std::string> getSeverContents(std::ifstream& config) {
                 server_content.append(line + "\n");
                 break;
             case SEMICOLON:
+                line.pop_back();
                 server_content.append(line + "\n");
                 break;
             case LOCATION_CLOSE:

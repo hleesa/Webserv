@@ -35,7 +35,7 @@ public:
 
 	// ~Server();
 
-	void server_token_parser(std::string key, std::stringstream one_line);
+	void server_token_parser(std::string key, std::stringstream& one_line);
 
 
 

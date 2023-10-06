@@ -1,7 +1,7 @@
 
 #include "Server.hpp"
 
-Server::Server() {}
+// Server::Server() {}
 
     /**
      * 1. server 멤버 값 넗기
@@ -11,13 +11,39 @@ Server::Server() {}
 
 Server::Server(std::istringstream& server_block) {
 	std::string line;
-	std::string key;
 
+	//server block item read
 	while (std::getline(server_block, line)) {
 		std::stringstream one_line(line);
+		std::string key;
 		one_line >> key;
+		// std::cout << key << " | " << one_line << std::endl;
+		if (key == "location")
+			break;
 		server_token_parser(key, one_line);
 	}
+	//location block read
+	while (std::getline(server_block, line)) {
+		std::stringstream one_line(line);
+		std::string checker;
+		one_line >> checker;
+		if (checker == "location") {
+			std::string loc_val;
+			std::string loc_key;
+			one_line >> loc_key;
+			while (std::getline(server_block, line)) {
+				if (line == "}")
+					break;
+				loc_val.append(line + "\n");
+			}
+			std::stringstream loc_line;
+			// Location unit_loc(loc_val);
+			// locations.insert(make_pair(loc_key, unit_loc));
+			std::cout << loc_val << std::endl;
+		}
+
+	}
+
 
 }
 
@@ -36,29 +62,29 @@ Server::Server(const Server& other) {
 	return ;
 }
 
-Server::~Server() {}
+// Server::~Server() {}
 
 
-void Server::server_token_parser(std::string key, std::stringstream one_line) {
-	
+void Server::server_token_parser(std::string key, std::stringstream& one_line) {
+	// std::cout << key << " | " << one_line << std::endl;
 	if (key == "listen") {
 		int value;
 		one_line >> value;
 		if (!value)
 			return ;
-		this->port = value;
+		port = value;
 	} else if (key == "host") {
 		std::string value;
 		one_line >> value;
 		if (value == "")
 			return ;
-		this->host = value;
-	} else if (key == "name") {
+		host = value;
+	} else if (key == "server_name") {
 		std::string value;
 		one_line >> value;
 		if (value == "")
 			return ;
-		this->name = value;
+		name = value;
 	} else if (key == "error_page") {
 		int value1;
 		std::string value2;
@@ -68,17 +94,21 @@ void Server::server_token_parser(std::string key, std::stringstream one_line) {
 		one_line >> value2;
 		if (value2 == "")
 			return;
-		this->error_page.first = value1;
-		this->error_page.second = value2;
+		error_page.insert(std::pair<int, std::string>(value1, value2));
 	} else if (key == "root") {
 		std::string value;
 		one_line >> value;
-
+		root = value;
 	} else if (key == "index") {
-
+		std::string value;
+		one_line >> value;
+		index.push_back(value);
 	} else if (key == "limit_body_size") {
-
+		long value;
+		one_line >> value;
+		limit_body_size = value;
+	} else {
+		throw std::invalid_argument("Error: invalid server key\n");
 	}
-
 }
 

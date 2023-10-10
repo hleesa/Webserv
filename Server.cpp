@@ -13,6 +13,7 @@
 Server::Server(std::istringstream& server_block) {
 	std::string line;
 	std::string d_loc_key;
+	std::set<std::string> duplicated;
 
 	//server block item read
 	while (std::getline(server_block, line)) {
@@ -23,9 +24,12 @@ Server::Server(std::istringstream& server_block) {
 		if (key == "location") {
 			one_line >> d_loc_key;
 			break;
+		} else if (duplicated.find(key) == duplicated.end()) {
+			throw std::invalid_argument("Error: duplicated arguments\n");
 		}
-		server_token_parser(key, one_line);
+		server_token_parser(key, one_line, duplicated);
 	}
+	//first location block read
 	std::string d_loc_val;
 	while (std::getline(server_block, line)) {
 		if (line == "}")
@@ -80,7 +84,7 @@ Server::Server(const Server& other) {
 // Server::~Server() {}
 
 
-void Server::server_token_parser(std::string key, std::stringstream& one_line) {
+void Server::server_token_parser(std::string key, std::stringstream& one_line, std::set<std::string>& duplicated) {
 	// std::cout << key << " | " << one_line << std::endl;
 	if (key == "listen") {
 		int value;
@@ -88,12 +92,16 @@ void Server::server_token_parser(std::string key, std::stringstream& one_line) {
 		if (!value)
 			return ;
 		port = value;
+		duplicated.insert(key);
+
 	} else if (key == "host") {
 		std::string value;
 		one_line >> value;
 		if (value == "")
 			return ;
 		host = value;
+		duplicated.insert(key);
+
 	} else if (key == "server_name") {
 		std::string value;
 		one_line >> value;
@@ -114,6 +122,7 @@ void Server::server_token_parser(std::string key, std::stringstream& one_line) {
 		std::string value;
 		one_line >> value;
 		root = value;
+		duplicated.insert(key);
 	} else if (key == "index") {
 		std::string value;
 		one_line >> value;
@@ -122,6 +131,10 @@ void Server::server_token_parser(std::string key, std::stringstream& one_line) {
 		long value;
 		one_line >> value;
 		limit_body_size = value;
+		duplicated.insert(key);
+	} else if (key == "autoindex") {
+		
+
 	} else {
 		throw std::invalid_argument("Error: invalid server key\n");
 	}

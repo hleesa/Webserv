@@ -13,31 +13,30 @@
 
 class Server {
 
-private:
-    int port;
-    std::string host;
-    std::string name;
-    std::map<int, std::string> error_page;
-    std::string root;
-    std::vector<std::string> index;
-    long limit_body_size;
-    std::map<std::string, Location> locations;
-    // CgiLocation cgi_location;
+	private:
+		int port;
+		std::string host;
+		std::vector<std::string> name;
+		std::map<int, std::string> error_page;
+		std::string root;
+		std::vector<std::string> index;
+		long limit_body_size;
+		std::map<std::string, Location> locations;
+		// CgiLocation cgi_location;
 
-public:
-	Server();
+	public:
+		Server();
 
-	Server(std::istringstream& server_block);
+		Server(std::vector< std::vector< std::string> >& server_block);
 
-	Server(const Server& other);
+		Server(const Server& other);
 
-	Server& operator=(const Server& other);
+		Server& operator=(const Server& other);
 
-	// ~Server();
+		// ~Server();
 
-	void server_token_parser(std::string key, std::stringstream& one_line);
-
-
+		void server_token_parser(std::vector<std::string> one_line, std::set<std::string>& duplicated);
+		// void server_token_parser(std::string key, std::stringstream& one_line, std::set<std::string>& duplicated);
 
 };
 

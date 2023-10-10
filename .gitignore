@@ -4,3 +4,4 @@ cmake-build-debug/
 a.out
 .vscode
 .DS_STORE
+*.gch

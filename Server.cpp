@@ -19,7 +19,7 @@ Server::Server(std::vector< std::vector< std::string> >& server_block)
 	for (;i < server_block.size(); i++) {
 		if (server_block[i][0] == "location") {
 			break;
-		} else if (duplicated.find(server_block[i][0]) == duplicated.end()) {
+		} else if (duplicated.find(server_block[i][0]) != duplicated.end()) {
 			throw std::invalid_argument("Error: duplicated argument\n");
 		} else {
 			server_token_parser(server_block[i], duplicated);
@@ -30,6 +30,7 @@ Server::Server(std::vector< std::vector< std::string> >& server_block)
 		std::vector< std::vector<std::string> > loc_block;
 		if (server_block[i][0] == "location") {
 			key = server_block[i][1];
+			i++;
 			for (; server_block[i][0] != "}"; ++i) {
 				loc_block.push_back(server_block[i]);
 			}
@@ -39,61 +40,6 @@ Server::Server(std::vector< std::vector< std::string> >& server_block)
 		}
 	}
 }
-
-
-//keep
-	// std::string line;
-	// std::string d_loc_key;
-	// std::set<std::string> duplicated;
-
-	// //server block item read
-	// while (std::getline(server_block, line)) {
-	// 	std::stringstream one_line(line);
-	// 	std::string key;
-	// 	one_line >> key;
-	// 	// std::cout << key << " | " << one_line << std::endl;
-	// 	if (key == "location") {
-	// 		one_line >> d_loc_key;
-	// 		break;
-	// 	} else if (duplicated.find(key) == duplicated.end()) {
-	// 		throw std::invalid_argument("Error: duplicated arguments\n");
-	// 	}
-	// 	server_token_parser(key, one_line, duplicated);
-	// }
-	// //first location block read
-	// std::string d_loc_val;
-	// while (std::getline(server_block, line)) {
-	// 	if (line == "}")
-	// 		break;
-	// 	d_loc_val.append(line + "\n");
-	// }
-	// std::istringstream d_ss(d_loc_val);
-	// Location d_unit_loc(d_ss);
-	// locations.insert(make_pair(d_loc_key, d_unit_loc));
-	// std::cout << "Location : " << d_loc_key << "\n" << d_unit_loc << std::endl;
-
-	// //location block read
-	// while (std::getline(server_block, line)) {
-	// 	std::stringstream one_line(line);
-	// 	std::string checker;
-	// 	one_line >> checker;
-	// 	if (checker == "location") {
-	// 		std::string loc_val;
-	// 		std::string loc_key;
-	// 		one_line >> loc_key;
-	// 		while (std::getline(server_block, line)) {
-	// 			if (line == "}")
-	// 				break;
-	// 			loc_val.append(line + "\n");
-	// 		}
-	// 		std::istringstream ss(loc_val);
-	// 		Location unit_loc(ss);
-	// 		std::cout << "Location : " << loc_key << "\n" << unit_loc << std::endl;
-	// 		locations.insert(make_pair(loc_key, unit_loc));
-	// 	}
-
-
-
 
 Server::Server(const Server& other) {
     if (this != &other) {

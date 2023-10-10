@@ -3,6 +3,7 @@
 
 #include <iostream>
 
+bool isHttpMethod(const std::string& method);
 bool isNumber(const std::string& string);
 
 Location::Location() {}
@@ -46,6 +47,10 @@ void Location::parse(std::vector<std::string>& line) {
 		return ;
 	directive = *(line.begin());
 	// std::cout << "directive : " << directive << std::endl;
+	if (directive == "limit_except") {
+		parseHttpMethod(line);
+		return ;
+	}
 	if (directive == "return") {
 		parseReturnValue(line);
 		return ;
@@ -73,6 +78,24 @@ void Location::checkDuplicated(const bool& duplicated, const std::string& direct
 void Location::checkInvalidNumber(unsigned int size, unsigned int expected, const std::string& directive) {
 	if (size > expected)
 		throw (std::invalid_argument("Error: Invalid number of arguments in '" + directive + "' directive"));
+}
+
+void Location::parseHttpMethod(std::vector<std::string>& line) {
+
+	std::string method;
+	std::vector<std::string>::iterator itr;
+
+	for (itr = line.begin(); itr != line.end(); itr++)
+	{
+		checkHttpMethod(*itr);
+		http_methods.insert(*itr);
+	}
+}
+
+void Location::checkHttpMethod(const std::string& value) const {
+
+	if (isHttpMethod(value) == false)
+		throw (std::invalid_argument("Error: Invalid value '" + value + "' in 'limit_except' directive"));
 }
 
 void Location::parseReturnValue(std::vector<std::string>& line) {
@@ -140,6 +163,5 @@ std::ostream& operator<<(std::ostream& out, Location& l) {
 	for (std::vector<std::string>::iterator itr = l.index.begin(); itr != l.index.end(); itr++)
 		out << *itr << " ";
 	out << "\n-----autoindex-----\n" << std::boolalpha << l.autoindex << std::endl;
-	out << "-----client max body size-----\n" << l.limit_body_size << "\n";
 	return out;
 }

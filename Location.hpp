@@ -11,29 +11,29 @@
 class Location {
 
 protected:
+	std::set<std::string> http_methods;
     std::pair<int, std::string> return_value;
     std::string root;
     std::vector<std::string> index;
     bool autoindex;
-    long limit_body_size;
 	
-	void parse(const std::string& line);
-	void parseReturnValue(std::stringstream& ss);
-	void parseRoot(std::stringstream& ss);
-	void parseIndex(std::stringstream& ss);
-	void parseAutoindex(std::stringstream& ss);
-	void parseLimitBodySize(std::stringstream& ss);
+	void parse(std::vector<std::string>& line, std::set<std::string>& duplicated);
+	void parseHttpMethod(std::vector<std::string>& line, std::set<std::string>& duplicated);
+	void parseReturnValue(std::vector<std::string>& line);
+	void parseRoot(std::vector<std::string>& line, std::set<std::string>& duplicated);
+	void parseIndex(std::vector<std::string>& line, std::set<std::string>& duplicated);
+	void parseAutoindex(std::vector<std::string>& line, std::set<std::string>& duplicated);
 
-	void checkDuplicated(const bool& duplicated, const std::string& directive);
-	void checkInvalidNumber(const std::stringstream& ss, const std::string& directive);
+	void checkDuplicated(const std::set<std::string>& duplicated, const std::string& directive);
+	void checkInvalidNumber(unsigned int size, unsigned int expected, const std::string& directive);
+	void checkHttpMethod(const std::string& value) const;
 	void setReturnCode(const std::string& value);
 	void setReturnString(const std::string& value);
 	void checkAutoindexFormat(const std::string& value) const;
-	void setLimitBodySize(const std::string& value);
 
 public:
     Location();
-    Location(std::istringstream& location_block);
+    Location(std::vector<std::vector<std::string> >& location_block);
     Location(const Location& other);
 	Location& operator=(const Location& other);
     ~Location();

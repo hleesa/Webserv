@@ -1,5 +1,6 @@
 
 #include "Server.hpp"
+#include "Location.hpp"
 
 // Server::Server() {}
 
@@ -36,10 +37,10 @@ Server::Server(std::istringstream& server_block) {
 					break;
 				loc_val.append(line + "\n");
 			}
-			std::stringstream loc_line;
-			// Location unit_loc(loc_val);
-			// locations.insert(make_pair(loc_key, unit_loc));
-			std::cout << loc_val << std::endl;
+			std::istringstream ss(loc_val);
+			Location unit_loc(ss);
+			std::cout << "Location : " << unit_loc << std::endl;
+			locations.insert(make_pair(loc_key, unit_loc));
 		}
 
 	}
@@ -49,15 +50,15 @@ Server::Server(std::istringstream& server_block) {
 
 Server::Server(const Server& other) {
     if (this != &other) {
-        this->port = other.port;
-        this->host = other.host;
-        this->name = other.name;
-        this->error_page = other.error_page;
-        this->root = other.root;
-        this->index = other.index;
-        this->limit_body_size = other.limit_body_size;
-        this->locations = other.locations;
-        // this->cgi_location = other.cgi_location;
+        port = other.port;
+        host = other.host;
+        name = other.name;
+        error_page = other.error_page;
+        root = other.root;
+        index = other.index;
+        limit_body_size = other.limit_body_size;
+        locations = other.locations;
+        // cgi_location = other.cgi_location;
     }
 	return ;
 }

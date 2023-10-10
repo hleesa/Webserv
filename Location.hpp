@@ -17,14 +17,14 @@ protected:
     std::vector<std::string> index;
     bool autoindex;
 	
-	void parse(std::vector<std::string>& line);
-	void parseHttpMethod(std::vector<std::string>& line);
+	void parse(std::vector<std::string>& line, std::set<std::string>& duplicated);
+	void parseHttpMethod(std::vector<std::string>& line, std::set<std::string>& duplicated);
 	void parseReturnValue(std::vector<std::string>& line);
-	void parseRoot(std::vector<std::string>& line);
-	void parseIndex(std::vector<std::string>& line);
-	void parseAutoindex(std::vector<std::string>& line);
+	void parseRoot(std::vector<std::string>& line, std::set<std::string>& duplicated);
+	void parseIndex(std::vector<std::string>& line, std::set<std::string>& duplicated);
+	void parseAutoindex(std::vector<std::string>& line, std::set<std::string>& duplicated);
 
-	void checkDuplicated(const bool& duplicated, const std::string& directive);
+	void checkDuplicated(const std::set<std::string>& duplicated, const std::string& directive);
 	void checkInvalidNumber(unsigned int size, unsigned int expected, const std::string& directive);
 	void checkHttpMethod(const std::string& value) const;
 	void setReturnCode(const std::string& value);

@@ -10,12 +10,15 @@ Location::Location() {}
 
 Location::Location(std::vector<std::vector<std::string> >& location_block) : root("html"), autoindex(false) {
 
+	std::set<std::string> duplicated;
 	std::vector<std::vector<std::string> >::iterator itr;
 
 	for (itr = location_block.begin(); itr != location_block.end(); itr++)
 	{
-		parse(*itr);
+		parse(*itr, duplicated);
 	}
+	if (index.empty())
+		index.push_back("index.html");
 	std::cout << *this;
 }
 
@@ -39,16 +42,15 @@ Location &Location::operator=(const Location &other) {
 
 Location::~Location() {}
 
-void Location::parse(std::vector<std::string>& line) {
+void Location::parse(std::vector<std::string>& line, std::set<std::string>& duplicated) {
 
 	std::string	directive;
 	
 	if (line.empty())
 		return ;
 	directive = *(line.begin());
-	// std::cout << "directive : " << directive << std::endl;
 	if (directive == "limit_except") {
-		parseHttpMethod(line);
+		parseHttpMethod(line, duplicated);
 		return ;
 	}
 	if (directive == "return") {
@@ -56,40 +58,45 @@ void Location::parse(std::vector<std::string>& line) {
 		return ;
 	}
 	if (directive == "root") {
-		parseRoot(line);
+		parseRoot(line, duplicated);
 		return ;
 	}
 	if (directive == "index") {
-		parseIndex(line);
+		parseIndex(line, duplicated);
 		return ;
 	}
 	if (directive == "autoindex") {
-		parseAutoindex(line);
+		parseAutoindex(line, duplicated);
 		return ;
 	}
 	throw (std::invalid_argument("Error: unknown directive '" + directive + "'"));
 }
 
-void Location::checkDuplicated(const bool& duplicated, const std::string& directive) {
-	if (duplicated == true)
+void Location::checkDuplicated(const std::set<std::string>& duplicated, const std::string& directive) {
+
+	if (duplicated.find(directive) != duplicated.end())
 		throw (std::invalid_argument("Error: '" + directive + "' directive is duplicate"));
 }
 
 void Location::checkInvalidNumber(unsigned int size, unsigned int expected, const std::string& directive) {
+
 	if (size > expected)
 		throw (std::invalid_argument("Error: Invalid number of arguments in '" + directive + "' directive"));
 }
 
-void Location::parseHttpMethod(std::vector<std::string>& line) {
+void Location::parseHttpMethod(std::vector<std::string>& line, std::set<std::string>& duplicated) {
 
 	std::string method;
-	std::vector<std::string>::iterator itr;
+	std::string directive("limit_except");
+	std::vector<std::string>::iterator itr = line.begin() + 1;
 
-	for (itr = line.begin(); itr != line.end(); itr++)
+	checkDuplicated(duplicated, directive);
+	for (; itr != line.end(); itr++)
 	{
 		checkHttpMethod(*itr);
 		http_methods.insert(*itr);
 	}
+	duplicated.insert(directive);
 }
 
 void Location::checkHttpMethod(const std::string& value) const {
@@ -100,9 +107,10 @@ void Location::checkHttpMethod(const std::string& value) const {
 
 void Location::parseReturnValue(std::vector<std::string>& line) {
 
+	std::string directive("return");
 	std::vector<std::string>::iterator itr = line.begin();
 
-	checkInvalidNumber(line.size(), 3, "return");
+	checkInvalidNumber(line.size(), 3, directive);
 	setReturnCode(*(++itr));
 	if (line.size() == 2)
 		return ;
@@ -122,40 +130,48 @@ void Location::setReturnString(const std::string& value) {
 	return_value.second = value;
 }
 
-void Location::parseRoot(std::vector<std::string>& line) {
+void Location::parseRoot(std::vector<std::string>& line, std::set<std::string>& duplicated) {
 
-	static bool duplicated = false;
+	std::string directive("root");
 
-	checkDuplicated(duplicated, "root");
-	checkInvalidNumber(line.size(), 2, "root");
+	checkDuplicated(duplicated, directive);
+	checkInvalidNumber(line.size(), 2, directive);
 	root = line[1];
+	duplicated.insert(directive);
 }
 
-void Location::parseIndex(std::vector<std::string>& line) {
+void Location::parseIndex(std::vector<std::string>& line, std::set<std::string>& duplicated) {
 
-	std::vector<std::string>::iterator itr;
+	std::string directive("index");
+	std::vector<std::string>::iterator itr = line.begin() + 1;
 
-	for (itr = line.begin(); itr != line.end(); itr++)
+	checkDuplicated(duplicated, directive);
+	for (; itr != line.end(); itr++)
 		index.push_back(*(++itr));
+	duplicated.insert(directive);
 }
 
-void Location::parseAutoindex(std::vector<std::string>& line) {
+void Location::parseAutoindex(std::vector<std::string>& line, std::set<std::string>& duplicated) {
 
-	static bool duplicated = false;
+	std::string directive("autoindex");
 
-	checkDuplicated(duplicated, "autoindex");
-	checkInvalidNumber(line.size(), 2, "autoindex");
+	checkDuplicated(duplicated, directive);
+	checkInvalidNumber(line.size(), 2, directive);
 	checkAutoindexFormat(line[1]);
 	autoindex = line[1] == "on" ? true : false;
-	duplicated = true;
+	duplicated.insert(directive);
 }
 
 void Location::checkAutoindexFormat(const std::string& value) const {
+
 	if (!(value == "on" || value == "off"))
 		throw (std::invalid_argument("Error: Invalid value '" + value + "' in 'autoindex' directive"));
 }
 
 std::ostream& operator<<(std::ostream& out, Location& l) {
+	out << "-----http methods-----\n";
+	for (std::set<std::string>::iterator itr = l.http_methods.begin(); itr != l.http_methods.end(); itr++)
+		out << *itr << " ";
 	out << "\n-----return-----\n";
 	out << "status code : " << l.return_value.first << "\nstring : " << l.return_value.second << "\n";
 	out << "-----root-----\n" << l.root << "\n";

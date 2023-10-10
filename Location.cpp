@@ -13,8 +13,7 @@ Location::Location(std::vector<std::vector<std::string> >& location_block) : roo
 	std::set<std::string> duplicated;
 	std::vector<std::vector<std::string> >::iterator itr;
 
-	for (itr = location_block.begin(); itr != location_block.end(); itr++)
-	{
+	for (itr = location_block.begin(); itr != location_block.end(); itr++) {
 		parse(*itr, duplicated);
 	}
 	if (index.empty())
@@ -29,8 +28,7 @@ Location::Location(const Location &other) {
 
 Location &Location::operator=(const Location &other) {
 
-	if (this != &other)
-	{
+	if (this != &other) {
 		this->http_methods = other.http_methods;
 		this->return_value = other.return_value;
 		this->root = other.root;
@@ -91,8 +89,7 @@ void Location::parseHttpMethod(std::vector<std::string>& line, std::set<std::str
 	std::vector<std::string>::iterator itr = line.begin() + 1;
 
 	checkDuplicated(duplicated, directive);
-	for (; itr != line.end(); itr++)
-	{
+	for (; itr != line.end(); itr++) {
 		checkHttpMethod(*itr);
 		http_methods.insert(*itr);
 	}
@@ -169,6 +166,7 @@ void Location::checkAutoindexFormat(const std::string& value) const {
 }
 
 std::ostream& operator<<(std::ostream& out, Location& l) {
+
 	out << "-----http methods-----\n";
 	for (std::set<std::string>::iterator itr = l.http_methods.begin(); itr != l.http_methods.end(); itr++)
 		out << *itr << " ";

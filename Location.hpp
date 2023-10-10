@@ -33,7 +33,7 @@ protected:
 
 public:
     Location();
-    Location(std::vector<std::vector<std::string>>& location_block);
+    Location(std::vector<std::vector<std::string> >& location_block);
     Location(const Location& other);
 	Location& operator=(const Location& other);
     ~Location();

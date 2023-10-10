@@ -8,16 +8,15 @@ bool isNumber(const std::string& string);
 
 Location::Location() {}
 
-Location::Location(std::vector<std::vector<std::string>>& location_block) {
+Location::Location(std::vector<std::vector<std::string> >& location_block) : root("html"), autoindex(false) {
 
-	std::vector<std::vector<std::string>>::iterator itr;
+	std::vector<std::vector<std::string> >::iterator itr;
 
-	autoindex = false;
 	for (itr = location_block.begin(); itr != location_block.end(); itr++)
 	{
 		parse(*itr);
 	}
-	// std::cout << *this;
+	std::cout << *this;
 }
 
 Location::Location(const Location &other) {
@@ -29,6 +28,7 @@ Location &Location::operator=(const Location &other) {
 
 	if (this != &other)
 	{
+		this->http_methods = other.http_methods;
 		this->return_value = other.return_value;
 		this->root = other.root;
 		this->index = other.index;

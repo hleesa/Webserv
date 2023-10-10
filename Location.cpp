@@ -7,16 +7,14 @@ bool isNumber(const std::string& string);
 
 Location::Location() {}
 
-Location::Location(std::istringstream& location_block) {
+Location::Location(std::vector<std::vector<std::string>>& location_block) {
 
-	std::string line;
+	std::vector<std::vector<std::string>>::iterator itr;
 
 	autoindex = false;
-	limit_body_size = 1e6;
-	while (location_block.eof() == false)
+	for (itr = location_block.begin(); itr != location_block.end(); itr++)
 	{
-		std::getline(location_block, line);
-		parse(line);
+		parse(*itr);
 	}
 	// std::cout << *this;
 }
@@ -40,61 +38,52 @@ Location &Location::operator=(const Location &other) {
 
 Location::~Location() {}
 
-void Location::parse(const std::string &line) {
+void Location::parse(std::vector<std::string>& line) {
 
-	std::stringstream ss(line);
 	std::string	directive;
 	
 	if (line.empty())
 		return ;
-	ss >> directive;
+	directive = *(line.begin());
 	// std::cout << "directive : " << directive << std::endl;
 	if (directive == "return") {
-		parseReturnValue(ss);
+		parseReturnValue(line);
 		return ;
 	}
 	if (directive == "root") {
-		parseRoot(ss);
+		parseRoot(line);
 		return ;
 	}
 	if (directive == "index") {
-		parseIndex(ss);
+		parseIndex(line);
 		return ;
 	}
 	if (directive == "autoindex") {
-		parseAutoindex(ss);
-		return ;
-	}
-	if (directive == "client_max_body_size") {
-		parseLimitBodySize(ss);
+		parseAutoindex(line);
 		return ;
 	}
 	throw (std::invalid_argument("Error: unknown directive '" + directive + "'"));
 }
 
-void Location::checkDuplicated(const bool& duplicated, const std::string& directive)
-{
+void Location::checkDuplicated(const bool& duplicated, const std::string& directive) {
 	if (duplicated == true)
 		throw (std::invalid_argument("Error: '" + directive + "' directive is duplicate"));
 }
 
-void Location::checkInvalidNumber(const std::stringstream& ss, const std::string& directive)
-{
-	if (ss.eof() == false)
+void Location::checkInvalidNumber(unsigned int size, unsigned int expected, const std::string& directive) {
+	if (size > expected)
 		throw (std::invalid_argument("Error: Invalid number of arguments in '" + directive + "' directive"));
 }
 
-void Location::parseReturnValue(std::stringstream& ss) {
+void Location::parseReturnValue(std::vector<std::string>& line) {
 
-	std::string value;
+	std::vector<std::string>::iterator itr = line.begin();
 
-	ss >> value;
-	setReturnCode(value);
-	if (ss.eof())
+	checkInvalidNumber(line.size(), 3, "return");
+	setReturnCode(*(++itr));
+	if (line.size() == 2)
 		return ;
-	ss >> value;
-	checkInvalidNumber(ss, "return");
-	setReturnString(value);
+	setReturnString(*(++itr));
 }
 
 void Location::setReturnCode(const std::string& value) {
@@ -106,73 +95,44 @@ void Location::setReturnCode(const std::string& value) {
 }
 
 void Location::setReturnString(const std::string& value) {
-	
+
 	return_value.second = value;
 }
 
-void Location::parseRoot(std::stringstream& ss) {
+void Location::parseRoot(std::vector<std::string>& line) {
 
 	static bool duplicated = false;
-	std::string value;
 
 	checkDuplicated(duplicated, "root");
-	ss >> value;
-	checkInvalidNumber(ss, "root");
-	root = value;
+	checkInvalidNumber(line.size(), 2, "root");
+	root = line[1];
 }
 
-void Location::parseIndex(std::stringstream& ss) {
+void Location::parseIndex(std::vector<std::string>& line) {
 
-	std::string value;
+	std::vector<std::string>::iterator itr;
 
-	while (ss.eof() == false)
-	{
-		ss >> value;
-		index.push_back(value);
-	}
+	for (itr = line.begin(); itr != line.end(); itr++)
+		index.push_back(*(++itr));
 }
 
-void Location::parseAutoindex(std::stringstream& ss) {
+void Location::parseAutoindex(std::vector<std::string>& line) {
 
 	static bool duplicated = false;
-	std::string value;
 
 	checkDuplicated(duplicated, "autoindex");
-	ss >> value;
-	checkInvalidNumber(ss, "autoindex");
-	checkAutoindexFormat(value);
-	autoindex = value == "on" ? true : false;
+	checkInvalidNumber(line.size(), 2, "autoindex");
+	checkAutoindexFormat(line[1]);
+	autoindex = line[1] == "on" ? true : false;
 	duplicated = true;
 }
 
-void Location::checkAutoindexFormat(const std::string& value) const
-{
+void Location::checkAutoindexFormat(const std::string& value) const {
 	if (!(value == "on" || value == "off"))
 		throw (std::invalid_argument("Error: Invalid value '" + value + "' in 'autoindex' directive"));
 }
 
-void Location::parseLimitBodySize(std::stringstream& ss)
-{
-	static bool duplicated = false;
-	std::string value;
-
-	checkDuplicated(duplicated, "client_max_body_size");
-	ss >> value;
-	checkInvalidNumber(ss, "client_max_body_size");
-	setLimitBodySize(value);
-	duplicated = true;
-}
-
-void Location::setLimitBodySize(const std::string& value)
-{
-	if (isNumber(value) == false)
-		throw (std::invalid_argument("Error: Invalid value '" + value + "' in 'client_max_body_size' directive"));
-	std::stringstream ss(value);
-	ss >> limit_body_size;
-}
-
-std::ostream& operator<<(std::ostream& out, Location& l)
-{
+std::ostream& operator<<(std::ostream& out, Location& l) {
 	out << "\n-----return-----\n";
 	out << "status code : " << l.return_value.first << "\nstring : " << l.return_value.second << "\n";
 	out << "-----root-----\n" << l.root << "\n";

@@ -35,6 +35,7 @@ Server::Server(std::vector< std::vector< std::string> >& server_block)
 			}
 			// Location unit_loc(loc_block);
 			// locations.insert(make_pair(key, unit_loc));
+
 		}
 	}
 }

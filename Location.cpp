@@ -144,7 +144,7 @@ void Location::parseIndex(std::vector<std::string>& line, std::set<std::string>&
 
 	checkDuplicated(duplicated, directive);
 	for (; itr != line.end(); itr++)
-		index.push_back(*(++itr));
+		index.push_back(*itr);
 	duplicated.insert(directive);
 }
 

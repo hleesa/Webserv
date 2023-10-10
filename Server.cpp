@@ -34,9 +34,8 @@ Server::Server(std::vector< std::vector< std::string> >& server_block)
 			for (; server_block[i][0] != "}"; ++i) {
 				loc_block.push_back(server_block[i]);
 			}
-			// Location unit_loc(loc_block);
-			// locations.insert(make_pair(key, unit_loc));
-
+			Location unit_loc(loc_block);
+			locations.insert(make_pair(key, unit_loc));
 		}
 	}
 }

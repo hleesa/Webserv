@@ -12,7 +12,7 @@
 * 3. server {}의 내용물만
 **/
 
-bool isValidLineTerminator(std::vector<std::string>& server_content) {
+bool isValidLineTerminator(const std::vector<std::string>& server_content) {
     const std::string line_term = "{;}";
     if (server_content.empty()) {
         return true;
@@ -60,7 +60,7 @@ bool isLocationOpen(const std::vector<std::string>& words) {
     return isTargetBlockOpen(words, "location", 3);
 }
 
-enum lineType getLineType(std::vector<std::string>& server_content, std::stack<char>& brace_stack) {
+enum lineType getLineType(const std::vector<std::string>& server_content, std::stack<char>& brace_stack) {
     if (!isValidLineTerminator(server_content)) {
         return INVALID;
     }
@@ -97,8 +97,8 @@ enum lineType getLineType(std::vector<std::string>& server_content, std::stack<c
 
 std::vector<std::vector<std::vector<std::string> > > getSeverContents(std::ifstream& config) {
     std::string line;
-    std::vector<std::vector<std::string > > server_content;
-    std::vector<std::vector<std::vector<std::string> > >server_contents;
+    std::vector<std::vector<std::string> > server_content;
+    std::vector<std::vector<std::vector<std::string> > > server_contents;
     std::stack<char> brace_stack;
     while (std::getline(config, line)) {
         std::vector<std::string> one_line = lineToWords(line);
@@ -150,8 +150,7 @@ Config::Config(const std::string& config_file) {
     if (!config.is_open()) {
         throw std::invalid_argument("Error: Failed to open file '" + config_file + "'");
     }
-    std::vector<std::vector<std::vector<std::string> > >server_contents = getSeverContents(config);
-
+    std::vector<std::vector<std::vector<std::string> > > server_contents = getSeverContents(config);
     for (std::vector<std::vector<std::vector<std::string> > >::iterator server_content = server_contents.begin();
          server_content != server_contents.end(); ++server_content) {
         servers.push_back(Server(*server_content));
@@ -159,15 +158,17 @@ Config::Config(const std::string& config_file) {
     config.close();
 }
 
-
 Config::Config() {
 }
 
 Config::Config(const Config& other) {
-
+    servers = other.servers;
 }
 
-Config& Config::operator=(const Config& ohter) {
+Config& Config::operator=(const Config& other) {
+    if (this != &other) {
+        servers = other.servers;
+    }
     return *this;
 }
 

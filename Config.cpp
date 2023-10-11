@@ -12,40 +12,21 @@
 * 3. server {}의 내용물만
 **/
 
-std::string semicolonTrim(const std::string& line) {
-    std::string ret = line;
-    const std::string space = " \t\n\v\f\r";
-    if (!ret.empty() && ret.back() == ';') {
-        ret.pop_back();
-        size_t end = ret.find_last_not_of(space);
-        ret = ret.substr(0, end + 1);
-        ret.append(";");
-    }
-    return ret;
-}
-
-std::string trim(const std::string& input) {
-    const std::string space = " \t\n\v\f\r";
-    size_t start = input.find_first_not_of(space);
-    if (start == std::string::npos) {
-        return "";
-    }
-    size_t end = input.find_last_not_of(space);
-    return semicolonTrim(input.substr(start, end - start + 1));
-}
-
-bool isValidLineTerminator(const std::string& line) {
+bool isValidLineTerminator(const std::vector<std::string>& server_content) {
     const std::string line_term = "{;}";
-    if (line.empty()) {
+    if (server_content.empty()) {
         return true;
     }
-    else if (line_term.find(line.back()) == std::string::npos) {
+    else if (line_term.find(server_content.back().back()) == std::string::npos) {
         return false;
     }
     const int char_size = 256;
     int counter[char_size] = {0};
-    for (std::string::const_iterator it = line.begin(); it != line.end(); ++it) {
-        ++counter[*it];
+    for (std::vector<std::string>::const_iterator content = server_content.begin();
+         content != server_content.end(); ++content) {
+        for (std::string::const_iterator ch = content->begin(); ch != content->end(); ++ch) {
+            ++counter[*ch];
+        }
     }
     int num_of_line_term = 0;
     for (std::string::const_iterator it = line_term.begin(); it != line_term.end(); ++it) {
@@ -54,55 +35,54 @@ bool isValidLineTerminator(const std::string& line) {
     return num_of_line_term == 1;
 }
 
-bool isValidServerOpen(const std::string& line) {
-    const std::string target = "server";
-    if (line.substr(0, target.length()) != target) {
-        return false;
+std::vector<std::string> lineToWords(const std::string& line) {
+    std::string word;
+    std::vector<std::string> words;
+    std::stringstream ss(line);
+    while (ss >> word) {
+        words.push_back(word);
     }
-    size_t i = target.length();
-    while (isspace(line[i]))
-        ++i;
-    return (i + 1) == line.length();
+    return words;
 }
 
-bool isValidLocationOpen(const std::string& line) {
-    const std::string target = "location";
-    if (line.substr(0, target.length()) != target) {
+bool isTargetBlockOpen(const std::vector<std::string> words, const std::string target, const int num_of_words) {
+    if (words.size() != num_of_words) {
         return false;
     }
-    size_t i = target.length();
-    while (isspace(line[i]))
-        ++i;
-    while (!isspace(line[i]))
-        ++i;
-    while (isspace(line[i]))
-        ++i;
-    return (i + 1) == line.length();
+    return (words.front() == target) && (words.back() == "{");
 }
 
-enum lineType getLineType(std::string& line, std::stack<char>& brace_stack) {
-    if (!isValidLineTerminator(line)) {
+bool isServerOpen(const std::vector<std::string>& words) {
+    return isTargetBlockOpen(words, "server", 2);
+}
+
+bool isLocationOpen(const std::vector<std::string>& words) {
+    return isTargetBlockOpen(words, "location", 3);
+}
+
+enum lineType getLineType(const std::vector<std::string>& server_content, const std::stack<char>& brace_stack) {
+    if (!isValidLineTerminator(server_content)) {
         return INVALID;
     }
-    else if (line.empty()) {
+    else if (server_content.empty()) {
         return SPACE;
     }
-    else if (line.front() == '#') {
+    else if (server_content.front().front() == '#') {
         return COMMENT;
     }
-    else if (line.back() == '{') {
-        if (brace_stack.empty() && isValidServerOpen(line)) {
+    else if (server_content.back().back() == '{') {
+        if (brace_stack.empty() && isServerOpen(server_content)) {
             return SERVER_OPEN;
         }
-        else if (!brace_stack.empty() && isValidLocationOpen(line) ) {
+        else if (!brace_stack.empty() && isLocationOpen(server_content)) {
             return LOCATION_OPEN;
         }
     }
-    else if (line.back() == ';') {
+    else if (server_content.back().back() == ';') {
         return SEMICOLON;
     }
-    else if (line.back() == '}') {
-        if (brace_stack.empty() || brace_stack.top() != '{' || line.length() != 1) {
+    else if (server_content.back().back() == '}') {
+        if (brace_stack.empty() || brace_stack.top() != '{' || server_content.size() != 1) {
             return INVALID;
         }
         else if (brace_stack.size() == 2) {
@@ -115,15 +95,14 @@ enum lineType getLineType(std::string& line, std::stack<char>& brace_stack) {
     return INVALID;
 }
 
-std::vector<std::string> getSeverContents(std::ifstream& config) {
-    const int content_size = 500;
+std::vector<std::vector<std::vector<std::string> > > getSeverContents(std::ifstream& config) {
     std::string line;
-    std::string server_content;
-    std::vector<std::string> server_contents;
+    std::vector<std::vector<std::string> > server_content;
+    std::vector<std::vector<std::vector<std::string> > > server_contents;
     std::stack<char> brace_stack;
     while (std::getline(config, line)) {
-        line = trim(line);
-        enum lineType line_type = getLineType(line, brace_stack);
+        std::vector<std::string> one_line = lineToWords(line);
+        enum lineType line_type = getLineType(one_line, brace_stack);
         switch (line_type) {
             case SPACE:
             case COMMENT:
@@ -135,19 +114,19 @@ std::vector<std::string> getSeverContents(std::ifstream& config) {
             case SERVER_OPEN:
                 brace_stack.push(line.back());
                 server_content.clear();
-                server_content.reserve(content_size);
                 break;
             case LOCATION_OPEN:
                 brace_stack.push(line.back());
-                server_content.append(line + "\n");
+                server_content.push_back(one_line);
                 break;
             case SEMICOLON:
                 line.pop_back();
-                server_content.append(line + "\n");
+                one_line.back().pop_back();
+                server_content.push_back(one_line);
                 break;
             case LOCATION_CLOSE:
                 brace_stack.pop();
-                server_content.append(line + "\n");
+                server_content.push_back(one_line);
                 break;
             case SERVER_CLOSE:
                 brace_stack.pop();
@@ -158,57 +137,55 @@ std::vector<std::string> getSeverContents(std::ifstream& config) {
     return server_contents;
 }
 
-
-void print(std::istringstream& ss) {
-    std::string line;
-    while (std::getline(ss, line)) {
-        std::cout << line << '\n';
-    }
-}
-
-Config::Config(const std::string& config_file) {
-
+void checkFileFormat(const std::string& file_name) {
     const std::string config_format = ".conf";
-    if (config_file.length() < config_format.length()) {
-        throw std::invalid_argument("Error: Invalid file name '" + config_file + "'");
+    if (file_name.length() < config_format.length()) {
+        throw std::invalid_argument("Error: Invalid file name '" + file_name + "'");
     }
-    else if (config_file.substr(config_file.length() - config_format.length()) != config_format) {
-        throw std::invalid_argument("Error: Invalid file format '" + config_file + "'");
+    else if (file_name.substr(file_name.length() - config_format.length()) != config_format) {
+        throw std::invalid_argument("Error: Invalid file format '" + file_name + "'");
     }
-    std::ifstream config(config_file.c_str());
-    if (!config.is_open()) {
-        throw std::invalid_argument("Error: Failed to open file '" + config_file + "'");
-    }
-    std::vector<std::string> server_contents = getSeverContents(config);
-
-    for (std::vector<std::string>::iterator it = server_contents.begin(); it != server_contents.end(); ++it) {
-        std::istringstream ifs(*it);
-		Server server(ifs);
-		servers.push_back(server);
-		// print(ifs);
-    }
-
-    config.close();
+    return;
 }
 
+Config::Config(const std::string& file_name) {
+    checkFileFormat(file_name);
+    std::ifstream file_stream(file_name.c_str());
+    if (!file_stream.is_open()) {
+        throw std::invalid_argument("Error: Failed to open file '" + file_name + "'");
+    }
+    std::vector<std::vector<std::vector<std::string> > > server_contents = getSeverContents(file_stream);
+    for (std::vector<std::vector<std::vector<std::string> > >::iterator server_content = server_contents.begin();
+         server_content != server_contents.end(); ++server_content) {
+        servers.push_back(Server(*server_content));
+    }
+    file_stream.close();
+}
 
 Config::Config() {
 }
 
-Config::Config(const Config& other) {
-
+Config::Config(const Config& other) : servers(other.servers) {
 }
 
-Config& Config::operator=(const Config& ohter) {
+Config& Config::operator=(const Config& other) {
+    if (this != &other) {
+        servers = other.servers;
+    }
     return *this;
 }
 
 Config::~Config() {
 }
 
+std::vector<Server> Config::getServers() const {
+    return servers;
+}
 
-
-
-
-
-
+std::ostream& operator<<(std::ostream& os, const Config& cfg) {
+    std::vector<Server> servers = cfg.getServers();
+//    for (size_t i = 0; i < servers.size(); ++i) {
+//        os << i + 1 << '\n' << servers[i] << '\n';
+//    }
+    return os;
+}

@@ -10,42 +10,34 @@
      *
      */
 
-Server::Server(std::istringstream& server_block) {
-	std::string line;
+Server::Server(std::vector< std::vector< std::string> >& server_block)
+	:	port(80), host(""), root("html"), limit_body_size(1e6)
+{
+	std::set<std::string> duplicated;
+	int i = 0;
 
-	//server block item read
-	while (std::getline(server_block, line)) {
-		std::stringstream one_line(line);
-		std::string key;
-		one_line >> key;
-		// std::cout << key << " | " << one_line << std::endl;
-		if (key == "location")
+	for (;i < server_block.size(); i++) {
+		if (server_block[i][0] == "location") {
 			break;
-		server_token_parser(key, one_line);
-	}
-	//location block read
-	while (std::getline(server_block, line)) {
-		std::stringstream one_line(line);
-		std::string checker;
-		one_line >> checker;
-		if (checker == "location") {
-			std::string loc_val;
-			std::string loc_key;
-			one_line >> loc_key;
-			while (std::getline(server_block, line)) {
-				if (line == "}")
-					break;
-				loc_val.append(line + "\n");
-			}
-			std::istringstream ss(loc_val);
-			Location unit_loc(ss);
-			std::cout << "Location : " << unit_loc << std::endl;
-			locations.insert(make_pair(loc_key, unit_loc));
+		} else if (duplicated.find(server_block[i][0]) != duplicated.end()) {
+			throw std::invalid_argument("Error: duplicated argument\n");
+		} else {
+			server_token_parser(server_block[i], duplicated);
 		}
-
 	}
-
-
+	for (; i < server_block.size(); i++) {
+		std::string key;
+		std::vector< std::vector<std::string> > loc_block;
+		if (server_block[i][0] == "location") {
+			key = server_block[i][1];
+			i++;
+			for (; server_block[i][0] != "}"; ++i) {
+				loc_block.push_back(server_block[i]);
+			}
+			Location unit_loc(loc_block);
+			locations.insert(make_pair(key, unit_loc));
+		}
+	}
 }
 
 Server::Server(const Server& other) {
@@ -66,48 +58,52 @@ Server::Server(const Server& other) {
 // Server::~Server() {}
 
 
-void Server::server_token_parser(std::string key, std::stringstream& one_line) {
+void Server::server_token_parser(std::vector<std::string> one_line, std::set<std::string>& duplicated) {
 	// std::cout << key << " | " << one_line << std::endl;
-	if (key == "listen") {
+	if (one_line.empty())
+		throw std::invalid_argument("Error: invalid arguments\n");
+
+	if (one_line[0] == "listen" || one_line.size() == 2) {
+		std::stringstream ss(one_line[1]);
 		int value;
-		one_line >> value;
+		ss >> value;
 		if (!value)
 			return ;
 		port = value;
-	} else if (key == "host") {
+		duplicated.insert(one_line[0]);
+
+	} else if (one_line[0] == "host" || one_line.size() == 2) {
 		std::string value;
-		one_line >> value;
-		if (value == "")
-			return ;
-		host = value;
-	} else if (key == "server_name") {
-		std::string value;
-		one_line >> value;
-		if (value == "")
-			return ;
-		name = value;
-	} else if (key == "error_page") {
-		int value1;
-		std::string value2;
-		one_line >> value1;
-		if (value1 || one_line.peek())
-			return;
-		one_line >> value2;
-		if (value2 == "")
-			return;
-		error_page.insert(std::pair<int, std::string>(value1, value2));
-	} else if (key == "root") {
-		std::string value;
-		one_line >> value;
-		root = value;
-	} else if (key == "index") {
-		std::string value;
-		one_line >> value;
-		index.push_back(value);
-	} else if (key == "limit_body_size") {
+		host = one_line[1];
+		duplicated.insert(one_line[0]);
+
+	} else if (one_line[0] == "server_name" || one_line.size() >= 2) {
+		for (int i = 1; i < one_line.size(); i++) {
+			name.push_back(one_line[i]);
+		}
+
+	} else if (one_line[0] == "error_page" || one_line.size() == 3) {
+		std::stringstream ss(one_line[1]);
+		int err_no;
+		ss >> err_no;
+		error_page.insert(std::pair<int, std::string>(err_no, one_line[2]));
+	
+	} else if (one_line[0] == "root" || one_line.size() == 2) {
+		root = one_line[1];
+		duplicated.insert(one_line[0]);
+
+	} else if (one_line[0] == "index" || one_line.size() >= 2) {
+		for (int i = 1; i < one_line.size(); i++) {
+			index.push_back(one_line[i]);
+		}
+
+	} else if (one_line[0] == "limit_body_size" || one_line.size() == 2) {
+		std::stringstream ss(one_line[1]);
 		long value;
-		one_line >> value;
+		ss >> value;
 		limit_body_size = value;
+		duplicated.insert(one_line[0]);
+
 	} else {
 		throw std::invalid_argument("Error: invalid server key\n");
 	}

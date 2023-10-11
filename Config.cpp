@@ -60,7 +60,7 @@ bool isLocationOpen(const std::vector<std::string>& words) {
     return isTargetBlockOpen(words, "location", 3);
 }
 
-enum lineType getLineType(const std::vector<std::string>& server_content, std::stack<char>& brace_stack) {
+enum lineType getLineType(const std::vector<std::string>& server_content, const std::stack<char>& brace_stack) {
     if (!isValidLineTerminator(server_content)) {
         return INVALID;
     }
@@ -165,8 +165,7 @@ Config::Config(const std::string& file_name) {
 Config::Config() {
 }
 
-Config::Config(const Config& other) {
-    servers = other.servers;
+Config::Config(const Config& other) : servers(other.servers) {
 }
 
 Config& Config::operator=(const Config& other) {
@@ -178,10 +177,3 @@ Config& Config::operator=(const Config& other) {
 
 Config::~Config() {
 }
-
-
-
-
-
-
-

@@ -35,5 +35,6 @@ public:
     std::vector<Server> getServers() const;
 };
 
+std::ostream& operator<<(std::ostream& os, const Config& cfg);
 
 #endif //CONFIG_HPP

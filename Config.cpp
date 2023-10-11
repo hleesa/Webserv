@@ -184,7 +184,8 @@ std::vector<Server> Config::getServers() const {
 
 std::ostream& operator<<(std::ostream& os, const Config& cfg) {
     std::vector<Server> servers = cfg.getServers();
-    for (size_t i = 0; i < servers.size(); ++i) {
-        os << i + 1 << '\n' << servers[i] << '\n';
-    }
+//    for (size_t i = 0; i < servers.size(); ++i) {
+//        os << i + 1 << '\n' << servers[i] << '\n';
+//    }
+    return os;
 }

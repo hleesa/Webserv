@@ -137,25 +137,29 @@ std::vector<std::vector<std::vector<std::string> > > getSeverContents(std::ifstr
     return server_contents;
 }
 
-Config::Config(const std::string& config_file) {
-
+void checkFileFormat(const std::string& file_name) {
     const std::string config_format = ".conf";
-    if (config_file.length() < config_format.length()) {
-        throw std::invalid_argument("Error: Invalid file name '" + config_file + "'");
+    if (file_name.length() < config_format.length()) {
+        throw std::invalid_argument("Error: Invalid file name '" + file_name + "'");
     }
-    else if (config_file.substr(config_file.length() - config_format.length()) != config_format) {
-        throw std::invalid_argument("Error: Invalid file format '" + config_file + "'");
+    else if (file_name.substr(file_name.length() - config_format.length()) != config_format) {
+        throw std::invalid_argument("Error: Invalid file format '" + file_name + "'");
     }
-    std::ifstream config(config_file.c_str());
-    if (!config.is_open()) {
-        throw std::invalid_argument("Error: Failed to open file '" + config_file + "'");
+    return;
+}
+
+Config::Config(const std::string& file_name) {
+    checkFileFormat(file_name);
+    std::ifstream file_stream(file_name.c_str());
+    if (!file_stream.is_open()) {
+        throw std::invalid_argument("Error: Failed to open file '" + file_name + "'");
     }
-    std::vector<std::vector<std::vector<std::string> > > server_contents = getSeverContents(config);
+    std::vector<std::vector<std::vector<std::string> > > server_contents = getSeverContents(file_stream);
     for (std::vector<std::vector<std::vector<std::string> > >::iterator server_content = server_contents.begin();
          server_content != server_contents.end(); ++server_content) {
         servers.push_back(Server(*server_content));
     }
-    config.close();
+    file_stream.close();
 }
 
 Config::Config() {

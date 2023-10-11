@@ -95,13 +95,14 @@ enum lineType getLineType(std::vector<std::string>& server_content, std::stack<c
     return INVALID;
 }
 
-std::vector<std::vector<std::string> > getSeverContents(std::ifstream& config) {
+std::vector<std::vector<std::vector<std::string> > > getSeverContents(std::ifstream& config) {
     std::string line;
-    std::vector<std::vector<std::string> > server_contents;
+    std::vector<std::vector<std::string > > server_content;
+    std::vector<std::vector<std::vector<std::string> > >server_contents;
     std::stack<char> brace_stack;
     while (std::getline(config, line)) {
-        std::vector<std::string> server_content = lineToWords(line);
-        enum lineType line_type = getLineType(server_content, brace_stack);
+        std::vector<std::string> one_line = lineToWords(line);
+        enum lineType line_type = getLineType(one_line, brace_stack);
         switch (line_type) {
             case SPACE:
             case COMMENT:
@@ -112,22 +113,24 @@ std::vector<std::vector<std::string> > getSeverContents(std::ifstream& config) {
                 break;
             case SERVER_OPEN:
                 brace_stack.push(line.back());
+                server_content.clear();
                 break;
             case LOCATION_OPEN:
                 brace_stack.push(line.back());
-                server_contents.push_back(server_content);
+                server_content.push_back(one_line);
                 break;
             case SEMICOLON:
                 line.pop_back();
-                server_content.back().pop_back();
-                server_contents.push_back(server_content);
+                one_line.back().pop_back();
+                server_content.push_back(one_line);
                 break;
             case LOCATION_CLOSE:
                 brace_stack.pop();
-                server_contents.push_back(server_content);
+                server_content.push_back(one_line);
                 break;
             case SERVER_CLOSE:
                 brace_stack.pop();
+                server_contents.push_back(server_content);
                 break;
         }
     }
@@ -147,19 +150,12 @@ Config::Config(const std::string& config_file) {
     if (!config.is_open()) {
         throw std::invalid_argument("Error: Failed to open file '" + config_file + "'");
     }
-    std::vector<std::vector<std::string> > server_contents = getSeverContents(config);
+    std::vector<std::vector<std::vector<std::string> > >server_contents = getSeverContents(config);
 
-    /**
-     * test
-     */
-    for (std::vector<std::vector<std::string> >::iterator it = server_contents.begin();
-         it != server_contents.end(); ++it) {
-        for (auto c: *it) {
-            std::cout << c << " ";
-        }
-        std::cout << '\n';
+    for (std::vector<std::vector<std::vector<std::string> > >::iterator server_content = server_contents.begin();
+         server_content != server_contents.end(); ++server_content) {
+        servers.push_back(Server(*server_content));
     }
-
     config.close();
 }
 

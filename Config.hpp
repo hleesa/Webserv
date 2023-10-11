@@ -20,19 +20,20 @@ class Config {
 private:
     std::vector<Server> servers;
 
-public:
     Config();
 
-    Config(const std::string &config_file);
+public:
 
-    Config(const Config &other);
+    Config(const std::string& file_name);
 
-    Config &operator=(const Config &ohter);
+    Config(const Config& other);
+
+    Config& operator=(const Config& other);
 
     ~Config();
 
+    std::vector<Server> getServers() const;
 };
-
 
 
 #endif //CONFIG_HPP

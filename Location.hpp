@@ -25,7 +25,7 @@ protected:
 	void parseAutoindex(std::vector<std::string>& line, std::set<std::string>& duplicated);
 
 	void checkDuplicated(const std::set<std::string>& duplicated, const std::string& directive);
-	void checkInvalidNumber(unsigned int size, unsigned int expected, const std::string& directive);
+	void checkInvalidNumber(bool isValid, const std::string& directive);
 	void checkHttpMethod(const std::string& value) const;
 	void setReturnCode(const std::string& value);
 	void setReturnString(const std::string& value);

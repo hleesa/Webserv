@@ -121,7 +121,12 @@ std::vector<std::vector<std::vector<std::string> > > getSeverContents(std::ifstr
                 break;
             case SEMICOLON:
                 line.pop_back();
-                one_line.back().pop_back();
+                if(one_line.back().size() == 1) {
+                    one_line.pop_back();
+                }
+                else {
+                    one_line.back().pop_back();
+                }
                 server_content.push_back(one_line);
                 break;
             case LOCATION_CLOSE:

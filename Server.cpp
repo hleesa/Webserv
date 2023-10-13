@@ -32,7 +32,10 @@ Server::Server(std::vector< std::vector< std::string> >& server_block)
 			locations.insert(make_pair(key, unit_loc));
 		}
 	}
-	// print_checker();
+	if (index.size() == 0) {
+		index.push_back("index.html");//index 부분 default value 초기화.
+	}
+	print_checker();
 }
 
 Server::Server(const Server& other) {
@@ -95,7 +98,7 @@ void Server::server_token_parser(std::vector<std::string> one_line, std::set<std
 			index.push_back(one_line[i]);
 		}
 
-	} else if (one_line[0] == "limit_body_size" && one_line.size() == 2) {
+	} else if (one_line[0] == "client_max_body_size" && one_line.size() == 2) {
 		std::stringstream ss(one_line[1]);
 		long value;
 		ss >> value;
@@ -110,35 +113,35 @@ void Server::server_token_parser(std::vector<std::string> one_line, std::set<std
 // 인자 확인하는 함수
 
 
-// void Server::print_checker(void) {
-// 	std::cout << "=========================\n";
-// 	std::cout << "port : " << port << std::endl;
-// 	std::cout << std::endl;
-// 	std::cout << "host : " << host << std::endl;
-// 	std::cout << std::endl;
-// 	for (int i = 0; i < name.size(); i++) {
-// 		std::cout << "name : " << name[i]<< std::endl;
-// 	}
-// 	std::cout << std::endl;
-// 	std::cout << "error_page : " << std::endl;
-// 	print_map(error_page);
-// 	std::cout << std::endl;
-// 	std::cout << "root : " << root << std::endl;
-// 	std::cout << std::endl;
-// 	for (int i = 0; i < index.size(); i++) {
-// 		std::cout << "index : " << index[i]<< std::endl;
-// 	}
-// 	std::cout << std::endl;
-// 	std::cout << "limit_body_size : " << limit_body_size << std::endl;
-// 	std::cout << std::endl;
-// 	std::cout << "locations : " << std::endl;
-// 	print_map(locations);
-// 	std::cout << std::endl;
-// }
+void Server::print_checker(void) {
+	std::cout << "============server block=============\n";
+	std::cout << "port : " << port << std::endl;
+	std::cout << std::endl;
+	std::cout << "host : " << host << std::endl;
+	std::cout << std::endl;
+	for (int i = 0; i < name.size(); i++) {
+		std::cout << "name : " << name[i]<< std::endl;
+	}
+	std::cout << std::endl;
+	std::cout << "error_page : " << std::endl;
+	print_map(error_page);
+	std::cout << std::endl;
+	std::cout << "root : " << root << std::endl;
+	std::cout << std::endl;
+	for (int i = 0; i < index.size(); i++) {
+		std::cout << "index : " << index[i]<< std::endl;
+	}
+	std::cout << std::endl;
+	std::cout << "limit_body_size : " << limit_body_size << std::endl;
+	std::cout << std::endl;
+	std::cout << "locations : " << std::endl;
+	print_map(locations);
+	std::cout << std::endl;
+}
 
-// template<typename K, typename V>
-// void Server::print_map(std::map<K, V> &m) {
-// 	for (auto &pair: m) {
-// 		std::cout << "{" << pair.first << ": " << pair.second << "}\n";
-// 	}
-// }
+template<typename K, typename V>
+void Server::print_map(std::map<K, V> &m) {
+	for (auto &pair: m) {
+		std::cout << "-------------first-------------\n" << pair.first << "\n-------------second-------------\n" << pair.second << "\n";
+	}
+}

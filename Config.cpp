@@ -59,6 +59,9 @@ Config& Config::operator=(const Config& other) {
 
 Config::~Config() {}
 
+int Config::getPort() const {
+	return this->port;
+}
 
 void Config::server_token_parser(std::vector<std::string> one_line, std::set<std::string>& duplicated) {
 	if (one_line.empty())

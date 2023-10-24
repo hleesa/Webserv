@@ -35,6 +35,7 @@ class Config {
 
 		~Config();
 
+		int getPort() const;
 		void server_token_parser(std::vector<std::string> one_line, std::set<std::string>& duplicated);
 		// void server_token_parser(std::string key, std::stringstream& one_line, std::set<std::string>& duplicated);
 

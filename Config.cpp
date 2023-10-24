@@ -1,196 +1,147 @@
 
 #include "Config.hpp"
-#include <fstream>
-#include <sstream>
-#include <iostream>
-#include <string>
-#include <stack>
+#include "Location.hpp"
 
-/**
-* 1. 파일 열기
-* 2. 서버 블록을 읽어서 server 객체 생성
-* 3. server {}의 내용물만
-**/
+Config::Config() {}
 
-bool isValidLineTerminator(const std::vector<std::string>& server_content) {
-    const std::string line_term = "{;}";
-    if (server_content.empty()) {
-        return true;
-    }
-    else if (line_term.find(server_content.back().back()) == std::string::npos) {
-        return false;
-    }
-    const int char_size = 256;
-    int counter[char_size] = {0};
-    for (std::vector<std::string>::const_iterator content = server_content.begin();
-         content != server_content.end(); ++content) {
-        for (std::string::const_iterator ch = content->begin(); ch != content->end(); ++ch) {
-            ++counter[*ch];
-        }
-    }
-    int num_of_line_term = 0;
-    for (std::string::const_iterator it = line_term.begin(); it != line_term.end(); ++it) {
-        num_of_line_term += counter[*it];
-    }
-    return num_of_line_term == 1;
+Config::Config(std::vector< std::vector< std::string> >& server_block)
+	:	port(80), host(""), root("html"), limit_body_size(1e6)
+{
+	std::set<std::string> duplicated;
+	int i = 0;
+
+	for (;i < server_block.size(); i++) {
+		if (server_block[i][0] == "location") {
+			break;
+		} else if (duplicated.find(server_block[i][0]) != duplicated.end()) {
+			throw std::invalid_argument("Error: duplicated argument\n");
+		} else {
+			server_token_parser(server_block[i], duplicated);
+		}
+	}
+	for (; i < server_block.size(); i++) {
+		std::string key;
+		std::vector< std::vector<std::string> > loc_block;
+		if (server_block[i][0] == "location") {
+			key = server_block[i][1];
+			i++;
+			for (; server_block[i][0] != "}"; ++i) {
+				loc_block.push_back(server_block[i]);
+			}
+			Location unit_loc(loc_block);
+			locations.insert(make_pair(key, unit_loc));
+		}
+	}
+	if (index.size() == 0) {
+		index.push_back("index.html");//index 부분 default value 초기화.
+	}
+	print_checker();
 }
 
-std::vector<std::string> lineToWords(const std::string& line) {
-    std::string word;
-    std::vector<std::string> words;
-    std::stringstream ss(line);
-    while (ss >> word) {
-        words.push_back(word);
-    }
-    return words;
-}
-
-bool isTargetBlockOpen(const std::vector<std::string> words, const std::string target, const int num_of_words) {
-    if (words.size() != num_of_words) {
-        return false;
-    }
-    return (words.front() == target) && (words.back() == "{");
-}
-
-bool isServerOpen(const std::vector<std::string>& words) {
-    return isTargetBlockOpen(words, "server", 2);
-}
-
-bool isLocationOpen(const std::vector<std::string>& words) {
-    return isTargetBlockOpen(words, "location", 3);
-}
-
-enum lineType getLineType(const std::vector<std::string>& server_content, const std::stack<char>& brace_stack) {
-    if (!isValidLineTerminator(server_content)) {
-        return INVALID;
-    }
-    else if (server_content.empty()) {
-        return SPACE;
-    }
-    else if (server_content.front().front() == '#') {
-        return COMMENT;
-    }
-    else if (server_content.back().back() == '{') {
-        if (brace_stack.empty() && isServerOpen(server_content)) {
-            return SERVER_OPEN;
-        }
-        else if (!brace_stack.empty() && isLocationOpen(server_content)) {
-            return LOCATION_OPEN;
-        }
-    }
-    else if (server_content.back().back() == ';') {
-        return SEMICOLON;
-    }
-    else if (server_content.back().back() == '}') {
-        if (brace_stack.empty() || brace_stack.top() != '{' || server_content.size() != 1) {
-            return INVALID;
-        }
-        else if (brace_stack.size() == 2) {
-            return LOCATION_CLOSE;
-        }
-        else if (brace_stack.size() == 1) {
-            return SERVER_CLOSE;
-        }
-    }
-    return INVALID;
-}
-
-std::vector<std::vector<std::vector<std::string> > > getSeverContents(std::ifstream& config) {
-    std::string line;
-    std::vector<std::vector<std::string> > server_content;
-    std::vector<std::vector<std::vector<std::string> > > server_contents;
-    std::stack<char> brace_stack;
-    while (std::getline(config, line)) {
-        std::vector<std::string> one_line = lineToWords(line);
-        enum lineType line_type = getLineType(one_line, brace_stack);
-        switch (line_type) {
-            case SPACE:
-            case COMMENT:
-                continue;
-                break;
-            case INVALID:
-                throw std::invalid_argument("Error: Syntax");
-                break;
-            case SERVER_OPEN:
-                brace_stack.push(line.back());
-                server_content.clear();
-                break;
-            case LOCATION_OPEN:
-                brace_stack.push(line.back());
-                server_content.push_back(one_line);
-                break;
-            case SEMICOLON:
-                line.pop_back();
-                if(one_line.back().size() == 1) {
-                    one_line.pop_back();
-                }
-                else {
-                    one_line.back().pop_back();
-                }
-                server_content.push_back(one_line);
-                break;
-            case LOCATION_CLOSE:
-                brace_stack.pop();
-                server_content.push_back(one_line);
-                break;
-            case SERVER_CLOSE:
-                brace_stack.pop();
-                server_contents.push_back(server_content);
-                break;
-        }
-    }
-    return server_contents;
-}
-
-void checkFileFormat(const std::string& file_name) {
-    const std::string config_format = ".conf";
-    if (file_name.length() < config_format.length()) {
-        throw std::invalid_argument("Error: Invalid file name '" + file_name + "'");
-    }
-    else if (file_name.substr(file_name.length() - config_format.length()) != config_format) {
-        throw std::invalid_argument("Error: Invalid file format '" + file_name + "'");
-    }
-    return;
-}
-
-Config::Config(const std::string& file_name) {
-    checkFileFormat(file_name);
-    std::ifstream file_stream(file_name.c_str());
-    if (!file_stream.is_open()) {
-        throw std::invalid_argument("Error: Failed to open file '" + file_name + "'");
-    }
-    std::vector<std::vector<std::vector<std::string> > > server_contents = getSeverContents(file_stream);
-    for (std::vector<std::vector<std::vector<std::string> > >::iterator server_content = server_contents.begin();
-         server_content != server_contents.end(); ++server_content) {
-        servers.push_back(Server(*server_content));
-    }
-    file_stream.close();
-}
-
-Config::Config() {
-}
-
-Config::Config(const Config& other) : servers(other.servers) {
+Config::Config(const Config& other) {
+	*this = other;
 }
 
 Config& Config::operator=(const Config& other) {
-    if (this != &other) {
-        servers = other.servers;
-    }
-    return *this;
+	if (this != &other) {
+		port = other.port;
+		host = other.host;
+		name = other.name;
+		error_page = other.error_page;
+		root = other.root;
+		index = other.index;
+		limit_body_size = other.limit_body_size;
+		locations = other.locations;
+		// cgi_location = other.cgi_location;
+	}
+	return (*this);
 }
 
-Config::~Config() {
+Config::~Config() {}
+
+
+void Config::server_token_parser(std::vector<std::string> one_line, std::set<std::string>& duplicated) {
+	if (one_line.empty())
+		throw std::invalid_argument("Error: invalid arguments\n");
+
+	if (one_line[0] == "listen" && one_line.size() == 2) {
+		std::stringstream ss(one_line[1]);
+		int value;
+		ss >> value;
+		if (!value)
+			return ;
+		port = value;
+		duplicated.insert(one_line[0]);
+
+	} else if (one_line[0] == "host" && one_line.size() == 2) {
+		std::string value;
+		host = one_line[1];
+		duplicated.insert(one_line[0]);
+
+	} else if (one_line[0] == "server_name" && one_line.size() >= 2) {
+		for (int i = 1; i < one_line.size(); i++) {
+			name.push_back(one_line[i]);
+		}
+
+	} else if (one_line[0] == "error_page" && one_line.size() == 3) {
+		std::stringstream ss(one_line[1]);
+		int err_no;
+		ss >> err_no;
+		error_page.insert(std::pair<int, std::string>(err_no, one_line[2]));
+	
+	} else if (one_line[0] == "root" && one_line.size() == 2) {
+		root = one_line[1];
+		duplicated.insert(one_line[0]);
+
+	} else if (one_line[0] == "index" && one_line.size() >= 2) {
+		for (int i = 1; i < one_line.size(); i++) {
+			index.push_back(one_line[i]);
+		}
+
+	} else if (one_line[0] == "client_max_body_size" && one_line.size() == 2) {
+		std::stringstream ss(one_line[1]);
+		long value;
+		ss >> value;
+		limit_body_size = value;
+		duplicated.insert(one_line[0]);
+	} else {
+		throw std::invalid_argument("Error: invalid server key\n");
+	}
 }
 
-std::vector<Server> Config::getServers() const {
-    return servers;
+
+// 인자 확인하는 함수
+
+
+void Config::print_checker(void) {
+	std::cout << "============server block=============\n";
+	std::cout << "port : " << port << std::endl;
+	std::cout << std::endl;
+	std::cout << "host : " << host << std::endl;
+	std::cout << std::endl;
+	for (int i = 0; i < name.size(); i++) {
+		std::cout << "name : " << name[i]<< std::endl;
+	}
+	std::cout << std::endl;
+	std::cout << "error_page : " << std::endl;
+	print_map(error_page);
+	std::cout << std::endl;
+	std::cout << "root : " << root << std::endl;
+	std::cout << std::endl;
+	for (int i = 0; i < index.size(); i++) {
+		std::cout << "index : " << index[i]<< std::endl;
+	}
+	std::cout << std::endl;
+	std::cout << "limit_body_size : " << limit_body_size << std::endl;
+	std::cout << std::endl;
+	std::cout << "locations : " << std::endl;
+	print_map(locations);
+	std::cout << std::endl;
 }
 
-std::ostream& operator<<(std::ostream& os, const Config& cfg) {
-    std::vector<Server> servers = cfg.getServers();
-//    for (size_t i = 0; i < servers.size(); ++i) {
-//        os << i + 1 << '\n' << servers[i] << '\n';
-//    }
-    return os;
+template<typename K, typename V>
+void Config::print_map(std::map<K, V> &m) {
+	for (auto &pair: m) {
+		std::cout << "-------------first-------------\n" << pair.first << "\n-------------second-------------\n" << pair.second << "\n";
+	}
 }

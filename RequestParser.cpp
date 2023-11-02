@@ -8,6 +8,8 @@
 #define NUM_OF_VERSION 3
 
 bool isValidRequestLineFormat(const std::string& request_line) {
+    if (request_line.front() == ' ' || request_line.back() == ' ')
+        return false;
     std::vector<size_t> spaces;
     int num_of_other_whitespace = 0;
     for (size_t i = 0; i < request_line.size(); ++i) {
@@ -77,7 +79,7 @@ bool isValidFieldName(const std::string& field_name) {
         return false;
     }
     for (std::string::const_iterator ch = field_name.begin(); ch != field_name.end(); ++ch) {
-        if (isspace(*ch)) {
+        if (isspace(*ch) || !isprint(*ch)) {
             return false;
         }
     }

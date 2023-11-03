@@ -5,8 +5,7 @@ enum ReadingStatus {
 	StartLine,
 	HEADER,
 	BODY,
-	END,
-	ERROR
+	END
 };
 
 #endif

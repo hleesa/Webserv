@@ -9,3 +9,7 @@ HttpRequestMessage::HttpRequestMessage(std::vector<std::string> request_line,
     message_body = message_body;
     status_code = status_code;
 }
+	
+std::vector<std::string> HttpRequestMessage::getRequestLine() {
+	return request_line;
+}

@@ -29,7 +29,7 @@ bool isValidRequestLineFormat(const std::string& request_line) {
 
 std::vector<std::string> tokenizeRequestLine(const std::string& request_line) {
     if (!isValidRequestLineFormat(request_line)) {
-        throw std::invalid_argument("invalid request line format");
+        throw std::invalid_argument("400");
     }
     std::string token;
     std::vector<std::string> tokens;
@@ -44,7 +44,7 @@ void validateMethod(const std::string& method) {
     std::string allow_method_list[] = {"GET", "POST", "DELETE"};
     std::vector<std::string> allow_method(allow_method_list, allow_method_list + NUM_OF_ALLOW_METHOD);
     if (std::find(allow_method.begin(), allow_method.end(), method) == allow_method.end()) {
-        throw std::invalid_argument("invalid http method");
+        throw std::invalid_argument("501");
     }
     return;
 }
@@ -53,7 +53,7 @@ void validateHttpVersion(const std::string& http_version) {
     std::string http_version_list[] = {"HTTP/1.1", "HTTP/1.0", "HTTP/0.9"};
     std::vector<std::string> versions(http_version_list, http_version_list + NUM_OF_VERSION);
     if (std::find(versions.begin(), versions.end(), http_version) == versions.end()) {
-        throw std::invalid_argument("invalid http version");
+        throw std::invalid_argument("505");
     }
     return;
 }
@@ -134,14 +134,20 @@ RequestParser::parseHeaderFields(const std::vector<std::string>& request) {
     return header_fields;
 }
 
-std::string RequestParser::parseMessageBody(const std::string& message_body) {
-    return message_body;
-}
-
 HttpRequestMessage RequestParser::parseRequestMessage(std::vector<std::string> request) {
     // request 또는 request 의 각 라인  or config 가 비어있는 경우 예외처리?
-    return HttpRequestMessage(parseRequestLine(request.front()), parseHeaderFields(request),
-                              parseMessageBody(request.back()));
+    int status_code = 0;
+    std::vector<std::string> request_line;
+    std::map<std::string, std::vector<std::string> > header_fields;
+    std::string message_body;
+    try{
+        request_line = parseRequestLine(request.front());
+        header_fields = parseHeaderFields(request);
+        message_body = request.back();
+    } catch (std::exception& e) {
+        status_code = std::stoi(e.what());
+    }
+    return HttpRequestMessage(request_line, header_fields, message_body, status_code);
 }
 
 

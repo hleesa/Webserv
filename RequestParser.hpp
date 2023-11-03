@@ -11,6 +11,7 @@
 class RequestParser {
 
 private:
+
     std::vector<std::string> parseRequestLine(const std::string& request_line);
 
     std::map<std::string, std::vector<std::string> > parseHeaderFields(const std::vector<std::string>& request);

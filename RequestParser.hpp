@@ -44,6 +44,7 @@ struct AssembleInfo {
 	AssembleInfo() {
 		request_line.clear();
 		header_fields.clear();
+		status_code = 0;
 		buffer.clear();
 		status = StartLine;
 	}
@@ -82,8 +83,6 @@ class RequestParser {
 		void run(const int ident, const char* newContent);
 		void checkReadingStatus(AssembleInfo& info);
 		void clear(const int ident);
-
 };
-
 
 #endif

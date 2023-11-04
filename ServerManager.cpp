@@ -65,9 +65,9 @@ void ServerManager::processEvents(const int events) {
             //servers[event.ident].clearContent();
 			if (parser.getReadingStatus(event->ident) == END) {
 				HttpRequestMessage msg = parser.getHttpRequestMessage(event->ident);
-
-				std::cout << msg.getRequestLine().front() << std::endl; 
-
+				
+				std::cout << msg.getStatusCode() << std::endl;
+				parser.clear(event->ident);
 			}
             processWriteEvent(*event);
         }

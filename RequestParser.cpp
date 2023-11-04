@@ -251,7 +251,8 @@ void RequestParser::clear(const int ident) {
 	info->header_fields.clear();
 	info->status_code = 0;
 	info->status = StartLine;
-	info->body = Body();	
+	info->method.clear();
+	info->body = Body();
 }
 
 std::string RequestParser::getMethod(const std::string& line) {

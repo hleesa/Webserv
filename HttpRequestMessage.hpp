@@ -21,7 +21,7 @@ public:
 
     HttpRequestMessage &operator=(const HttpRequestMessage &other);
 
-	std::vector<std::string> getRequestLine();
+	int getStatusCode();
 };
 
 

@@ -20,6 +20,6 @@ HttpRequestMessage &HttpRequestMessage::operator=(const HttpRequestMessage &othe
     return *this;
 }
 	
-std::vector<std::string> HttpRequestMessage::getRequestLine() {
-	return request_line;
+int HttpRequestMessage::getStatusCode() {
+	return status_code;
 }

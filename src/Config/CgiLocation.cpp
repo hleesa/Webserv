@@ -1,2 +1,2 @@
 
-#include "CgiLocation.hpp"
+#include "../../inc/CgiLocation.hpp"

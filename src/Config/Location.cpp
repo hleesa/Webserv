@@ -1,5 +1,5 @@
 
-#include "Location.hpp"
+#include "../../inc/Location.hpp"
 
 #include <iostream>
 

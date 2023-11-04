@@ -1,5 +1,5 @@
 
-#include "ConfigParser.hpp"
+#include "../../inc/ConfigParser.hpp"
 #include <fstream>
 #include <sstream>
 #include <iostream>

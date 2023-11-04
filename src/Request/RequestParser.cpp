@@ -1,4 +1,6 @@
-#include "RequestParser.hpp"
+#include "../../inc/RequestParser.hpp"
+#include <vector>
+#include <string>
 #include <sstream>
 #include <algorithm>
 

@@ -1,6 +1,6 @@
 
-#include "Config.hpp"
-#include "Location.hpp"
+#include "../../inc/Config.hpp"
+#include "../../inc/Location.hpp"
 
 Config::Config() {}
 

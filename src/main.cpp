@@ -1,6 +1,6 @@
 #include <iostream>
-#include "ConfigParser.hpp"
-#include "ServerManager.hpp"
+#include "../inc/ConfigParser.hpp"
+#include "../inc/ServerManager.hpp"
 
 int main() {
     try {

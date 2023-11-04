@@ -1,5 +1,5 @@
-#ifndef REQUESTASSEMBLER_HPP
-#define REQUESTASSEMBLER_HPP
+#ifndef REQUESTPARSER_HPP
+#define REQUESTPARSER_HPP
 
 #include <string>
 #include <map>

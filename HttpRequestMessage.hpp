@@ -19,6 +19,8 @@ public:
                        std::map<std::string, std::vector<std::string> > header_fields, std::string message_body,
                        int status_code);
 
+    HttpRequestMessage &operator=(const HttpRequestMessage &other);
+
 	std::vector<std::string> getRequestLine();
 };
 

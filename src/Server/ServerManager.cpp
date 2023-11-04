@@ -58,18 +58,14 @@ void ServerManager::processEvents(const int events) {
         }
         else if (event->filter == EVFILT_READ && servers.find(event->ident) != servers.end()) {
             processReadEvent(*event);
-        }
-        else if (event->filter == EVFILT_WRITE && servers.find(event->ident) != servers.end()) { // status 확인
-            // status에 대한 처리
-            // status == 요청 다 읽음 -> Request parser -> Request
-            //servers[event.ident].clearContent();
 			if (parser.getReadingStatus(event->ident) == END) {
 				HttpRequestMessage msg = parser.getHttpRequestMessage(event->ident);
-				
-				std::cout << msg.getStatusCode() << std::endl;
 				parser.clear(event->ident);
+				// write event 추가
 			}
-            processWriteEvent(*event);
+        }
+        else if (event->filter == EVFILT_WRITE && servers.find(event->ident) != servers.end()) {
+			processWriteEvent(*event);
         }
     }
 }
@@ -97,23 +93,20 @@ void ServerManager::processReadEvent(const struct kevent& event) {
     char buff[BUFFER_SIZE + 1];
 
     memset(buff, 0, sizeof(buff));
-    n = read(event.ident, &buff, BUFFER_SIZE);
+    n = read(event.ident, &buff, BUFFER_SIZE); // recv
     if (n < 1) {
         disconnectWithClient(event);
         return;
     }
     buff[n] = 0;
 	parser.run(event.ident, buff);
-    // servers[event.ident].appendContent(buff);
-    // servers[event.ident].checkContent();
 }
 
 void ServerManager::processWriteEvent(const struct kevent& event) {
     int n = 0;
-    std::string response_content;
 
-    // Request -> Response -> String
-    //write(event.ident, response_content, response_content.size());
+	// TO DO : Request -> Response
+    // send(event.ident, response_content, response_content.size());
     if (n == ERROR) {
         disconnectWithClient(event);
         return;

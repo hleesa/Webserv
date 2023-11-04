@@ -66,16 +66,21 @@ bool RequestParser::processStartLine(AssembleInfo& info) {
 	int pos;
 	
 	pos = info.buffer.find('\n');
-	if (pos == std::string::npos)
+	if (pos == std::string::npos) {
 		return false;
+	}
 	line = info.buffer.substr(0, pos);
 	trimCarriageReturn(line);
-	parseRequestLine(info, line);
+	if (line.empty()) {
+		info.buffer = info.buffer.substr(pos + 1);
+		return false;
+	}
 	info.status = HEADER;
 	info.buffer = info.buffer.substr(pos + 1);
 	info.method = getMethod(line);
 	if (info.method != "POST")
 		info.body.status = MustNot;
+	parseRequestLine(info, line);
 	return true;
 }
 
@@ -92,7 +97,6 @@ bool RequestParser::processHeader(AssembleInfo& info) {
 		info.body.status = getBodyStatus(line, info.body);
 		parseHeaderFields(info, line);	
 		info.buffer = info.buffer.substr(pos + 1);
-
 		pos = info.buffer.find('\n');
 		if (pos == std::string::npos)
 			return false;
@@ -101,9 +105,9 @@ bool RequestParser::processHeader(AssembleInfo& info) {
 	}
 	if (isCRLF(line)) {
 		info.status = BODY;
+		info.buffer = info.buffer.substr(pos + 1);
 		if (info.header_fields.find("host") == info.header_fields.end())
         	throw 400;
-		info.buffer = info.buffer.substr(pos + 1);
 	}
 	return true;
 }

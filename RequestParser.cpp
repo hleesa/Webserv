@@ -1,11 +1,274 @@
-
 #include "RequestParser.hpp"
-#include "sstream"
-#include "Config.hpp"
-#include "algorithm"
+#include <sstream>
+#include <algorithm>
 
-#define NUM_OF_ALLOW_METHOD 3
-#define NUM_OF_VERSION 3
+RequestParser::RequestParser() {}
+
+RequestParser::RequestParser(const RequestParser& other) {
+	*this = other;
+}
+
+RequestParser& RequestParser::operator=(const RequestParser& other) {
+	if (this != &other)
+	{
+		this->map = other.map;
+	}
+	return *this;
+}
+
+RequestParser::~RequestParser() {}
+
+ReadingStatus RequestParser::getReadingStatus(const int ident) {
+	return map[ident].status;
+}
+
+HttpRequestMessage RequestParser::getHttpRequestMessage(const int ident) {
+	AssembleInfo info = map[ident];
+    
+	return HttpRequestMessage(info.request_line, info.header_fields, info.body.content, info.status_code);
+}
+
+void RequestParser::run(const int ident, const char* newContent) {
+	AssembleInfo *info = &map[ident];
+
+	info->buffer += newContent;
+	try {
+		checkReadingStatus(*info);
+    }
+	catch (const int e) {
+		info->status_code = e;
+		info->status = END;
+	}
+}
+
+void RequestParser::checkReadingStatus(AssembleInfo& info) {
+	bool isRunning = true;
+
+	if (info.status == StartLine) {
+		isRunning = processStartLine(info);
+	}
+	if (!isRunning) {
+		return ;
+	}
+	if (info.status == HEADER) {
+		isRunning = processHeader(info);
+	}
+	if (!isRunning) {
+		return ;
+	}
+	if (info.status == BODY) {
+		info.status = processBody(info);
+	}
+}
+
+bool RequestParser::processStartLine(AssembleInfo& info) {
+	std::string line;
+	int pos;
+	
+	pos = info.buffer.find('\n');
+	if (pos == std::string::npos) {
+		return false;
+	}
+	line = info.buffer.substr(0, pos);
+	trimCarriageReturn(line);
+	if (line.empty()) {
+		info.buffer = info.buffer.substr(pos + 1);
+		return false;
+	}
+	info.status = HEADER;
+	info.buffer = info.buffer.substr(pos + 1);
+	info.method = getMethod(line);
+	if (info.method != "POST")
+		info.body.status = MustNot;
+	parseRequestLine(info, line);
+	return true;
+}
+
+bool RequestParser::processHeader(AssembleInfo& info) {
+	std::string line;
+	int pos;
+	
+	pos = info.buffer.find('\n');
+	if (pos == std::string::npos)
+		return false;
+	line = info.buffer.substr(0, pos);
+	trimCarriageReturn(line);
+	while (!isCRLF(line)) {
+		info.body.status = getBodyStatus(line, info.body);
+		parseHeaderFields(info, line);	
+		info.buffer = info.buffer.substr(pos + 1);
+		pos = info.buffer.find('\n');
+		if (pos == std::string::npos)
+			return false;
+		line = info.buffer.substr(0, pos);
+		trimCarriageReturn(line);
+	}
+	if (isCRLF(line)) {
+		info.status = BODY;
+		info.buffer = info.buffer.substr(pos + 1);
+		if (info.header_fields.find("host") == info.header_fields.end())
+        	throw 400;
+	}
+	return true;
+}
+
+ReadingStatus RequestParser::processBody(AssembleInfo& info) {
+	if (info.body.status == MustNot) {
+		return END;
+	}
+	if (info.body.status == None && info.method == "POST") {
+		throw 411;
+	}
+	if (info.body.status == ENCODING) {
+		return processEncoding(info.body, info.buffer);
+	}
+	if (info.body.status == ContentLength) {
+		return processContentLength(info.body, info.buffer);
+	}
+	return BODY;
+}
+
+ReadingStatus RequestParser::processEncoding(Body& body, std::string& buffer) {
+	int tmp;
+	int size;
+	int pos;
+	std::string line;
+
+	while ((size = getChunkedSize(buffer, tmp)) > 0) {
+		pos = buffer.substr(tmp + 1).find("\n");
+		if (pos == std::string::npos) {
+			return BODY;
+		}
+		line = buffer.substr(tmp + 1, pos);
+		trimCarriageReturn(line);
+		if (line.size() != size) {
+			throw 400;
+		}
+		body.content += line;
+		buffer = buffer.substr(tmp + pos + 2);
+	}
+	if (size == -1) {
+		return BODY;
+	}
+	// size == 0
+	pos = buffer.substr(tmp + 1).find("\n");
+	if (pos == std::string::npos) {
+		throw 400;
+	}
+	line = buffer.substr(tmp + 1, pos);
+	trimCarriageReturn(line);
+	if (!line.empty()) {
+		throw 400;
+	}
+	return END;
+}
+
+int RequestParser::getChunkedSize(std::string& buffer, int& pos) {
+	int size;
+	std::string line;
+	
+	pos = buffer.find("\n");
+	if (pos == std::string::npos) {
+		return -1;
+	}
+	line = buffer.substr(0, pos);
+	trimCarriageReturn(line);
+	if (line.size() != 1 || !isdigit(line[0])) {
+		throw 400;
+	}
+	return line[0] - '0';
+}
+
+ReadingStatus RequestParser::processContentLength(Body& body, std::string& buffer) {
+	if (buffer.size() < body.length)
+		return BODY;
+	body.content = buffer.substr(0, body.length);
+	buffer = buffer.substr(body.length);
+	return END;
+}
+
+BodyStatus RequestParser::getBodyStatus(const std::string line, Body& body) {
+	if (body.status == ENCODING || body.status == MustNot) {
+		return body.status;
+	}
+	if (hasTransferEncoding(line)) {
+		return ENCODING;
+	}
+	if (body.status == ContentLength)
+		return ContentLength;
+	int length = getContentLength(line);
+	if (length > 0) {
+		body.length = length;
+		return ContentLength;	
+	}
+	return None;
+}
+
+bool RequestParser::hasTransferEncoding(const std::string line) {
+	std::stringstream ss(line);
+	std::string key("transfer-encoding");
+	std::string tmp;
+
+	std::getline(ss, tmp, ':');
+	convertLowerCase(tmp);
+	if (tmp != key) {
+		return false;
+	}
+	ss >> tmp;
+	return tmp == "chunked";
+}
+
+int RequestParser::getContentLength(const std::string line) {
+	std::stringstream ss(line);
+	std::string key("content-length");
+	std::string tmp;
+	int value;
+	
+	std::getline(ss, tmp, ':');
+	convertLowerCase(tmp);
+	if (tmp != key) {
+		return 0;
+	}
+	ss >> value;
+	return value;
+}
+
+bool RequestParser::isCRLF(const std::string line) {
+	return line == "\r" || line.empty();
+}
+
+void RequestParser::trimCarriageReturn(std::string& line) {
+	if (*--line.end() == '\r')
+		line.resize(line.size() - 1);
+}
+
+void RequestParser::convertLowerCase(std::string& string) {
+	for (unsigned int idx = 0; idx < string.size(); idx++) {
+		string[idx] = tolower(string[idx]);
+	}
+}
+
+void RequestParser::clear(const int ident) {
+	AssembleInfo *info = &map[ident];
+	
+	info->request_line.clear();
+	info->header_fields.clear();
+	info->status_code = 0;
+	info->status = StartLine;
+	info->method.clear();
+	info->body = Body();
+}
+
+std::string RequestParser::getMethod(const std::string& line) {
+	std::stringstream ss(line);
+	std::string method;
+
+	ss >> method;
+	return method;
+}
+
+
+/* parse */
 
 bool isValidRequestLineFormat(const std::string& request_line) {
     if (request_line.front() == ' ' || request_line.back() == ' ')
@@ -29,7 +292,7 @@ bool isValidRequestLineFormat(const std::string& request_line) {
 
 std::vector<std::string> tokenizeRequestLine(const std::string& request_line) {
     if (!isValidRequestLineFormat(request_line)) {
-        throw std::invalid_argument("400");
+		throw 400;
     }
     std::string token;
     std::vector<std::string> tokens;
@@ -44,7 +307,7 @@ void validateMethod(const std::string& method) {
     std::string allow_method_list[] = {"GET", "POST", "DELETE"};
     std::vector<std::string> allow_method(allow_method_list, allow_method_list + NUM_OF_ALLOW_METHOD);
     if (std::find(allow_method.begin(), allow_method.end(), method) == allow_method.end()) {
-        throw std::invalid_argument("501");
+		throw 501;
     }
     return;
 }
@@ -53,17 +316,17 @@ void validateHttpVersion(const std::string& http_version) {
     std::string http_version_list[] = {"HTTP/1.1", "HTTP/1.0", "HTTP/0.9"};
     std::vector<std::string> versions(http_version_list, http_version_list + NUM_OF_VERSION);
     if (std::find(versions.begin(), versions.end(), http_version) == versions.end()) {
-        throw std::invalid_argument("505");
-    }
+		throw 505;
+	}
     return;
 }
 
-std::vector<std::string> RequestParser::parseRequestLine(const std::string& request_line) {
-    std::vector<std::string> request = tokenizeRequestLine(request_line);
+void RequestParser::parseRequestLine(AssembleInfo& info, const std::string& line) {
+    std::vector<std::string> request = tokenizeRequestLine(line);
     validateMethod(request.front());
     // validRequestTarget
     validateHttpVersion(request.back());
-    return request;
+	info.request_line = request;
 }
 
 bool isVisibleString(const std::string& str) {
@@ -122,32 +385,9 @@ std::vector<std::string> tokenizeHeaderFiled(const std::string& header) {
     return tokens;
 }
 
-std::map<std::string, std::vector<std::string> >
-RequestParser::parseHeaderFields(const std::vector<std::string>& request) {
-    std::map<std::string, std::vector<std::string> > header_fields;
-    for (size_t i = 1; i + 1 < request.size(); ++i) {
-        std::vector<std::string> header_field = tokenizeHeaderFiled(request[i]);
-        if (header_field.empty()) continue;
-        header_fields[header_field.front()].insert(header_fields[header_field.front()].end(), header_field.begin() + 1,
-                                                   header_field.end());
-    }
-    return header_fields;
+void RequestParser::parseHeaderFields(AssembleInfo& info, const std::string line) {
+	std::vector<std::string> header_field = tokenizeHeaderFiled(line);
+	if (!header_field.empty())
+		info.header_fields[header_field.front()]
+		.insert(info.header_fields[header_field.front()].end(), header_field.begin() + 1, header_field.end());
 }
-
-HttpRequestMessage RequestParser::parseRequestMessage(std::vector<std::string> request) {
-    // request 또는 request 의 각 라인  or config 가 비어있는 경우 예외처리?
-    int status_code = 0;
-    std::vector<std::string> request_line;
-    std::map<std::string, std::vector<std::string> > header_fields;
-    std::string message_body;
-    try{
-        request_line = parseRequestLine(request.front());
-        header_fields = parseHeaderFields(request);
-        message_body = request.back();
-    } catch (std::exception& e) {
-        status_code = std::stoi(e.what());
-    }
-    return HttpRequestMessage(request_line, header_fields, message_body, status_code);
-}
-
-

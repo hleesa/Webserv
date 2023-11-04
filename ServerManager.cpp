@@ -63,6 +63,12 @@ void ServerManager::processEvents(const int events) {
             // status에 대한 처리
             // status == 요청 다 읽음 -> Request parser -> Request
             //servers[event.ident].clearContent();
+			if (parser.getReadingStatus(event->ident) == END) {
+				HttpRequestMessage msg = parser.getHttpRequestMessage(event->ident);
+				
+				std::cout << msg.getStatusCode() << std::endl;
+				parser.clear(event->ident);
+			}
             processWriteEvent(*event);
         }
     }
@@ -83,6 +89,7 @@ void ServerManager::processListenEvent(const struct kevent& event) {
         throw (strerror(errno));
     change_list.push_back(makeEvent(connection_socket, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, NULL));
     change_list.push_back(makeEvent(connection_socket, EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, NULL));
+	servers[connection_socket] = Server(connection_socket, event.ident);
 }
 
 void ServerManager::processReadEvent(const struct kevent& event) {
@@ -96,6 +103,7 @@ void ServerManager::processReadEvent(const struct kevent& event) {
         return;
     }
     buff[n] = 0;
+	parser.run(event.ident, buff);
     // servers[event.ident].appendContent(buff);
     // servers[event.ident].checkContent();
 }

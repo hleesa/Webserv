@@ -37,12 +37,11 @@ class Config {
 
 		int getPort() const;
 		void server_token_parser(std::vector<std::string> one_line, std::set<std::string>& duplicated);
-		// void server_token_parser(std::string key, std::stringstream& one_line, std::set<std::string>& duplicated);
 
 //인자 확인 함수
-		void print_checker(void);
-		template<typename K, typename V>
-		void print_map(std::map<K, V> &m);
+		// void print_checker(void);
+		// template<typename K, typename V>
+		// void print_map(std::map<K, V> &m);
 };
 
 

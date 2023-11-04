@@ -11,7 +11,7 @@ RequestParser::RequestParser(const RequestParser& other) {
 RequestParser& RequestParser::operator=(const RequestParser& other) {
 	if (this != &other)
 	{
-		this->map = other.map;
+		this->parsing_data = other.parsing_data;
 	}
 	return *this;
 }
@@ -19,111 +19,111 @@ RequestParser& RequestParser::operator=(const RequestParser& other) {
 RequestParser::~RequestParser() {}
 
 ReadingStatus RequestParser::getReadingStatus(const int ident) {
-	return map[ident].status;
+	return parsing_data[ident].status;
 }
 
 HttpRequestMessage RequestParser::getHttpRequestMessage(const int ident) {
-	AssembleInfo info = map[ident];
+	ParsingData data = parsing_data[ident];
     
-	return HttpRequestMessage(info.request_line, info.header_fields, info.body.content, info.status_code);
+	return HttpRequestMessage(data.request_line, data.header_fields, data.body.content, data.status_code);
 }
 
 void RequestParser::run(const int ident, const char* newContent) {
-	AssembleInfo *info = &map[ident];
+	ParsingData *data = &parsing_data[ident];
 
-	info->buffer += newContent;
+	data->buffer += newContent;
 	try {
-		checkReadingStatus(*info);
+		checkReadingStatus(*data);
     }
 	catch (const int e) {
-		info->status_code = e;
-		info->status = END;
+		data->status_code = e;
+		data->status = END;
 	}
 }
 
-void RequestParser::checkReadingStatus(AssembleInfo& info) {
+void RequestParser::checkReadingStatus(ParsingData& data) {
 	bool isRunning = true;
 
-	if (info.status == StartLine) {
-		isRunning = processStartLine(info);
+	if (data.status == StartLine) {
+		isRunning = processStartLine(data);
 	}
 	if (!isRunning) {
 		return ;
 	}
-	if (info.status == HEADER) {
-		isRunning = processHeader(info);
+	if (data.status == HEADER) {
+		isRunning = processHeader(data);
 	}
 	if (!isRunning) {
 		return ;
 	}
-	if (info.status == BODY) {
-		info.status = processBody(info);
+	if (data.status == BODY) {
+		data.status = processBody(data);
 	}
 }
 
-bool RequestParser::processStartLine(AssembleInfo& info) {
+bool RequestParser::processStartLine(ParsingData& data) {
 	std::string line;
-	int pos;
+	unsigned long pos;
 	
-	pos = info.buffer.find('\n');
+	pos = data.buffer.find('\n');
 	if (pos == std::string::npos) {
 		return false;
 	}
-	line = info.buffer.substr(0, pos);
+	line = data.buffer.substr(0, pos);
 	trimCarriageReturn(line);
 	if (line.empty()) {
-		info.buffer = info.buffer.substr(pos + 1);
+		data.buffer = data.buffer.substr(pos + 1);
 		return false;
 	}
-	info.status = HEADER;
-	info.buffer = info.buffer.substr(pos + 1);
-	info.method = getMethod(line);
-	if (info.method != "POST")
-		info.body.status = MustNot;
-	parseRequestLine(info, line);
+	data.status = HEADER;
+	data.buffer = data.buffer.substr(pos + 1);
+	data.method = getMethod(line);
+	if (data.method != "POST")
+		data.body.status = MustNot;
+	parseRequestLine(data, line);
 	return true;
 }
 
-bool RequestParser::processHeader(AssembleInfo& info) {
+bool RequestParser::processHeader(ParsingData& data) {
 	std::string line;
-	int pos;
+	unsigned long pos;
 	
-	pos = info.buffer.find('\n');
+	pos = data.buffer.find('\n');
 	if (pos == std::string::npos)
 		return false;
-	line = info.buffer.substr(0, pos);
+	line = data.buffer.substr(0, pos);
 	trimCarriageReturn(line);
 	while (!isCRLF(line)) {
-		info.body.status = getBodyStatus(line, info.body);
-		parseHeaderFields(info, line);	
-		info.buffer = info.buffer.substr(pos + 1);
-		pos = info.buffer.find('\n');
+		data.body.status = getBodyStatus(line, data.body);
+		parseHeaderFields(data, line);	
+		data.buffer = data.buffer.substr(pos + 1);
+		pos = data.buffer.find('\n');
 		if (pos == std::string::npos)
 			return false;
-		line = info.buffer.substr(0, pos);
+		line = data.buffer.substr(0, pos);
 		trimCarriageReturn(line);
 	}
 	if (isCRLF(line)) {
-		info.status = BODY;
-		info.buffer = info.buffer.substr(pos + 1);
-		if (info.header_fields.find("host") == info.header_fields.end())
+		data.status = BODY;
+		data.buffer = data.buffer.substr(pos + 1);
+		if (data.header_fields.find("host") == data.header_fields.end())
         	throw 400;
 	}
 	return true;
 }
 
-ReadingStatus RequestParser::processBody(AssembleInfo& info) {
-	if (info.body.status == MustNot) {
+ReadingStatus RequestParser::processBody(ParsingData& data) {
+	if (data.body.status == MustNot) {
 		return END;
 	}
-	if (info.body.status == None && info.method == "POST") {
+	if (data.body.status == None && data.method == "POST") {
 		throw 411;
 	}
-	if (info.body.status == ENCODING) {
-		return processEncoding(info.body, info.buffer);
+	if (data.body.status == ENCODING) {
+		return processEncoding(data.body, data.buffer);
 	}
-	if (info.body.status == ContentLength) {
-		return processContentLength(info.body, info.buffer);
+	if (data.body.status == ContentLength) {
+		return processContentLength(data.body, data.buffer);
 	}
 	return BODY;
 }
@@ -136,12 +136,12 @@ ReadingStatus RequestParser::processEncoding(Body& body, std::string& buffer) {
 
 	while ((size = getChunkedSize(buffer, tmp)) > 0) {
 		pos = buffer.substr(tmp + 1).find("\n");
-		if (pos == std::string::npos) {
+		if (static_cast<unsigned long>(pos) == std::string::npos) {
 			return BODY;
 		}
 		line = buffer.substr(tmp + 1, pos);
 		trimCarriageReturn(line);
-		if (line.size() != size) {
+		if (line.size() != static_cast<unsigned long>(size)) {
 			throw 400;
 		}
 		body.content += line;
@@ -152,7 +152,7 @@ ReadingStatus RequestParser::processEncoding(Body& body, std::string& buffer) {
 	}
 	// size == 0
 	pos = buffer.substr(tmp + 1).find("\n");
-	if (pos == std::string::npos) {
+	if (static_cast<unsigned long>(pos) == std::string::npos) {
 		throw 400;
 	}
 	line = buffer.substr(tmp + 1, pos);
@@ -164,11 +164,10 @@ ReadingStatus RequestParser::processEncoding(Body& body, std::string& buffer) {
 }
 
 int RequestParser::getChunkedSize(std::string& buffer, int& pos) {
-	int size;
 	std::string line;
 	
 	pos = buffer.find("\n");
-	if (pos == std::string::npos) {
+	if (static_cast<unsigned long>(pos) == std::string::npos) {
 		return -1;
 	}
 	line = buffer.substr(0, pos);
@@ -180,7 +179,7 @@ int RequestParser::getChunkedSize(std::string& buffer, int& pos) {
 }
 
 ReadingStatus RequestParser::processContentLength(Body& body, std::string& buffer) {
-	if (buffer.size() < body.length)
+	if (buffer.size() < (unsigned long)body.length)
 		return BODY;
 	body.content = buffer.substr(0, body.length);
 	buffer = buffer.substr(body.length);
@@ -249,14 +248,14 @@ void RequestParser::convertLowerCase(std::string& string) {
 }
 
 void RequestParser::clear(const int ident) {
-	AssembleInfo *info = &map[ident];
+	ParsingData *data = &parsing_data[ident];
 	
-	info->request_line.clear();
-	info->header_fields.clear();
-	info->status_code = 0;
-	info->status = StartLine;
-	info->method.clear();
-	info->body = Body();
+	data->request_line.clear();
+	data->header_fields.clear();
+	data->status_code = 0;
+	data->status = StartLine;
+	data->method.clear();
+	data->body = Body();
 }
 
 std::string RequestParser::getMethod(const std::string& line) {
@@ -321,12 +320,12 @@ void validateHttpVersion(const std::string& http_version) {
     return;
 }
 
-void RequestParser::parseRequestLine(AssembleInfo& info, const std::string& line) {
+void RequestParser::parseRequestLine(ParsingData& data, const std::string& line) {
     std::vector<std::string> request = tokenizeRequestLine(line);
     validateMethod(request.front());
     // validRequestTarget
     validateHttpVersion(request.back());
-	info.request_line = request;
+	data.request_line = request;
 }
 
 bool isVisibleString(const std::string& str) {
@@ -385,9 +384,9 @@ std::vector<std::string> tokenizeHeaderFiled(const std::string& header) {
     return tokens;
 }
 
-void RequestParser::parseHeaderFields(AssembleInfo& info, const std::string line) {
+void RequestParser::parseHeaderFields(ParsingData& data, const std::string line) {
 	std::vector<std::string> header_field = tokenizeHeaderFiled(line);
 	if (!header_field.empty())
-		info.header_fields[header_field.front()]
-		.insert(info.header_fields[header_field.front()].end(), header_field.begin() + 1, header_field.end());
+		data.header_fields[header_field.front()]
+		.insert(data.header_fields[header_field.front()].end(), header_field.begin() + 1, header_field.end());
 }

@@ -25,12 +25,12 @@ bool isValidLineTerminator(const std::vector<std::string>& server_content) {
     for (std::vector<std::string>::const_iterator content = server_content.begin();
          content != server_content.end(); ++content) {
         for (std::string::const_iterator ch = content->begin(); ch != content->end(); ++ch) {
-            ++counter[(unsigned char)*ch];
+            ++counter[static_cast<unsigned char>(*ch)];
         }
     }
     int num_of_line_term = 0;
     for (std::string::const_iterator it = line_term.begin(); it != line_term.end(); ++it) {
-        num_of_line_term += counter[(unsigned char)*it];
+        num_of_line_term += counter[static_cast<unsigned char>(*it)];
     }
     return num_of_line_term == 1;
 }

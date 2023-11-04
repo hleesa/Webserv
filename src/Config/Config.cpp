@@ -35,7 +35,6 @@ Config::Config(std::vector< std::vector< std::string> >& server_block)
 	if (index.size() == 0) {
 		index.push_back("index.html");//index 부분 default value 초기화.
 	}
-	print_checker();
 }
 
 Config::Config(const Config& other) {

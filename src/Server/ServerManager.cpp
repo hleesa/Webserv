@@ -5,7 +5,7 @@
 #include <unistd.h>
 
 ServerManager::ServerManager(const std::vector<Config>& configs) {
-    for (int idx = 0; idx < configs.size(); idx++) {
+    for (unsigned long idx = 0; idx < configs.size(); idx++) {
         this->configs[openListenSocket(configs[idx].getPort())] = configs[idx];
     }
     memset((void*) event_list, 0, sizeof(struct kevent) * NUMBER_OF_EVENT);
@@ -109,7 +109,7 @@ void ServerManager::processReadEvent(const struct kevent& event) {
 }
 
 void ServerManager::processWriteEvent(const struct kevent& event) {
-    int n;
+    int n = 0;
     std::string response_content;
 
     // Request -> Response -> String

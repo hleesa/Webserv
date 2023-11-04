@@ -26,7 +26,6 @@ class RequestParser {
 		ReadingStatus processContentLength(Body& body, std::string& buffer);
 		
 		void trimCarriageReturn(std::string& line);
-		void convertLowerCase(std::string& string);
     
 		void parseRequestLine(ParsingData& data, const std::string& line);
 		void parseHeaderFields(ParsingData& data, const std::string line);
@@ -43,5 +42,8 @@ class RequestParser {
 		void checkReadingStatus(ParsingData& data);
 		void clear(const int ident);
 };
+
+void convertLowerCase(std::string& string);
+bool isIntegerLiteral(std::string literal);
 
 #endif

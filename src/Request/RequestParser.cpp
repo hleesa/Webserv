@@ -127,36 +127,41 @@ ReadingStatus RequestParser::processBody(ParsingData& data) {
 	}
 	return BODY;
 }
-
+#include <iostream>
 ReadingStatus RequestParser::processEncoding(Body& body, std::string& buffer) {
-	int tmp;
+	int size_pos;
 	int size;
 	int pos;
 	std::string line;
 
-	while ((size = getChunkedSize(buffer, tmp)) > 0) {
-		pos = buffer.substr(tmp + 1).find("\n");
+	while ((size = getChunkedSize(buffer, size_pos)) > 0) {
+		pos = buffer.substr(size_pos + 1).find("\n");
 		if (static_cast<unsigned long>(pos) == std::string::npos) {
 			return BODY;
 		}
-		line = buffer.substr(tmp + 1, pos);
+		line = buffer.substr(size_pos + 1, pos);
 		trimCarriageReturn(line);
+		buffer = buffer.substr(size_pos + pos + 2);
 		if (line.size() != static_cast<unsigned long>(size)) {
 			throw 400;
 		}
 		body.content += line;
-		buffer = buffer.substr(tmp + pos + 2);
 	}
 	if (size == -1) {
 		return BODY;
 	}
 	// size == 0
-	pos = buffer.substr(tmp + 1).find("\n");
+	if (buffer.size() < 4) {
+		return BODY;
+	}
+	pos = buffer.substr(size_pos + 1).find("\n");
 	if (static_cast<unsigned long>(pos) == std::string::npos) {
+		buffer = buffer.substr(size_pos + 1);
 		throw 400;
 	}
-	line = buffer.substr(tmp + 1, pos);
+	line = buffer.substr(size_pos + 1, pos);
 	trimCarriageReturn(line);
+	buffer = buffer.substr(size_pos + pos + 2);
 	if (!line.empty()) {
 		throw 400;
 	}
@@ -172,10 +177,10 @@ int RequestParser::getChunkedSize(std::string& buffer, int& pos) {
 	}
 	line = buffer.substr(0, pos);
 	trimCarriageReturn(line);
-	if (line.size() != 1 || !isdigit(line[0])) {
+	if (!isIntegerLiteral(line)) {
 		throw 400;
 	}
-	return line[0] - '0';
+	return std::atoi(line.c_str());
 }
 
 ReadingStatus RequestParser::processContentLength(Body& body, std::string& buffer) {
@@ -241,12 +246,6 @@ void RequestParser::trimCarriageReturn(std::string& line) {
 		line.resize(line.size() - 1);
 }
 
-void RequestParser::convertLowerCase(std::string& string) {
-	for (unsigned int idx = 0; idx < string.size(); idx++) {
-		string[idx] = tolower(string[idx]);
-	}
-}
-
 void RequestParser::clear(const int ident) {
 	ParsingData *data = &parsing_data[ident];
 	
@@ -264,6 +263,23 @@ std::string RequestParser::getMethod(const std::string& line) {
 
 	ss >> method;
 	return method;
+}
+
+/* utils */
+
+void convertLowerCase(std::string& string) {
+	for (unsigned int idx = 0; idx < string.size(); idx++) {
+		string[idx] = tolower(string[idx]);
+	}
+}
+
+bool	isIntegerLiteral(std::string literal) {
+	int	idx = 0;
+	int	size = literal.size();
+
+	while (idx < size && isdigit(literal[idx]))
+		idx++;
+	return idx == size;
 }
 
 

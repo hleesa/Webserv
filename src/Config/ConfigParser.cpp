@@ -25,12 +25,12 @@ bool isValidLineTerminator(const std::vector<std::string>& server_content) {
     for (std::vector<std::string>::const_iterator content = server_content.begin();
          content != server_content.end(); ++content) {
         for (std::string::const_iterator ch = content->begin(); ch != content->end(); ++ch) {
-            ++counter[*ch];
+            ++counter[(unsigned char)*ch];
         }
     }
     int num_of_line_term = 0;
     for (std::string::const_iterator it = line_term.begin(); it != line_term.end(); ++it) {
-        num_of_line_term += counter[*it];
+        num_of_line_term += counter[(unsigned char)*it];
     }
     return num_of_line_term == 1;
 }
@@ -45,7 +45,7 @@ std::vector<std::string> lineToWords(const std::string& line) {
     return words;
 }
 
-bool isTargetBlockOpen(const std::vector<std::string> words, const std::string target, const int num_of_words) {
+bool isTargetBlockOpen(const std::vector<std::string> words, const std::string target, const size_t num_of_words) {
     if (words.size() != num_of_words) {
         return false;
     }
@@ -157,6 +157,7 @@ ConfigParser::ConfigParser() {
 }
 
 ConfigParser::ConfigParser(const ConfigParser& other) {
+    *this = other;
 }
 
 ConfigParser& ConfigParser::operator=(const ConfigParser& other) {

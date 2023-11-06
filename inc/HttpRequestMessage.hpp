@@ -22,6 +22,11 @@ public:
 
     HttpRequestMessage &operator=(const HttpRequestMessage &other);
 
+	std::string getMethod() const;
+	std::string getURL() const;
+	std::vector<std::string> getRequestLine() const;
+	std::map<std::string, std::vector<std::string> > getHeaderFields() const;
+	std::string getMessageBody() const;
 	int getStatusCode();
 };
 

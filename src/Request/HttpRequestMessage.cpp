@@ -22,6 +22,26 @@ HttpRequestMessage &HttpRequestMessage::operator=(const HttpRequestMessage &othe
     return *this;
 }
 	
+std::string HttpRequestMessage::getMethod() const {
+	return this->request_line[0];
+}
+
+std::string HttpRequestMessage::getURL() const {
+	return this->request_line[1];
+}
+
+std::vector<std::string> HttpRequestMessage::getRequestLine() const {
+	return this->request_line;
+}
+
+std::map<std::string, std::vector<std::string> > HttpRequestMessage::getHeaderFields() const {
+	return this->header_fields;
+}
+
+std::string HttpRequestMessage::getMessageBody() const {
+	return this->message_body;
+}
+
 int HttpRequestMessage::getStatusCode() {
 	return status_code;
 }

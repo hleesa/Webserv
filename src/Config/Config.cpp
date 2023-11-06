@@ -62,6 +62,34 @@ int Config::getPort() const {
 	return this->port;
 }
 
+std::string Config::getHost() const {
+	return this->host;	
+}
+
+std::vector<std::string> Config::getName() const {
+	return this->name;
+}
+
+std::map<int, std::string> Config::getErrorpage() const {
+	return this->error_page;
+}
+
+std::string Config::getRoot() const {
+	return this->root;
+}
+
+std::vector<std::string> Config::getIndex() const {
+	return this->index;
+}
+
+long Config::getLimitBodySize() const {
+	return this->limit_body_size;
+}
+
+std::map<std::string, Location> Config::getLocations() const {
+	return this->locations;
+}
+
 void Config::server_token_parser(std::vector<std::string> one_line, std::set<std::string>& duplicated) {
 	if (one_line.empty())
 		throw std::invalid_argument("Error: invalid arguments\n");

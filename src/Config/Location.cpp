@@ -39,6 +39,26 @@ Location &Location::operator=(const Location &other) {
 
 Location::~Location() {}
 
+std::set<std::string> Location::getHttpMethods() const {
+	return this->http_methods;
+}
+
+std::pair<int, std::string> Location::getReturnValue() const {
+	return this->return_value;
+}
+
+std::string Location::getRoot() const {
+	return this->root;
+}
+
+std::vector<std::string> Location::getIndex() const {
+	return this->index;
+}
+
+bool Location::getAutoindex() const {
+	return this->autoindex;
+}
+
 void Location::parse(std::vector<std::string>& line, std::set<std::string>& duplicated) {
 
 	std::string	directive;

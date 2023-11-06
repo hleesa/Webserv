@@ -35,8 +35,16 @@ class Config {
 
 		~Config();
 
-		int getPort() const;
 		void server_token_parser(std::vector<std::string> one_line, std::set<std::string>& duplicated);
+		
+		int getPort() const;
+		std::string getHost() const;
+		std::vector<std::string> getName() const;
+		std::map<int, std::string> getErrorpage() const;
+		std::string getRoot() const;
+		std::vector<std::string> getIndex() const;
+		long getLimitBodySize() const;
+		std::map<std::string, Location> getLocations() const;
 
 //인자 확인 함수
 		// void print_checker(void);

@@ -38,6 +38,12 @@ public:
 	Location& operator=(const Location& other);
     ~Location();
 
+	std::set<std::string> getHttpMethods() const;
+    std::pair<int, std::string> getReturnValue() const;
+    std::string getRoot() const;
+    std::vector<std::string> getIndex() const;
+    bool getAutoindex() const;
+
 	friend std::ostream& operator<<(std::ostream& out, Location& location);
 };
 

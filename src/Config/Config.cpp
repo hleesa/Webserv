@@ -5,7 +5,7 @@
 Config::Config() {}
 
 Config::Config(std::vector< std::vector< std::string> >& server_block)
-	:	port(80), host(""), root("html"), limit_body_size(1e6)
+	:	port(80), host(""), root("docs/"), limit_body_size(1e6)
 {
 	std::set<std::string> duplicated;
 	unsigned long i = 0;
@@ -33,7 +33,7 @@ Config::Config(std::vector< std::vector< std::string> >& server_block)
 		}
 	}
 	if (index.size() == 0) {
-		index.push_back("index.html");//index 부분 default value 초기화.
+		index.push_back("index.html");
 	}
 }
 

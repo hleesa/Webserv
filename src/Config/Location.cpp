@@ -8,7 +8,7 @@ bool isNumber(const std::string& string);
 
 Location::Location() {}
 
-Location::Location(std::vector<std::vector<std::string> >& location_block) : root("html"), autoindex(false) {
+Location::Location(std::vector<std::vector<std::string> >& location_block) : autoindex(false) {
 
 	std::set<std::string> duplicated;
 	std::vector<std::vector<std::string> >::iterator itr;

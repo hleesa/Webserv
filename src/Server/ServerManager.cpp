@@ -3,6 +3,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <unistd.h>
+#include "../../inc/PostResponse.hpp"
 
 ServerManager::ServerManager(const std::vector<Config>& configs) {
     for (unsigned long idx = 0; idx < configs.size(); idx++) {
@@ -106,6 +107,8 @@ void ServerManager::processWriteEvent(const struct kevent& event) {
     int n = 0;
 
 	// TO DO : Request -> Response
+	PostResponse post_response = PostResponse(event.ident);
+
     // send(event.ident, response_content, response_content.size());
     if (n == ERROR) {
         disconnectWithClient(event);

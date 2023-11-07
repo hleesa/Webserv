@@ -14,6 +14,7 @@ private:
     std::string message_body;
 
 public:
+	HttpResponseMessage();
     HttpResponseMessage(int status_code, std::map<std::string, std::string> header_fields,
                         std::string message_body);
 

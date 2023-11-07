@@ -3,6 +3,8 @@
 
 #include <sstream>
 
+HttpResponseMessage::HttpResponseMessage() {}
+
 HttpResponseMessage::HttpResponseMessage(int status_code,
                                          std::map<std::string, std::string> header_fields,
                                          std::string message_body) {
@@ -13,8 +15,9 @@ HttpResponseMessage::HttpResponseMessage(int status_code,
 
 std::string HttpResponseMessage::toString(const std::map<int, std::string>& codeToReason) {
     std::stringstream ss;
-    ss << "HTTP/1.1 " << status_code << " " << codeToReason.at(status_code) << "\r\n";
-    for (std::map<std::string, std::string>::const_iterator header = header_fields.begin(); header != header_fields.begin(); ++header) {
+    
+	ss << "HTTP/1.1 " << status_code << " " << codeToReason.at(status_code) << "\r\n";
+    for (std::map<std::string, std::string>::const_iterator header = header_fields.begin(); header != header_fields.end(); ++header) {
         ss << header->first << ": " << header->second << "\r\n";
     }
     ss << "\r\n" << message_body;

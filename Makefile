@@ -25,6 +25,9 @@ REQUEST_SRC = \
 			RequestParser.cpp
 
 RESPONSE_SRC = \
+			HttpResponseMessage.cpp \
+			GetMethod.cpp \
+			Resource.cpp
 
 SERVER_SRC = \
 			Server.cpp \

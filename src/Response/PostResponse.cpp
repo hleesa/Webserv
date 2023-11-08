@@ -28,19 +28,32 @@ HttpResponseMessage PostResponse::run(HttpRequestMessage request_msg, Config con
 }
 
 void PostResponse::check_request_line(std::vector<std::string> request_line, std::string root) {
+	std::string abs_path = root;
+	std::string rel_path;
+	size_t pos;
+
+
 	if (request_line.size() != 3) {
 		this->status_code = 404;
 		return;
 	}
+	if (request_line[1].compare(0, 7, "http://") == 0) {
+		pos = request_line[1].find('/', 8);
+		rel_path = request_line[1].substr(pos);
+	} else if (request_line[1].compare(0, 8, "https://")) {
+		pos = request_line[1].find('/', 9);
+		rel_path = request_line[1].substr(pos);
+	} else if (request_line[1][0] == '/') {
+		rel_path = request_line[1];
+	}
 
-	std::string full_request_url = root + request_line[1];
-	std::fstream file(full_request_url);
+	std::fstream file(.c_str());
 
-	if (!file.is_open()) {
+	if (file.fail()) {
 		this->status_code = 404;
 		return;
 	} else {
-		this->status_code = 303;
+		//this->status_code = 303;
 		file.close();
 		return;
 	}

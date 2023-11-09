@@ -6,3 +6,7 @@ Server::Server(int connection, int listen) {
 	connection_socket = connection;
 	listen_socket = listen;
 }
+
+std::vector<std::string> Server::getRequestLine() const {
+    return request.getRequestLine();
+}

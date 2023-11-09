@@ -3,6 +3,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <unistd.h>
+#include "../../inc/CgiGet.hpp"
 
 ServerManager::ServerManager(const std::vector<Config>& configs) {
     for (unsigned long idx = 0; idx < configs.size(); idx++) {
@@ -105,8 +106,14 @@ void ServerManager::processReadEvent(const struct kevent& event) {
 void ServerManager::processWriteEvent(const struct kevent& event) {
     int n = 0;
 
+    std::vector<std::string> request_line = servers[event.ident].getRequestLine();
+    if (CgiGet::isValidCgiGetUrl(request_line, configs, event.ident)) {
+
+    }
+
 	// TO DO : Request -> Response
     // send(event.ident, response_content, response_content.size());
+
     if (n == ERROR) {
         disconnectWithClient(event);
         return;

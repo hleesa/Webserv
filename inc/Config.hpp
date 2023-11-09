@@ -9,7 +9,7 @@
 #include <sstream>
 #include <vector>
 #include "Location.hpp"
-// #include "CgiLocation.hpp"
+#include "CgiLocation.hpp"
 
 class Config {
 
@@ -22,7 +22,7 @@ class Config {
 		std::vector<std::string> index;
 		long limit_body_size;
 		std::map<std::string, Location> locations;
-//		 CgiLocation cgi_location;
+        CgiLocation cgi_location;
 
 	public:
 		Config();

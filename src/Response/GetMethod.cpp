@@ -44,9 +44,13 @@ std::string GetMethod::findRoot() {
 std::string GetMethod::findResourcePath() {
 	std::string root = findRoot();
 	std::vector<std::string> index = config.getLocations()[location_key].getIndex();
+	std::string url = request.getURL();
 
-	if (location_key != "/" && location_key != request.getURL()) {
-		std::string path = root + "/" + request.getURL();
+	if (url != "/" && *url.rbegin() == '/') {
+		url.resize(url.size() - 1);
+	}
+	if (location_key != "/" && location_key != url) {
+		std::string path = root + "/" + url;
 		return checkFileExistence(path) ? path : "";
 	}
 

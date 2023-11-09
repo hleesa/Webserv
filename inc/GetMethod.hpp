@@ -8,19 +8,27 @@
 
 class GetMethod {
 	private:
-		static std::string findLocation(std::string url, const Config& config);
-		static std::string getFilePath(std::string url, const Config& config, const std::string location_key);
-		
-		static Resource makeResource(const std::string& resource_path, const Config& config, const std::string location_key);
-		static std::string searchValidPath(std::vector<std::string> index, const std::string& pre_path);
-		static bool existFile(const std::string resource_path);
-		static ResourceStatus getResourceStaus(const std::string resource_path, const bool autoindex);
-		static HttpResponseMessage makeHttpResponseMessage(const Resource& resource);
-		static std::map<std::string, std::string> makeHeaderFileds(const std::string& body);
-		static std::string makeDate();
+		HttpRequestMessage request;
+		Config config;
+		std::string location_key;
+		Resource resource;
+	
+		std::string findLocationKey();
+		std::string findRoot();
+		std::string findResourcePath();
+		ResourceStatus getResourceStatus(const std::string path);
+		std::string findErrorPageFilePath();
+		Resource makeResource();
+
+		std::map<std::string, std::string> makeHeaderFileds(const std::string& body);
+		std::string makeDate();
 
 	public:
-		static HttpResponseMessage run(const HttpRequestMessage& request, const Config& config);
+		GetMethod(const HttpRequestMessage& request, const Config& config);
+
+		HttpResponseMessage makeHttpResponseMessage();
 };
+
+bool checkFileExistence(const std::string file_name);
 
 #endif

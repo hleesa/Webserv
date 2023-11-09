@@ -32,8 +32,9 @@ std::string Resource::read() const {
 	std::ifstream file_in(path.c_str());
 	std::string content;
 	
-	// if (!file_in.is_open()) {
-	// }
+	if (!file_in.is_open()) {
+		return "";
+	}
 	file_in.seekg(0, std::ios::end);
 	int size = file_in.tellg();
 	content.resize(size);

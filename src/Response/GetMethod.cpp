@@ -1,104 +1,97 @@
 #include "../../inc/GetMethod.hpp"
 #include <unistd.h>
 #include <ctime>
-// EXIST, AUTOINDEX, NOTFOUND
 
-HttpResponseMessage GetMethod::run(const HttpRequestMessage& request, const Config& config) {
-	// resource의 경로 찾기
-	std::string url = request.getURL();
-	std::string location_key = findLocation(url, config);
-	std::string resource_path = getFilePath(url, config, location_key);
-	std::cout << "resource_path : " << resource_path << std::endl;
-	// 존재하는지 찾기 -> 못 찾은 경우, autoindex 확인
-	Resource resouce = makeResource(resource_path, config, location_key);
-	// readFile
-	// header-filed & body 만들기
-	return makeHttpResponseMessage(resouce);
+GetMethod::GetMethod(const HttpRequestMessage& request, const Config& config) {
+	this->request = request;
+	this->config = config;
+	this->location_key = findLocationKey();
+	this->resource = makeResource();
+	std::cout << "url : " << request.getURL() << "\n\n";
 }
 
-std::string GetMethod::findLocation(std::string url, const Config& config) {
+std::string GetMethod::findLocationKey() {
+	std::string url = request.getURL();
 	std::map<std::string, Location> locations = config.getLocations();
-	Location location;
-	unsigned long pos = url.rfind("/");
-	
+
+	if (locations.find(url) != locations.end()) {
+		return url;
+	}
+	if (url.size() > 1 && *--url.end() != '/') {
+		url += "/";
+	}
+	unsigned long pos = url.rfind('/');
 	while (pos != std::string::npos) {
-		std::string path = url.substr(0, pos);
-		std::cout << "path : " << path << std::endl;
-		if (locations.find(path) != locations.end()) {
-			std::cout << "found ! path is " << path << std::endl;
-			return path;
+		std::string key = url.substr(0, pos);
+		if (locations.find(key) != locations.end()) {
+			return key;
 		}
-		url = path;
-		pos = url.rfind("/");
+		url = key;
+		pos = url.rfind('/');
 	}
 	return "/";
 }
 
-std::string GetMethod::getFilePath(std::string url, const Config& config, const std::string location_key) {
-	std::map<std::string, Location> locations = config.getLocations();
-	Location location = locations[location_key];
-	std::string root = config.getRoot();
+std::string GetMethod::findRoot() {
+	std::string root = config.getLocations()[location_key].getRoot();
 
-	if (location.getRoot().size()) {
-		root = location.getRoot();
+	if (root.empty()) {
+		root = config.getRoot();
 	}
-	if (root[0] != '/') {
-		root = "/" + root;
-	}
-	root = "." + root;
-	std::string path;
-	if (url != location_key) {
-		path = searchValidPath(location.getIndex(), root + location_key + "/");
-	}
-	if (path.size())
-		return path;
-	return searchValidPath(config.getIndex(), root + "/");
+	return root;
 }
 
-std::string GetMethod::searchValidPath(std::vector<std::string> index, const std::string& pre_path) {
+std::string GetMethod::findResourcePath() {
+	std::string root = findRoot();
+	std::vector<std::string> index = config.getLocations()[location_key].getIndex();
+
+	if (location_key != "/" && location_key != request.getURL()) {
+		std::string path = root + "/" + request.getURL();
+		return checkFileExistence(path) ? path : "";
+	}
+
 	std::vector<std::string>::iterator itr = index.begin();
-	std::string file;
-	
-	for (itr = index.begin(); index.size() && itr != index.end(); itr++) {
-		file = pre_path + *itr;
-		if (existFile(file)) {
-			return file;
-		}
+	std::string path = root + location_key + "/" + *itr;
+	std::cout << "path : " << path << std::endl;
+	while (!checkFileExistence(path) && ++itr != index.end()) {
+		path = root + location_key + "/" + *itr;
+	}
+	return itr != index.end() ? path : "";
+}
+
+bool checkFileExistence(const std::string file_name) {
+	return !access(file_name.c_str(), R_OK);
+}
+
+ResourceStatus GetMethod::getResourceStatus(const std::string path) {
+	if (path.size()) {
+		return FOUND;
+	}
+	return config.getLocations()[location_key].getAutoindex() ? DirectoryList : NotFound;
+}
+
+std::string GetMethod::findErrorPageFilePath() {
+	std::map<int, std::string> error_page = config.getErrorpage();
+
+	if (error_page.find(404) != error_page.end()) {
+		return config.getRoot() + "/" + error_page[404];
 	}
 	return "";
 }
 
-Resource GetMethod::makeResource(const std::string& resource_path, const Config& config, const std::string location_key) {
-	std::map<std::string, Location> locations = config.getLocations();
-	Location location = locations[location_key];
-	ResourceStatus status = getResourceStaus(resource_path, location.getAutoindex());
-	if (status == FOUND) {
-		return Resource(resource_path, status);
+Resource GetMethod::makeResource() {
+	std::string resource_path = findResourcePath();
+	ResourceStatus status = getResourceStatus(resource_path);
+	if (status == NotFound) {
+		resource_path = findErrorPageFilePath();
 	}
-	// if (status == DirectoryList) {
-
-	// }
-	std::map<int, std::string> error_pages = config.getErrorpage();
-	if (error_pages.find(404) != error_pages.end()) {
-		std::string path = config.getRoot() + error_pages[404];
-		return Resource(path, status);
-	}
-	return Resource();
+	std::cout << "resource_path : " << resource_path << std::endl;
+	return Resource(resource_path, status);
 }
 
-ResourceStatus GetMethod::getResourceStaus(const std::string resource_path, const bool autoindex) {
-	if (resource_path.size()) {
-		return FOUND;
-	}
-	return autoindex ? DirectoryList : NotFound;
-}
-
-bool GetMethod::existFile(const std::string resource_path) {
-	return !access(resource_path.c_str(), F_OK | R_OK);
-}
-
-HttpResponseMessage GetMethod::makeHttpResponseMessage(const Resource& resource) {
+HttpResponseMessage GetMethod::makeHttpResponseMessage() {
 	int status_code = 200;
+
 	std::string body = resource.read();
 	if (resource.getStatus() == NotFound)
 		status_code = 404;

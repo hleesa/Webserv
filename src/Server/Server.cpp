@@ -13,7 +13,9 @@ void Server::setRequest(const HttpRequestMessage& request_message) {
 }
 
 HttpResponseMessage Server::makeResponse(std::map<int, Config>& configs) {
-	if (request.getMethod() == "GET")
-		return GetMethod::run(request, configs[listen_socket]);
+	if (request.getMethod() == "GET") {
+		GetMethod method(request, configs[listen_socket]);
+		return method.makeHttpResponseMessage();
+	}
 	return HttpResponseMessage();
 }

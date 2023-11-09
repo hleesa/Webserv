@@ -82,17 +82,20 @@ std::string GetMethod::findErrorPageFilePath() {
 Resource GetMethod::makeResource() {
 	std::string resource_path = findResourcePath();
 	ResourceStatus status = getResourceStatus(resource_path);
+	if (status == DirectoryList) {
+		resource_path = findRoot() + location_key;
+	}
 	if (status == NotFound) {
 		resource_path = findErrorPageFilePath();
 	}
-	std::cout << "resource_path : " << resource_path << std::endl;
+	// std::cout << "resource_path : " << resource_path << std::endl;
 	return Resource(resource_path, status);
 }
 
 HttpResponseMessage GetMethod::makeHttpResponseMessage() {
 	int status_code = 200;
 
-	std::string body = resource.read();
+	std::string body = resource.makeResource();
 	if (resource.getStatus() == NotFound)
 		status_code = 404;
 	return HttpResponseMessage(status_code, makeHeaderFileds(body), body);

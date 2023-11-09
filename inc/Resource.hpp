@@ -10,6 +10,9 @@ class Resource {
 		std::string path;
 		ResourceStatus status;
 		//MIME
+		
+		std::string read() const;
+		std::string makeDirectoryList() const;
 
 	public:
 		Resource();
@@ -20,7 +23,7 @@ class Resource {
 		
 		ResourceStatus getStatus() const;
 
-		std::string read() const;
+		std::string makeResource() const;
 };
 
 #endif

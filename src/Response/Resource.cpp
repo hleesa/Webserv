@@ -2,6 +2,7 @@
 #include <unistd.h>
 #include <fstream>
 #include <iostream>
+#include <dirent.h>
 
 Resource::Resource() {}
 
@@ -41,4 +42,44 @@ std::string Resource::read() const {
 	file_in.seekg(0, std::ios::beg);
 	file_in.read(&content[0], size);
 	return content;
+}
+
+std::string Resource::makeDirectoryList() const {
+	std::string content = "<!DOCTYPE html>\n" 
+						 "<html lang=\"en\">\n"
+						 "<head>\n"
+						 "\t<meta charset=\"UTF-8\">\n"
+						 "\t<meta name=\"viewport\"\n"
+						 "\tcontent=\"width=device-width, initial-scale=1.0\">\n"
+						 "\t<title>Directory Listing</title>\n"
+						 "</head>\n<body>\n"
+						 "\t<h1>Index of " + path + "</h1>\n\t<ul>\n";
+    DIR *dir;
+    struct dirent *entry;
+
+	dir = opendir(path.c_str());
+	if (dir == NULL) {
+		// 예외처리
+	}
+	while ((entry = readdir(dir)) != NULL) {
+		std::string name(entry->d_name);
+		if (entry->d_type == DT_DIR) {
+			name += "/";
+		}
+		content += "\t\t<li><a href=\"" + name + "\">" + name + "</a></li>\n";	
+	}
+	content += "\t\t</ul>\n</body>\n</html>\n";
+    closedir(dir);
+	return content;
+}
+
+std::string Resource::makeResource() const {
+	// if (status == FOUND) {
+	// 	return read();
+	// }
+	if (status == DirectoryList) {
+		return makeDirectoryList();
+	}
+	return read();
+	// 존재하지 않는 error page 들어왔을 때, 기본값 error page 띄우기 ?		
 }

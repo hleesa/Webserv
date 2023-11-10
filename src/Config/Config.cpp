@@ -10,6 +10,7 @@ Config::Config(std::vector< std::vector< std::string> >& server_block)
 	std::set<std::string> duplicated;
 	unsigned long i = 0;
 
+	initErrorPage();
 	for (;i < server_block.size(); i++) {
 		if (server_block[i][0] == "location") {
 			break;
@@ -88,6 +89,17 @@ long Config::getLimitBodySize() const {
 
 std::map<std::string, Location> Config::getLocations() const {
 	return this->locations;
+}
+
+void Config::initErrorPage() {
+	int status_code;
+
+	for (status_code = 400; status_code <= 417; status_code++) {
+		error_page[status_code] = CLIENT_ERROR_PAGE;
+	}
+	for (status_code = 500; status_code <= 505; status_code++) {
+		error_page[status_code] = SERVER_ERROR_PAGE;
+	}
 }
 
 void Config::server_token_parser(std::vector<std::string> one_line, std::set<std::string>& duplicated) {

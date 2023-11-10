@@ -16,8 +16,6 @@ Location::Location(std::vector<std::vector<std::string> >& location_block) : aut
 	for (itr = location_block.begin(); itr != location_block.end(); itr++) {
 		parse(*itr, duplicated);
 	}
-	if (index.empty())
-		index.push_back("index.html");
 }
 
 Location::Location(const Location &other) {

@@ -9,6 +9,7 @@ Config::Config(std::vector< std::vector< std::string> >& server_block)
 {
 	std::set<std::string> duplicated;
 	unsigned long i = 0;
+	bool hasCgi = false;
 
 	for (;i < server_block.size(); i++) {
 		if (server_block[i][0] == "location") {
@@ -28,13 +29,25 @@ Config::Config(std::vector< std::vector< std::string> >& server_block)
 			for (; server_block[i][0] != "}"; ++i) {
 				loc_block.push_back(server_block[i]);
 			}
-			Location unit_loc(loc_block);
-			locations.insert(make_pair(key, unit_loc));
+			setLocation(loc_block, key, hasCgi);
 		}
 	}
-	if (index.size() == 0) {
+	if (index.empty()) {
 		index.push_back("index.html");
 	}
+}
+
+void Config::setLocation(std::vector< std::vector<std::string> >& loc_block, const std::string key, bool& hasCgi) {
+	if (key.find("cgi") != std::string::npos) {
+		if (hasCgi) {
+			throw std::invalid_argument("Error: too many cgi location block.");
+		}
+		cgi_location = std::make_pair(key, CgiLocation(loc_block));
+		hasCgi = true;
+		return ;
+	}
+	Location unit_loc(loc_block);
+	locations.insert(make_pair(key, unit_loc));
 }
 
 Config::Config(const Config& other) {
@@ -51,7 +64,7 @@ Config& Config::operator=(const Config& other) {
 		index = other.index;
 		limit_body_size = other.limit_body_size;
 		locations = other.locations;
-		// cgi_location = other.cgi_location;
+		cgi_location = other.cgi_location;
 	}
 	return (*this);
 }
@@ -88,6 +101,10 @@ long Config::getLimitBodySize() const {
 
 std::map<std::string, Location> Config::getLocations() const {
 	return this->locations;
+}
+
+std::pair<std::string, CgiLocation> Config::getCgiLocation() const {
+	return this->cgi_location;
 }
 
 void Config::server_token_parser(std::vector<std::string> one_line, std::set<std::string>& duplicated) {

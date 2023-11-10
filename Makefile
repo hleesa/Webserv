@@ -17,8 +17,8 @@ CONFIG_SRC = \
 			Config.cpp \
 			ConfigParser.cpp \
 			Location.cpp \
+			CgiLocation.cpp \
 			type.cpp
-			#CgiLocation.cpp
 
 REQUEST_SRC = \
 			HttpRequestMessage.cpp \

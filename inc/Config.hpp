@@ -24,6 +24,8 @@ class Config {
 		std::map<std::string, Location> locations;
         std::pair<std::string, CgiLocation> cgi_location;
 
+		void setLocation(std::vector< std::vector<std::string> >& loc_block, const std::string key, bool& hasCgi);
+
 	public:
 		Config();
 
@@ -45,7 +47,7 @@ class Config {
 		std::vector<std::string> getIndex() const;
 		long getLimitBodySize() const;
 		std::map<std::string, Location> getLocations() const;
-        std::pair<std::string,CgiLocation> getCgiLocation() const;
+        std::pair<std::string, CgiLocation> getCgiLocation() const;
 
 //인자 확인 함수
 		// void print_checker(void);

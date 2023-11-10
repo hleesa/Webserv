@@ -47,6 +47,10 @@ std::pair<int, std::string> Location::getReturnValue() const {
 	return this->return_value;
 }
 
+bool Location::hasReturnValue() const {
+	return this->return_value.first != 0 && this->return_value.second.size();
+}
+
 std::string Location::getRoot() const {
 	return this->root;
 }

@@ -20,6 +20,8 @@ class GetMethod {
 		std::string findErrorPageFilePath();
 		Resource makeResource();
 
+		HttpResponseMessage processReturnDirective();
+		HttpResponseMessage makeRedirectionResponse(const std::pair<int, std::string> return_value);
 		std::map<std::string, std::string> makeHeaderFileds(const std::string& body);
 		std::string makeDate();
 

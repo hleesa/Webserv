@@ -111,6 +111,7 @@ void ServerManager::processWriteEvent(const struct kevent& event) {
 	
 	std::map<int, std::string> codeToReason;
 	codeToReason[200] = "OK";
+	codeToReason[301] = "Moved Permanently";
 	codeToReason[400] = "Bad Request";
 	codeToReason[404] = "Not Found";
 

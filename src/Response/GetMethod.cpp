@@ -46,17 +46,20 @@ std::string GetMethod::findResourcePath() {
 	std::vector<std::string> index = config.getLocations()[location_key].getIndex();
 	std::string url = request.getURL();
 
-	if (url != "/" && *url.rbegin() == '/') {
+	if (index.empty()) {
+		index = config.getIndex();
+	}
+	// / 이 아닌 url에 대해
+	if (url != "/" && *url.rbegin() == '/') { // url 끝에 있는 / 제거
 		url.resize(url.size() - 1);
 	}
-	if (location_key != "/" && location_key != url) {
+	if (location_key != url) { // url 자체를 찾음 
 		std::string path = root + "/" + url;
 		return checkFileExistence(path) ? path : "";
 	}
 
 	std::vector<std::string>::iterator itr = index.begin();
 	std::string path = root + location_key + "/" + *itr;
-	std::cout << "path : " << path << std::endl;
 	while (!checkFileExistence(path) && ++itr != index.end()) {
 		path = root + location_key + "/" + *itr;
 	}
@@ -92,24 +95,49 @@ Resource GetMethod::makeResource() {
 	if (status == NotFound) {
 		resource_path = findErrorPageFilePath();
 	}
-	// std::cout << "resource_path : " << resource_path << std::endl;
 	return Resource(resource_path, status);
 }
 
 HttpResponseMessage GetMethod::makeHttpResponseMessage() {
 	int status_code = 200;
-
 	std::string body = resource.makeResource();
-	if (resource.getStatus() == NotFound)
+
+	if (config.getLocations()[location_key].hasReturnValue()) {
+		return processReturnDirective();
+	}
+	if (resource.getStatus() == NotFound) {
 		status_code = 404;
+	}
 	return HttpResponseMessage(status_code, makeHeaderFileds(body), body);
+}
+
+
+HttpResponseMessage GetMethod::processReturnDirective() {
+	std::pair<int, std::string> return_value = config.getLocations()[location_key].getReturnValue();
+	int status_code = return_value.first;
+
+	if (status_code / 100 == 3) { // redirection
+		return makeRedirectionResponse(return_value);
+	}
+	std::string body = return_value.second;
+	return HttpResponseMessage(status_code, makeHeaderFileds(body), body);
+}
+
+HttpResponseMessage GetMethod::makeRedirectionResponse(const std::pair<int, std::string> return_value) {
+	std::string host = request.getHeaderFields()["host"].at(0);
+	std::string location = "http://" + host + return_value.second;
+	std::string body = "Moved Permanently. Redirecting to " + location + ".";
+	std::map<std::string, std::string> header = makeHeaderFileds(body);
+
+	header["Location"] = location;
+	return HttpResponseMessage(return_value.first, header, body);
 }
 
 std::map<std::string, std::string> GetMethod::makeHeaderFileds(const std::string& body) {
 	std::map<std::string, std::string> header;
 
 	header["Content-length"] = std::to_string(body.length());
-	header["content-type"] = "text/html";
+	header["Content-type"] = "text/html";
 	// MIME을 어떻게 찾지 ..? 
 	header["Date"] = makeDate(); 
 	return header;

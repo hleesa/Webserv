@@ -43,6 +43,7 @@ public:
     std::string getRoot() const;
     std::vector<std::string> getIndex() const;
     bool getAutoindex() const;
+	bool hasReturnValue() const;
 
 	friend std::ostream& operator<<(std::ostream& out, Location& location);
 };

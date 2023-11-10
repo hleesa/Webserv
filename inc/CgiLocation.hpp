@@ -6,9 +6,11 @@
 
 class CgiLocation : public Location {
 private:
-    std::vector<std::string> cgi_path;
-    std::vector<std::string> cgi_ext;
+    std::string cgi_path;
+    std::string cgi_ext;
+public:
+    std::string getCgiPath() const;
+    std::string getCgiExt() const;
 };
-
 
 #endif //WEBSERV_CGILOCATION_HPP

@@ -22,7 +22,7 @@ class Config {
 		std::vector<std::string> index;
 		long limit_body_size;
 		std::map<std::string, Location> locations;
-        CgiLocation cgi_location;
+        std::pair<std::string, CgiLocation> cgi_location;
 
 	public:
 		Config();
@@ -36,7 +36,7 @@ class Config {
 		~Config();
 
 		void server_token_parser(std::vector<std::string> one_line, std::set<std::string>& duplicated);
-		
+
 		int getPort() const;
 		std::string getHost() const;
 		std::vector<std::string> getName() const;
@@ -45,6 +45,7 @@ class Config {
 		std::vector<std::string> getIndex() const;
 		long getLimitBodySize() const;
 		std::map<std::string, Location> getLocations() const;
+        std::pair<std::string,CgiLocation> getCgiLocation() const;
 
 //인자 확인 함수
 		// void print_checker(void);

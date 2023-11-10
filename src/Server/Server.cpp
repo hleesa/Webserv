@@ -10,3 +10,7 @@ Server::Server(int connection, int listen) {
 std::vector<std::string> Server::getRequestLine() const {
     return request.getRequestLine();
 }
+
+void Server::setRequest(HttpRequestMessage request) {
+    this->request = request;
+}

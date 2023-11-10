@@ -60,13 +60,16 @@ void ServerManager::processEvents(const int events) {
         else if (event->filter == EVFILT_READ && servers.find(event->ident) != servers.end()) {
             processReadEvent(*event);
 			if (parser.getReadingStatus(event->ident) == END) {
-				HttpRequestMessage msg = parser.getHttpRequestMessage(event->ident);
+				HttpRequestMessage request = parser.getHttpRequestMessage(event->ident);
 				parser.clear(event->ident);
-				// write event 추가
+
+                // write event 추가
+                servers[event->ident].setRequest(request);
+                change_list.push_back(makeEvent(event->ident, EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, NULL));
 			}
         }
         else if (event->filter == EVFILT_WRITE && servers.find(event->ident) != servers.end()) {
-			processWriteEvent(*event);
+            processWriteEvent(*event);
         }
     }
 }
@@ -85,7 +88,6 @@ void ServerManager::processListenEvent(const struct kevent& event) {
     if (connection_socket == ERROR)
         throw (strerror(errno));
     change_list.push_back(makeEvent(connection_socket, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, NULL));
-    change_list.push_back(makeEvent(connection_socket, EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, NULL));
 	servers[connection_socket] = Server(connection_socket, event.ident);
 }
 
@@ -107,10 +109,20 @@ void ServerManager::processWriteEvent(const struct kevent& event) {
     int n = 0;
 
     std::vector<std::string> request_line = servers[event.ident].getRequestLine();
-    if (CgiGet::isValidCgiGetUrl(request_line, configs, event.ident)) {
+    try {
+        if (CgiGet::isValidCgiGetUrl(request_line, configs, event.ident)) {
+            std::map<int, Config>::const_iterator found_config = configs.find(event.ident);
+            if (found_config == configs.end()) {
+                // config not found
+                return;
+            }
+            HttpResponseMessage response = CgiGet::processCgiGet(request_line[1],
+                                                                 found_config->second.getCgiLocation().second);
 
+        }
+    } catch (int status_code) {
+        return;
     }
-
 	// TO DO : Request -> Response
     // send(event.ident, response_content, response_content.size());
 

@@ -139,6 +139,9 @@ void Config::server_token_parser(std::vector<std::string> one_line, std::set<std
 	}
 }
 
+std::pair<std::string, CgiLocation> Config::getCgiLocation() const {
+    return cgi_location;
+}
 
 // 인자 확인하는 함수
 

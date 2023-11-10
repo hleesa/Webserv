@@ -14,6 +14,7 @@ class Server {
 		Server();
         Server(int connection, int listen);
         std::vector<std::string> getRequestLine() const;
+        void setRequest(HttpRequestMessage request);
 };
 
 #endif

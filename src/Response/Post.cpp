@@ -1,6 +1,6 @@
-#include "../../inc/PostResponse.hpp"
+#include "../../inc/Post.hpp"
 
-PostResponse::PostResponse() {
+Post::Post() {
 	_status_code = 0;
 	//_header_fields = ;
 	_message_body = "";
@@ -9,11 +9,11 @@ PostResponse::PostResponse() {
 	content_length = 0;
 }
 
-PostResponse::PostResponse(const PostResponse& other) {
+Post::Post(const Post& other) {
 	*this = other;
 }
 
-PostResponse& PostResponse::operator=(const PostResponse& other) {
+Post& Post::operator=(const Post& other) {
 	if (this != &other) {
 		this->_status_code = other._status_code;
 		this->abs_path = other.abs_path;
@@ -23,9 +23,9 @@ PostResponse& PostResponse::operator=(const PostResponse& other) {
 	return *this;
 }
 
-PostResponse::~PostResponse() {}
+Post::~Post() {}
 
-HttpResponseMessage PostResponse::run(HttpRequestMessage request_msg, Config config) {
+HttpResponseMessage Post::run(HttpRequestMessage request_msg, Config config) {
 	if (request_msg.getMethod() != "POST") {
 		_status_code = 300;
 		_header_fields["content-type"] = "text/plain";
@@ -51,7 +51,7 @@ HttpResponseMessage PostResponse::run(HttpRequestMessage request_msg, Config con
 	return HttpResponseMessage(_status_code, _header_fields, _message_body);
 }
 
-void PostResponse::check_request_line(std::vector<std::string> request_line, std::string root) {
+void Post::check_request_line(std::vector<std::string> request_line, std::string root) {
 	std::string rel_path;
 	size_t pos;
 
@@ -80,7 +80,7 @@ void PostResponse::check_request_line(std::vector<std::string> request_line, std
 	}
 }
 
-bool PostResponse::directory_exists(const std::string& path) {
+bool Post::directory_exists(const std::string& path) {
 	struct stat info;
 
 	if (stat(path.c_str(), &info) != 0) {
@@ -89,7 +89,7 @@ bool PostResponse::directory_exists(const std::string& path) {
 	return (info.st_mode & S_IFDIR) != 0;
 }
 
-void PostResponse::check_header_field(std::map<std::string, std::vector<std::string> > header_field) {
+void Post::check_header_field(std::map<std::string, std::vector<std::string> > header_field) {
 	check_header_content_type(header_field);
 	check_header_content_length(header_field);
 	check_header_content_desposition(header_field);
@@ -98,7 +98,7 @@ void PostResponse::check_header_field(std::map<std::string, std::vector<std::str
 }
 
 //check request header field fn
-void PostResponse::check_header_content_type(std::map<std::string, std::vector<std::string> > header_field) {
+void Post::check_header_content_type(std::map<std::string, std::vector<std::string> > header_field) {
 	//HTML, JSON, TEXT data 세가지만 처리
 	if (header_field.find("content-type") == header_field.end()) {
 		_status_code = 403;
@@ -137,7 +137,7 @@ void PostResponse::check_header_content_type(std::map<std::string, std::vector<s
 		return;
 	}
 }
-void PostResponse::check_header_content_length(std::map<std::string, std::vector<std::string> > header_field) {
+void Post::check_header_content_length(std::map<std::string, std::vector<std::string> > header_field) {
 	if (header_field.find("content-length") == header_field.end()) {
 		_status_code = 403;
 		return;
@@ -153,21 +153,21 @@ void PostResponse::check_header_content_length(std::map<std::string, std::vector
 		}
 	}
 }
-void PostResponse::check_header_content_desposition(std::map<std::string, std::vector<std::string> > header_field){
+void Post::check_header_content_desposition(std::map<std::string, std::vector<std::string> > header_field){
 	if (header_field.find("content-desposition") == header_field.end()) {
 		return;
 	}
 	//처리 보류
 
 }
-void PostResponse::check_header_user_agent(std::map<std::string, std::vector<std::string> > header_field) {
+void Post::check_header_user_agent(std::map<std::string, std::vector<std::string> > header_field) {
 	if (header_field.find("content-user-agent") == header_field.end()) {
 		return;
 	}
 	//처리 보류
 
 }
-void PostResponse::check_header_authorization(std::map<std::string, std::vector<std::string> > header_field) {
+void Post::check_header_authorization(std::map<std::string, std::vector<std::string> > header_field) {
 	if (header_field.find("content-authorization") == header_field.end()) {
 		return;
 	}
@@ -175,7 +175,7 @@ void PostResponse::check_header_authorization(std::map<std::string, std::vector<
 
 }
 
-void PostResponse::saveStringToFile(std::string message_body) {
+void Post::saveStringToFile(std::string message_body) {
 	std::string filename = generateFileName();
 	std::string data_path = abs_path + "/" + filename;
 	std::ofstream file_write(data_path, std::ios::app);
@@ -196,7 +196,7 @@ void PostResponse::saveStringToFile(std::string message_body) {
 
 }
 
-std::string PostResponse::generateFileName() {
+std::string Post::generateFileName() {
 	static size_t fileIndex = 0;
 
 	std::stringstream filenameStream;
@@ -204,7 +204,7 @@ std::string PostResponse::generateFileName() {
 	return filenameStream.str();
 }
 
-void PostResponse::make_post_response(Config config) {
+void Post::make_post_response(Config config) {
 	std::string redirect_path = config.getRoot() + "/redirect_page/";
 	std::string errorpage_path = config.getRoot() + "/error_pages/";
 	std::ostringstream body_length;
@@ -239,7 +239,7 @@ void PostResponse::make_post_response(Config config) {
 	_header_fields["content-length"] = body_length.str();
 }
 
-std::string PostResponse::make_response_body(const std::string& file_path) {
+std::string Post::make_response_body(const std::string& file_path) {
 	std::ifstream input_file(file_path, std::ios::binary);
 
 	if(!input_file.is_open()) {
@@ -258,10 +258,10 @@ std::string PostResponse::make_response_body(const std::string& file_path) {
 }
 
 //make response header field fn
-//void PostResponse::make_header_location();
-//void PostResponse::make_header_content_type();
-//void PostResponse::make_header_content_length();
-//void PostResponse::make_header_set_cookie();
-//void PostResponse::make_header_allow();
-//void PostResponse::make_header_chache_control();
-//void PostResponse::make_header_access_control_allow_origin();
+//void Post::make_header_location();
+//void Post::make_header_content_type();
+//void Post::make_header_content_length();
+//void Post::make_header_set_cookie();
+//void Post::make_header_allow();
+//void Post::make_header_chache_control();
+//void Post::make_header_access_control_allow_origin();

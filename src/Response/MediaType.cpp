@@ -1,8 +1,5 @@
 #include "../../inc/MediaType.hpp"
 
-// text/
-// img html txt json
-
 void MediaType::init(std::map<std::string, std::string>& mime_table) {
 	mime_table[".bin"] = "application/octet-stream";
 	mime_table[".css"] = "text/css";
@@ -24,7 +21,6 @@ void MediaType::init(std::map<std::string, std::string>& mime_table) {
 	mime_table[".xhtml"] = "application/xhtml+xml";
 	mime_table[".xml"] = "application/xml";
 }
-#include <iostream>
 
 std::string MediaType::getType(const std::string resource_path) {
 	static std::map<std::string, std::string> mime_table;

@@ -1,12 +1,12 @@
-#ifndef GETMETHOD_HPP
-#define GETMETHOD_HPP
+#ifndef GET_HPP
+#define GET_HPP
 
 #include "HttpRequestMessage.hpp"
 #include "HttpResponseMessage.hpp"
 #include "Config.hpp"
 #include "Resource.hpp"
 
-class GetMethod {
+class Get {
 	private:
 		HttpRequestMessage request;
 		Config config;
@@ -28,7 +28,7 @@ class GetMethod {
 		std::string makeDate();
 
 	public:
-		GetMethod(const HttpRequestMessage& request, const Config& config);
+		Get(const HttpRequestMessage& request, const Config& config);
 
 		HttpResponseMessage makeHttpResponseMessage();
 };

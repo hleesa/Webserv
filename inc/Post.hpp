@@ -1,5 +1,5 @@
-#ifndef POSTRESPONSE_HPP
-#define POSTRESPONSE_HPP
+#ifndef POST_HPP
+#define POST_HPP
 
 #include <iostream>
 #include <fstream>
@@ -9,7 +9,7 @@
 #include "Config.hpp"
 #include "HttpResponseMessage.hpp"
 
-class PostResponse {
+class Post {
 	private :
 		//HttpResponseMessage msg_response;
 		int _status_code;
@@ -22,10 +22,10 @@ class PostResponse {
 		size_t content_length;
 
 	public :
-		PostResponse();
-		PostResponse(const PostResponse& other);
-		PostResponse& operator=(const PostResponse& other);
-		~PostResponse();
+		Post();
+		Post(const Post& other);
+		Post& operator=(const Post& other);
+		~Post();
 
 		HttpResponseMessage run(HttpRequestMessage msg, Config config);
 

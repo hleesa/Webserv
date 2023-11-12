@@ -18,7 +18,10 @@ public:
     HttpResponseMessage(int status_code, std::map<std::string, std::string> header_fields,
                         std::string message_body);
 
+    int getBodySize();
+
     std::string toString();
+  
 };
 
 #endif //WEBSERV_HTTPRESPONSEMESSAGE_HPP

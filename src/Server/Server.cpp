@@ -9,6 +9,19 @@ Server::Server(int connection, int listen) {
 	listen_socket = listen;
 }
 
+
+std::vector<std::string> Server::getRequestLine() const {
+    return request.getRequestLine();
+}
+
+void Server::setRequest(HttpRequestMessage request) {
+    this->request = request;
+}
+
+int Server::getListenSocket() const {
+    return listen_socket;
+}
+
 void Server::setRequest(const HttpRequestMessage& request_message) {
 	this->request = request_message;
 }

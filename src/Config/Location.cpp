@@ -21,8 +21,6 @@ Location::Location(std::vector<std::vector<std::string> >& location_block) : aut
 		http_methods.insert("POST");
 		http_methods.insert("DELETE");
 	}
-	// if (index.empty())
-	// 	index.push_back("index.html");
 }
 
 Location::Location(const Location &other) {

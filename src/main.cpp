@@ -4,7 +4,11 @@
 
 int main() {
     try {
+
+      //  std::vector<Config> configs =  ConfigParser::parseConfigFile("../ConfigFile/default.conf");
+
         std::vector<Config> configs =  ConfigParser::parseConfigFile("ConfigFile/my.conf");
+
 		ServerManager manager(configs);
 
 		manager.run();

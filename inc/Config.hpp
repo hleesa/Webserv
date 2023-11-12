@@ -9,7 +9,7 @@
 #include <sstream>
 #include <vector>
 #include "Location.hpp"
-// #include "CgiLocation.hpp"
+#include "CgiLocation.hpp"
 
 #define CLIENT_ERROR_PAGE "/default/4xx.html"
 #define SERVER_ERROR_PAGE "/default/5xx.html"
@@ -25,7 +25,9 @@ class Config {
 		std::vector<std::string> index;
 		long limit_body_size;
 		std::map<std::string, Location> locations;
-//		 CgiLocation cgi_location;
+        std::pair<std::string, CgiLocation> cgi_location;
+
+		void setLocation(std::vector< std::vector<std::string> >& loc_block, const std::string key, bool& hasCgi);
 
 		void initErrorPage();
 
@@ -41,7 +43,7 @@ class Config {
 		~Config();
 
 		void server_token_parser(std::vector<std::string> one_line, std::set<std::string>& duplicated);
-		
+
 		int getPort() const;
 		std::string getHost() const;
 		std::vector<std::string> getName() const;
@@ -50,6 +52,7 @@ class Config {
 		std::vector<std::string> getIndex() const;
 		long getLimitBodySize() const;
 		std::map<std::string, Location> getLocations() const;
+        std::pair<std::string, CgiLocation> getCgiLocation() const;
 
 //인자 확인 함수
 		// void print_checker(void);

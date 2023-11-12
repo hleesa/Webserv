@@ -13,12 +13,18 @@ class Server {
 		int listen_socket;
 		HttpRequestMessage request;
 
-	public:
+    public:
 		Server();
-		Server(int connection, int listen);
+
+        Server(int connection, int listen);
+        std::vector<std::string> getRequestLine() const;
+        void setRequest(HttpRequestMessage request);
+        int getListenSocket() const;
+
 
 		void setRequest(const HttpRequestMessage& msg);
 		std::string makeResponse(std::map<int, Config>& configs);
+
 };
 
 #endif

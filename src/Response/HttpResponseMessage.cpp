@@ -24,3 +24,7 @@ std::string HttpResponseMessage::toString() {
     ss << "\r\n" << message_body;
     return ss.str();
 }
+
+int HttpResponseMessage::getBodySize() {
+    return message_body.size();
+}

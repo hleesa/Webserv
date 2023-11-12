@@ -18,6 +18,8 @@ public:
                         std::string message_body);
 
     std::string toString(const std::map<int, std::string>& codeToReason);
+
+    int getBodySize();
 };
 
 #endif //WEBSERV_HTTPRESPONSEMESSAGE_HPP

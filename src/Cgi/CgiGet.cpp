@@ -172,6 +172,7 @@ HttpResponseMessage CgiGet::processCgiGet(const std::string url, CgiLocation cgi
             const_cast<char*>(python_script),
             NULL
     };
+    std::string body;
     int pipe_fd[2];
     if (pipe(pipe_fd) == ERROR) {
         // pipe error
@@ -193,8 +194,11 @@ HttpResponseMessage CgiGet::processCgiGet(const std::string url, CgiLocation cgi
         memset(rcv_buffer, 0, sizeof(rcv_buffer));
         int n;
         while (n = read(STDIN_FILENO, rcv_buffer, sizeof(rcv_buffer))) {
-//            rcv_buffer[n] = '\0';
-            write(conn_sock, rcv_buffer, strlen(rcv_buffer));
+//            if (n != 0) {
+//                rcv_buffer[n] = '\0';
+                body += std::string(rcv_buffer);
+//            }
+//            write(conn_sock, rcv_buffer, strlen(rcv_buffer));
             memset(rcv_buffer, 0, sizeof(rcv_buffer));
         }
         waitpid(pid, 0, 0);
@@ -213,5 +217,9 @@ HttpResponseMessage CgiGet::processCgiGet(const std::string url, CgiLocation cgi
         execve(python_interpreter, command, cgi_environ);
         exit(EXIT_FAILURE);
     }
-    return HttpResponseMessage(0, std::map<std::string, std::string>(), "");
+    int status_code = 200;
+    std::map<std::string, std::string> header_fields;
+    header_fields["Content-type"] = "text/html";
+    header_fields["Content-Length"] = std::to_string(body.size()-1);
+    return HttpResponseMessage(status_code, header_fields, body);
 }

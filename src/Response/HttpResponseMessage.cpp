@@ -20,3 +20,7 @@ std::string HttpResponseMessage::toString(const std::map<int, std::string>& code
     ss << "\r\n" << message_body;
     return ss.str();
 }
+
+int HttpResponseMessage::getBodySize() {
+    return message_body.size();
+}

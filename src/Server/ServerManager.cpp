@@ -120,13 +120,16 @@ void ServerManager::processWriteEvent(const struct kevent& event) {
             HttpResponseMessage response = CgiGet::processCgiGet(request_line[1],
                                                                  found_config->second.getCgiLocation().second,
                                                                  event.ident);
-
+            std::map<int, std::string> codeToReason;
+            codeToReason[200] = "OK";
+            std::string str = response.toString(codeToReason);
+            write(event.ident, str.c_str(), str.length());
         }
     } catch (int status_code) {
         return;
     }
 	// TO DO : Request -> Response
-    // send(event.ident, response_content, response_content.size());
+//     send(event.ident, response_content, response_content.size());
 
     if (n == ERROR) {
         disconnectWithClient(event);

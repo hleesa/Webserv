@@ -3,6 +3,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <unistd.h>
+#include "../../inc/PostResponse.hpp"
 
 ServerManager::ServerManager(const std::vector<Config>& configs) {
     for (unsigned long idx = 0; idx < configs.size(); idx++) {
@@ -108,8 +109,6 @@ void ServerManager::processWriteEvent(const struct kevent& event) {
 
 	// httpRuequestMessage의 status code != 0 인 경우에는 바로 에러 페이지 response 만들기
 	// TO DO : Request -> Response
-	
-
 	std::string response = servers[event.ident].makeResponse(configs);
 	write(event.ident, response.c_str(), response.size());
     change_list.push_back(makeEvent(event.ident, EVFILT_WRITE, EV_DISABLE, 0, 0, NULL));

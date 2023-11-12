@@ -28,6 +28,7 @@ RESPONSE_SRC = \
 			HttpResponseMessage.cpp \
 			CodeToReason.cpp \
 			GetMethod.cpp \
+			PostResponse.cpp \
 			Resource.cpp \
 			MediaType.cpp
 

@@ -37,9 +37,12 @@ HttpResponseMessage PostResponse::run(HttpRequestMessage request_msg, Config con
 		check_request_line(request_msg.getRequestLine(), config.getRoot());
 		check_header_field(request_msg.getHeaderFields());
 	}
+	//요청 헤더 파싱 후에 맞는 상황에 대하여  처리
 	if (content_type == "text/plain" && _status_code == 0) {
 		saveStringToFile(request_msg.getMessageBody());
 	}
+
+
 	make_post_response(config);
 	return HttpResponseMessage(_status_code, _header_fields, _message_body);
 }
@@ -169,7 +172,8 @@ void PostResponse::check_header_authorization(std::map<std::string, std::vector<
 }
 
 void PostResponse::saveStringToFile(std::string message_body) {
-	std::string data_path = abs_path + "/data.txt";
+	std::string filename = generateFileName();
+	std::string data_path = abs_path + "/" + filename;
 	std::ofstream file_write(data_path, std::ios::app);
 
 	if (message_body.size() != content_length) {
@@ -186,29 +190,14 @@ void PostResponse::saveStringToFile(std::string message_body) {
 		return;
 	}
 
-	//std::ifstream fileCheck(data_path);
+}
 
-	//if(fileCheck.good()) {
-	//	std::ofstream file_wirte(data_path, std::ios::app);
+std::string generateFileName() {
+	static size_t fileIndex = 0;
 
-	//	if (file_wirte.is_open()) {
-	//		file_wirte << message_body;
-	//		file_wirte.close();
-	//	} else {
-	//		_status_code = 403; // write fail
-	//		return;
-	//	}
-	//} else {
-	//	std::ofstream file_wirte(data_path);
-
-	//	if (file_wirte.is_open()) {
-	//		file_wirte << message_body;
-	//		file_wirte.close();
-	//	} else {
-	//		_status_code = 403;
-	//		return;
-	//	}
-	//}
+	std::stringstream filenameStream;
+	filenameStream << "file_" << fileIndex++ << ".txt";
+	return filenameStream.str();
 }
 
 void PostResponse::make_post_response(Config config) {
@@ -229,7 +218,10 @@ void PostResponse::make_post_response(Config config) {
 		// 리다이렉션
 		_header_fields["location"] = request_url;
 		_header_fields["content_type"] = "text/html";
-		_message_body = make_response_body(errorpage_path + "redirection.html");
+
+		//어떤 내용물을 반환하는  리다이렉션?
+		_message_body = "This page will be redirected";
+		//_message_body = make_response_body(errorpage_path + "redirection.html");
 	} else if (_status_code >= 400 && _status_code < 500) {
 		_message_body = make_response_body(errorpage_path + "/4XX.html");
 		_header_fields["content_type"] = "text/html";

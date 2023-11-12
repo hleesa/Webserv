@@ -77,7 +77,7 @@ std::string Resource::makeDirectoryList() const {
 	return content;
 }
 
-std::string Resource::makeResource() const {
+std::string Resource::make() const {
 	// if (status == FOUND) {
 	// 	return read();
 	// }

@@ -10,6 +10,7 @@ class GetMethod {
 	private:
 		HttpRequestMessage request;
 		Config config;
+		int status_code;
 		std::string location_key;
 		Resource resource;
 	

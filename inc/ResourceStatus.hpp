@@ -4,7 +4,8 @@
 enum ResourceStatus {
 	FOUND,
 	NotFound,
-	DirectoryList
+	DirectoryList,
+	ERROR
 };
 
 #endif

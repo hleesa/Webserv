@@ -24,7 +24,7 @@ class Resource {
 		ResourceStatus getStatus() const;
 		std::string getPath() const;
 
-		std::string makeResource() const;
+		std::string make() const;
 };
 
 #endif

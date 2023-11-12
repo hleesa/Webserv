@@ -6,6 +6,7 @@
 GetMethod::GetMethod(const HttpRequestMessage& request, const Config& config) {
 	this->request = request;
 	this->config = config;
+	this->status_code = 200;
 	this->location_key = findLocationKey();
 	this->resource = makeResource();
 	std::cout << "url : " << request.getURL() << "\n\n";
@@ -81,34 +82,37 @@ ResourceStatus GetMethod::getResourceStatus(const std::string path) {
 std::string GetMethod::findErrorPageFilePath() {
 	std::map<int, std::string> error_page = config.getErrorpage();
 
-	return config.getRoot() + "/" + error_page[404];
+	return config.getRoot() + "/" + error_page[status_code];
 }
 
 Resource GetMethod::makeResource() {
+	if (config.getLocations()[location_key].isNotAllowedMethod("GET")) {
+		status_code = 405;
+		return  Resource(findErrorPageFilePath(), ERROR);	
+	}
+
 	std::string resource_path = findResourcePath();
 	ResourceStatus status = getResourceStatus(resource_path);
+	
 	if (status == DirectoryList) {
 		resource_path = findRoot() + location_key;
 	}
 	if (status == NotFound) {
+		status_code = 404;
 		resource_path = findErrorPageFilePath();
 	}
 	return Resource(resource_path, status);
 }
 
 HttpResponseMessage GetMethod::makeHttpResponseMessage() {
-	int status_code = 200;
-	std::string body = resource.makeResource();
+	std::string body = resource.make();
+	Location location = config.getLocations()[location_key];
 
-	if (config.getLocations()[location_key].hasReturnValue()) {
+	if (location.hasReturnValue()) {
 		return processReturnDirective();
-	}
-	if (resource.getStatus() == NotFound) {
-		status_code = 404;
 	}
 	return HttpResponseMessage(status_code, makeHeaderFileds(body), body);
 }
-
 
 HttpResponseMessage GetMethod::processReturnDirective() {
 	std::pair<int, std::string> return_value = config.getLocations()[location_key].getReturnValue();

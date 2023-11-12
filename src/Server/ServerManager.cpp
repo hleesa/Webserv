@@ -59,8 +59,9 @@ void ServerManager::processEvents(const int events) {
         else if (event->filter == EVFILT_READ && servers.find(event->ident) != servers.end()) {
             processReadEvent(*event);
 			if (parser.getReadingStatus(event->ident) == END) {
-				HttpRequestMessage msg = parser.getHttpRequestMessage(event->ident);
+				servers[event->ident].setRequest(parser.getHttpRequestMessage(event->ident));
 				parser.clear(event->ident);
+    			change_list.push_back(makeEvent(event->ident, EVFILT_WRITE, EV_ENABLE, 0, 0, NULL));
 				// write event 추가
 			}
         }
@@ -84,7 +85,7 @@ void ServerManager::processListenEvent(const struct kevent& event) {
     if (connection_socket == ERROR)
         throw (strerror(errno));
     change_list.push_back(makeEvent(connection_socket, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, NULL));
-    change_list.push_back(makeEvent(connection_socket, EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, NULL));
+    change_list.push_back(makeEvent(connection_socket, EVFILT_WRITE, EV_ADD | EV_DISABLE, 0, 0, NULL));
 	servers[connection_socket] = Server(connection_socket, event.ident);
 }
 
@@ -105,8 +106,12 @@ void ServerManager::processReadEvent(const struct kevent& event) {
 void ServerManager::processWriteEvent(const struct kevent& event) {
     int n = 0;
 
+	// httpRuequestMessage의 status code != 0 인 경우에는 바로 에러 페이지 response 만들기
 	// TO DO : Request -> Response
-    // send(event.ident, response_content, response_content.size());
+	std::string response = servers[event.ident].makeResponse(configs);
+	write(event.ident, response.c_str(), response.size());
+    change_list.push_back(makeEvent(event.ident, EVFILT_WRITE, EV_DISABLE, 0, 0, NULL));
+	// send(event.ident, response, response.size());
     if (n == ERROR) {
         disconnectWithClient(event);
         return;

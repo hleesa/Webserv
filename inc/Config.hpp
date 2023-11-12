@@ -11,6 +11,9 @@
 #include "Location.hpp"
 // #include "CgiLocation.hpp"
 
+#define CLIENT_ERROR_PAGE "/default/4xx.html"
+#define SERVER_ERROR_PAGE "/default/5xx.html"
+
 class Config {
 
 	private:
@@ -23,6 +26,8 @@ class Config {
 		long limit_body_size;
 		std::map<std::string, Location> locations;
 //		 CgiLocation cgi_location;
+
+		void initErrorPage();
 
 	public:
 		Config();

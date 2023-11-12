@@ -3,6 +3,9 @@
 
 #include <string>
 #include "HttpRequestMessage.hpp"
+#include "HttpResponseMessage.hpp"
+
+#include "Config.hpp"
 
 class Server {
 	private:
@@ -13,6 +16,9 @@ class Server {
 	public:
 		Server();
 		Server(int connection, int listen);
+
+		void setRequest(const HttpRequestMessage& msg);
+		std::string makeResponse(std::map<int, Config>& configs);
 };
 
 #endif

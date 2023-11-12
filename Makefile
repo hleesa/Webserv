@@ -25,6 +25,12 @@ REQUEST_SRC = \
 			RequestParser.cpp
 
 RESPONSE_SRC = \
+			HttpResponseMessage.cpp \
+			CodeToReason.cpp \
+			Get.cpp \
+			Post.cpp \
+			Resource.cpp \
+			MediaType.cpp
 
 SERVER_SRC = \
 			Server.cpp \

@@ -16,6 +16,11 @@ Location::Location(std::vector<std::vector<std::string> >& location_block) : aut
 	for (itr = location_block.begin(); itr != location_block.end(); itr++) {
 		parse(*itr, duplicated);
 	}
+	if (http_methods.empty()) {
+		http_methods.insert("GET");
+		http_methods.insert("POST");
+		http_methods.insert("DELETE");
+	}
 }
 
 Location::Location(const Location &other) {
@@ -41,8 +46,16 @@ std::set<std::string> Location::getHttpMethods() const {
 	return this->http_methods;
 }
 
+bool Location::isNotAllowedMethod(const std::string method) const {
+	return this->http_methods.find(method) == this->http_methods.end();
+}
+
 std::pair<int, std::string> Location::getReturnValue() const {
 	return this->return_value;
+}
+
+bool Location::hasReturnValue() const {
+	return this->return_value.first != 0 && this->return_value.second.size();
 }
 
 std::string Location::getRoot() const {

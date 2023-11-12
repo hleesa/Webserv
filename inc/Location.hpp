@@ -43,6 +43,9 @@ public:
     std::string getRoot() const;
     std::vector<std::string> getIndex() const;
     bool getAutoindex() const;
+	
+	bool hasReturnValue() const;
+	bool isNotAllowedMethod(const std::string method) const;
 
 	friend std::ostream& operator<<(std::ostream& out, Location& location);
 };

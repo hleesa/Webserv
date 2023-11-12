@@ -60,12 +60,18 @@ void ServerManager::processEvents(const int events) {
         else if (event->filter == EVFILT_READ && servers.find(event->ident) != servers.end()) {
             processReadEvent(*event);
 			if (parser.getReadingStatus(event->ident) == END) {
-				HttpRequestMessage request = parser.getHttpRequestMessage(event->ident);
-				parser.clear(event->ident);
 
-                // write event 추가
-                servers[event->ident].setRequest(request);
-                change_list.push_back(makeEvent(event->ident, EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, NULL));
+// 				HttpRequestMessage request = parser.getHttpRequestMessage(event->ident);
+// 				parser.clear(event->ident);
+
+//                 // write event 추가
+//                 servers[event->ident].setRequest(request);
+//                 change_list.push_back(makeEvent(event->ident, EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, NULL));
+
+				servers[event->ident].setRequest(parser.getHttpRequestMessage(event->ident));
+				parser.clear(event->ident);
+    			change_list.push_back(makeEvent(event->ident, EVFILT_WRITE, EV_ENABLE, 0, 0, NULL));
+				// write event 추가
 			}
         }
         else if (event->filter == EVFILT_WRITE && servers.find(event->ident) != servers.end()) {
@@ -89,6 +95,8 @@ void ServerManager::processListenEvent(const struct kevent& event) {
     if (connection_socket == ERROR)
         throw (strerror(errno));
     change_list.push_back(makeEvent(connection_socket, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, NULL));
+    change_list.push_back(makeEvent(connection_socket, EVFILT_WRITE, EV_ADD | EV_DISABLE, 0, 0, NULL));
+  
 	servers[connection_socket] = Server(connection_socket, event.ident);
 }
 
@@ -109,27 +117,35 @@ void ServerManager::processReadEvent(const struct kevent& event) {
 void ServerManager::processWriteEvent(const struct kevent& event) {
     int n = 0;
 
-    std::vector<std::string> request_line = servers[event.ident].getRequestLine();
-    try {
-        if (CgiGet::isValidCgiGetUrl(request_line, configs, servers[event.ident].getListenSocket())) {
-            std::map<int, Config>::const_iterator found_config = configs.find(servers[event.ident].getListenSocket());
-            if (found_config == configs.end()) {
-                // config not found
-                return;
-            }
-            HttpResponseMessage response = CgiGet::processCgiGet(request_line[1],
-                                                                 found_config->second.getCgiLocation().second,
-                                                                 event.ident);
-            std::map<int, std::string> codeToReason;
-            codeToReason[200] = "OK";
-            std::string str = response.toString(codeToReason);
-            write(event.ident, str.c_str(), str.length());
-        }
-    } catch (int status_code) {
-        return;
-    }
+
+//     std::vector<std::string> request_line = servers[event.ident].getRequestLine();
+//     try {
+//         if (CgiGet::isValidCgiGetUrl(request_line, configs, servers[event.ident].getListenSocket())) {
+//             std::map<int, Config>::const_iterator found_config = configs.find(servers[event.ident].getListenSocket());
+//             if (found_config == configs.end()) {
+//                 // config not found
+//                 return;
+//             }
+//             HttpResponseMessage response = CgiGet::processCgiGet(request_line[1],
+//                                                                  found_config->second.getCgiLocation().second,
+//                                                                  event.ident);
+//             std::map<int, std::string> codeToReason;
+//             codeToReason[200] = "OK";
+//             std::string str = response.toString(codeToReason);
+//             write(event.ident, str.c_str(), str.length());
+//         }
+//     } catch (int status_code) {
+//         return;
+//     }
 	// TO DO : Request -> Response
 //     send(event.ident, response_content, response_content.size());
+
+	// httpRuequestMessage의 status code != 0 인 경우에는 바로 에러 페이지 response 만들기
+	// TO DO : Request -> Response
+	std::string response = servers[event.ident].makeResponse(configs);
+	write(event.ident, response.c_str(), response.size());
+    change_list.push_back(makeEvent(event.ident, EVFILT_WRITE, EV_DISABLE, 0, 0, NULL));
+	// send(event.ident, response, response.size());
 
     if (n == ERROR) {
         disconnectWithClient(event);

@@ -3,6 +3,7 @@
 #include <fstream>
 #include <iostream>
 #include <dirent.h>
+#include <sys/stat.h>
 
 Resource::Resource() {}
 
@@ -78,11 +79,17 @@ std::string Resource::makeDirectoryList() const {
 }
 
 std::string Resource::make() const {
-	// if (status == FOUND) {
-	// 	return read();
-	// }
 	if (status == DirectoryList) {
 		return makeDirectoryList();
 	}
 	return read();
+}
+
+bool isDirectory(const std::string& path) {
+    struct stat file_info;
+    
+    if (stat(path.c_str(), &file_info) != 0) {
+        return false;
+    }
+    return S_ISDIR(file_info.st_mode);
 }

@@ -20,6 +20,7 @@ class GetMethod {
 		ResourceStatus getResourceStatus(const std::string path);
 		std::string findErrorPageFilePath();
 		Resource makeResource();
+		std::string redefineResourcePath(const ResourceStatus status);
 
 		HttpResponseMessage processReturnDirective();
 		HttpResponseMessage makeRedirectionResponse(const std::pair<int, std::string> return_value);

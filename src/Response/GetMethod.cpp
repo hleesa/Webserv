@@ -43,6 +43,10 @@ std::string GetMethod::findRoot() {
 	return root;
 }
 
+bool checkFileExistence(const std::string file_name) {
+	return !access(file_name.c_str(), R_OK);
+}
+
 std::string GetMethod::findResourcePath() {
 	std::string root = findRoot();
 	std::vector<std::string> index = config.getLocations()[location_key].getIndex();
@@ -68,11 +72,11 @@ std::string GetMethod::findResourcePath() {
 	return itr != index.end() ? path : "";
 }
 
-bool checkFileExistence(const std::string file_name) {
-	return !access(file_name.c_str(), R_OK);
-}
-
 ResourceStatus GetMethod::getResourceStatus(const std::string path) {
+	if (isDirectory(path)) {
+		status_code = 403;
+		return ERROR;	
+	}
 	if (path.size()) {
 		return FOUND;
 	}
@@ -85,6 +89,16 @@ std::string GetMethod::findErrorPageFilePath() {
 	return config.getRoot() + "/" + error_page[status_code];
 }
 
+std::string GetMethod::redefineResourcePath(const ResourceStatus status) {
+	if (status == DirectoryList) {
+		return findRoot() + location_key;
+	}
+	if (status == NotFound) {
+		status_code = 404;
+	}
+	return findErrorPageFilePath();
+}
+
 Resource GetMethod::makeResource() {
 	if (config.getLocations()[location_key].isNotAllowedMethod("GET")) {
 		status_code = 405;
@@ -93,13 +107,8 @@ Resource GetMethod::makeResource() {
 
 	std::string resource_path = findResourcePath();
 	ResourceStatus status = getResourceStatus(resource_path);
-	
-	if (status == DirectoryList) {
-		resource_path = findRoot() + location_key;
-	}
-	if (status == NotFound) {
-		status_code = 404;
-		resource_path = findErrorPageFilePath();
+	if (status != FOUND) {
+		resource_path = redefineResourcePath(status);
 	}
 	return Resource(resource_path, status);
 }

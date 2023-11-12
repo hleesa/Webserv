@@ -29,5 +29,10 @@ void CodeToReason::init() {
 }
 
 std::string CodeToReason::getReasonPharse(const int status_code) {
-	return codeToReason.at(status_code);
+	try {
+		return codeToReason.at(status_code);
+	}
+	catch (const std::exception& e)
+	{}
+	return codeToReason[500];
 }

@@ -31,7 +31,6 @@ std::string MediaType::getType(const std::string resource_path) {
 	std::string filename_extenstion = resource_path.substr(resource_path.rfind("."));
 
 	init(mime_table);
-	std::cout << "extensiont : " << filename_extenstion << std::endl;
 	if (mime_table.find(filename_extenstion) == mime_table.end()) {
 		return DEFAULT;
 	}

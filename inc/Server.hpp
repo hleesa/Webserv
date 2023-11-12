@@ -18,7 +18,7 @@ class Server {
 		Server(int connection, int listen);
 
 		void setRequest(const HttpRequestMessage& msg);
-		HttpResponseMessage makeResponse(std::map<int, Config>& configs);
+		std::string makeResponse(std::map<int, Config>& configs);
 };
 
 #endif

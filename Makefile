@@ -4,7 +4,7 @@ CXX = c++
 
 INCLUDE_DIR = ./inc/
 
-CXXFLAGS = -Wall -Wextra -Werror -std=c++98 -I $(INCLUDE_DIR)
+CXXFLAGS = -Wall -Wextra -Werror -std=c++98 -I $(INCLUDE_DIR) -fsanitize=address
 
 SRCS_DIR = ./src/
 
@@ -26,6 +26,7 @@ REQUEST_SRC = \
 
 RESPONSE_SRC = \
 			HttpResponseMessage.cpp \
+			CodeToReason.cpp \
 			GetMethod.cpp \
 			Resource.cpp
 

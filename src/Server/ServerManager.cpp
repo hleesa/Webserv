@@ -109,13 +109,8 @@ void ServerManager::processWriteEvent(const struct kevent& event) {
 	// httpRuequestMessage의 status code != 0 인 경우에는 바로 에러 페이지 response 만들기
 	// TO DO : Request -> Response
 	
-	std::map<int, std::string> codeToReason;
-	codeToReason[200] = "OK";
-	codeToReason[301] = "Moved Permanently";
-	codeToReason[400] = "Bad Request";
-	codeToReason[404] = "Not Found";
 
-	std::string response = servers[event.ident].makeResponse(configs).toString(codeToReason);
+	std::string response = servers[event.ident].makeResponse(configs);
 	write(event.ident, response.c_str(), response.size());
     change_list.push_back(makeEvent(event.ident, EVFILT_WRITE, EV_DISABLE, 0, 0, NULL));
 	// send(event.ident, response, response.size());

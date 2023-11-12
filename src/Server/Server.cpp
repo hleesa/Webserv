@@ -12,10 +12,10 @@ void Server::setRequest(const HttpRequestMessage& request_message) {
 	this->request = request_message;
 }
 
-HttpResponseMessage Server::makeResponse(std::map<int, Config>& configs) {
+std::string Server::makeResponse(std::map<int, Config>& configs) {
 	if (request.getMethod() == "GET") {
 		GetMethod method(request, configs[listen_socket]);
-		return method.makeHttpResponseMessage();
+		return method.makeHttpResponseMessage().toString();
 	}
-	return HttpResponseMessage();
+	return HttpResponseMessage().toString();
 }

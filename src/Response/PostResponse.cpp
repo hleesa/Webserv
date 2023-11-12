@@ -27,11 +27,15 @@ PostResponse::~PostResponse() {}
 
 HttpResponseMessage PostResponse::run(HttpRequestMessage request_msg, Config config) {
 	if (request_msg.getMethod() != "POST") {
-		return;
+		_status_code = 300;
+		_header_fields["content-type"] = "text/plain";
+		request_url = request_msg.getRequestLine()[1];
+
 	} else if (request_msg.getMessageBody() == "") {
 		//redirect to get
 		//make
 		_status_code = 300;
+		_header_fields["content-type"] = "text/plain";
 		request_url = request_msg.getRequestLine()[1];
 	} else {
 		check_request_line(request_msg.getRequestLine(), config.getRoot());
@@ -39,9 +43,9 @@ HttpResponseMessage PostResponse::run(HttpRequestMessage request_msg, Config con
 	}
 	//요청 헤더 파싱 후에 맞는 상황에 대하여  처리
 	if (content_type == "text/plain" && _status_code == 0) {
+		std::cout << "come here>>>>" << std::endl;
 		saveStringToFile(request_msg.getMessageBody());
 	}
-
 
 	make_post_response(config);
 	return HttpResponseMessage(_status_code, _header_fields, _message_body);
@@ -96,35 +100,35 @@ void PostResponse::check_header_field(std::map<std::string, std::vector<std::str
 //check request header field fn
 void PostResponse::check_header_content_type(std::map<std::string, std::vector<std::string> > header_field) {
 	//HTML, JSON, TEXT data 세가지만 처리
-	if (header_field.find("content_type") == header_field.end()) {
+	if (header_field.find("content-type") == header_field.end()) {
 		_status_code = 403;
 		return;
-	} else if (header_field["content_type"].size() != 1) {
+	} else if (header_field["content-type"].size() != 1) {
 		//보통은 value에 공백으로 두개이상의 인자가 오지는 않기 때문에 일단은 예외처리
 		_status_code = 403;
 		return;
-	} else if (header_field["content_type"][0] == "application/x-www-form-urlencoded") {
+	} else if (header_field["content-type"][0] == "application/x-www-form-urlencoded") {
 		//HTML 폼 데이터를 인코딩한 것으로, 기본적인 폼 제출 방식
 		content_type = "application/x-www-form-urlencoded";
 		return;
-	} else if (header_field["content_type"][0] == "multipart/form-data") {
+	} else if (header_field["content-type"][0] == "multipart/form-data") {
 		//폼 데이터를 여러 부분으로 나눠서 전송할 때 사용됩니다. 주로 파일 업로드와 함께 사용
 		//따로 처리 안함
 		return;
-	} else if (header_field["content_type"][0] == "application/json") {
+	} else if (header_field["content-type"][0] == "application/json") {
 		//JSON 형식의 데이터를 전송할 때 사용
 		content_type = "application/json";
 		return;
-	} else if (header_field["content_type"][0] == "text/plain") {
+	} else if (header_field["content-type"][0] == "text/plain") {
 		//텍스트 데이터를 평문으로 전송
 		content_type = "text/plain";
 		return;
-	} else if (header_field["content_type"][0] == "application/xml") {
+	} else if (header_field["content-type"][0] == "application/xml") {
 		//XML 형식의 데이터를 전송할 때 사용
 		//처리 안함
 
 		return;
-	} else if (header_field["content_type"][0] == "application/octet-stream") {
+	} else if (header_field["content-type"][0] == "application/octet-stream") {
 		//이진 데이터를 전송할 때 사용
 		//처리 안함
 
@@ -134,15 +138,15 @@ void PostResponse::check_header_content_type(std::map<std::string, std::vector<s
 	}
 }
 void PostResponse::check_header_content_length(std::map<std::string, std::vector<std::string> > header_field) {
-	if (header_field.find("content_length") == header_field.end()) {
+	if (header_field.find("content-length") == header_field.end()) {
 		_status_code = 403;
 		return;
-	} else if ((header_field["content_length"].size() != 1)) {
+	} else if ((header_field["content-length"].size() != 1)) {
 		_status_code = 403;
 		return;
 	} else {
 		try {
-			content_length = std::stoi(header_field["content_length"][0]);
+			content_length = std::stoi(header_field["content-length"][0]);
 		} catch (const std::invalid_argument& e) {
 			_status_code = 403;
 			return;
@@ -150,21 +154,21 @@ void PostResponse::check_header_content_length(std::map<std::string, std::vector
 	}
 }
 void PostResponse::check_header_content_desposition(std::map<std::string, std::vector<std::string> > header_field){
-	if (header_field.find("content_desposition") == header_field.end()) {
+	if (header_field.find("content-desposition") == header_field.end()) {
 		return;
 	}
 	//처리 보류
 
 }
 void PostResponse::check_header_user_agent(std::map<std::string, std::vector<std::string> > header_field) {
-	if (header_field.find("content_user_agent") == header_field.end()) {
+	if (header_field.find("content-user-agent") == header_field.end()) {
 		return;
 	}
 	//처리 보류
 
 }
 void PostResponse::check_header_authorization(std::map<std::string, std::vector<std::string> > header_field) {
-	if (header_field.find("content_authorization") == header_field.end()) {
+	if (header_field.find("content-authorization") == header_field.end()) {
 		return;
 	}
 	//처리 보류
@@ -192,47 +196,47 @@ void PostResponse::saveStringToFile(std::string message_body) {
 
 }
 
-std::string generateFileName() {
+std::string PostResponse::generateFileName() {
 	static size_t fileIndex = 0;
 
 	std::stringstream filenameStream;
-	filenameStream << "file_" << fileIndex++ << ".txt";
+	filenameStream << "DB_" << fileIndex++ << ".txt";
 	return filenameStream.str();
 }
 
 void PostResponse::make_post_response(Config config) {
 	std::string redirect_path = config.getRoot() + "/redirect_page/";
-	std::string errorpage_path = config.getRoot() + "/error_page/";
+	std::string errorpage_path = config.getRoot() + "/error_pages/";
 	std::ostringstream body_length;
 
 	if ((_status_code >= 200 && _status_code < 300) || _status_code == 0) {
 		if (content_type == "text/plain") {
 			_message_body = "데이터가 성공적으로 저장되었습니다.";
-			_header_fields["content_type"] = "text/plain";
+			_header_fields["content-type"] = "text/plain";
 		} else if (content_type == "application/x-www-form-urlencoded") {
 			_message_body = "제이슨 파일 처리가 필요합니다.";
-			_header_fields["content_type"] = "application/jason";
+			_header_fields["content-type"] = "application/jason";
 		}
 		//5가지 각 형식에 대한 처리 
 	} else if (_status_code >= 300 && _status_code < 400) {
 		// 리다이렉션
 		_header_fields["location"] = request_url;
-		_header_fields["content_type"] = "text/html";
+		_header_fields["content-type"] = "text/html";
 
 		//어떤 내용물을 반환하는  리다이렉션?
 		_message_body = "This page will be redirected";
 		//_message_body = make_response_body(errorpage_path + "redirection.html");
 	} else if (_status_code >= 400 && _status_code < 500) {
-		_message_body = make_response_body(errorpage_path + "/4XX.html");
-		_header_fields["content_type"] = "text/html";
+		_message_body = make_response_body(errorpage_path + "/400.html");
+		_header_fields["content-type"] = "text/html";
 	} else if (_status_code >= 500 && _status_code < 600) {
-		_message_body = make_response_body(errorpage_path + "/5XX.html");
-		_header_fields["content_type"] = "text/html";
+		_message_body = make_response_body(errorpage_path + "/400.html");
+		_header_fields["content-type"] = "text/html";
 	} else {
 		// 600 번대 이상의 코드 처리?
 	}
 	body_length << _message_body.size();
-	_header_fields["content_length"] = body_length.str();
+	_header_fields["content-length"] = body_length.str();
 }
 
 std::string PostResponse::make_response_body(const std::string& file_path) {

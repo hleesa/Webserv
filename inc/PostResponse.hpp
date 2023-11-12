@@ -35,6 +35,7 @@ class PostResponse {
 
 //save string and make reponse
 		void saveStringToFile(std::string message_body);
+		std::string generateFileName();
 		void make_post_response(Config config);
 		std::string make_response_body(const std::string& file_path);
 

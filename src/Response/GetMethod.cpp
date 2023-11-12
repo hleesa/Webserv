@@ -1,4 +1,5 @@
 #include "../../inc/GetMethod.hpp"
+#include "../../inc/MediaType.hpp"
 #include <unistd.h>
 #include <ctime>
 
@@ -80,10 +81,7 @@ ResourceStatus GetMethod::getResourceStatus(const std::string path) {
 std::string GetMethod::findErrorPageFilePath() {
 	std::map<int, std::string> error_page = config.getErrorpage();
 
-	if (error_page.find(404) != error_page.end()) {
-		return config.getRoot() + "/" + error_page[404];
-	}
-	return "";
+	return config.getRoot() + "/" + error_page[404];
 }
 
 Resource GetMethod::makeResource() {
@@ -130,6 +128,7 @@ HttpResponseMessage GetMethod::makeRedirectionResponse(const std::pair<int, std:
 	std::map<std::string, std::string> header = makeHeaderFileds(body);
 
 	header["Location"] = location;
+	header["Content-type"] = "text/plain";
 	return HttpResponseMessage(return_value.first, header, body);
 }
 
@@ -137,9 +136,10 @@ std::map<std::string, std::string> GetMethod::makeHeaderFileds(const std::string
 	std::map<std::string, std::string> header;
 
 	header["Content-length"] = std::to_string(body.length());
-	header["Content-type"] = "text/html";
-	// MIME을 어떻게 찾지 ..? 
-	header["Date"] = makeDate(); 
+	header["Content-type"] = MediaType::getType(resource.getPath());
+	header["Date"] = makeDate();
+	header["Connection"] = "keep-alive";
+	header["Server"] = "Webserv";
 	return header;
 }
 

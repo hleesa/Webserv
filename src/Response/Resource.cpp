@@ -29,6 +29,10 @@ ResourceStatus Resource::getStatus() const {
 	return this->status;
 }
 
+std::string Resource::getPath() const {
+	return this->path;
+}
+
 std::string Resource::read() const {
 	std::ifstream file_in(path.c_str());
 	std::string content;
@@ -81,5 +85,4 @@ std::string Resource::makeResource() const {
 		return makeDirectoryList();
 	}
 	return read();
-	// 존재하지 않는 error page 들어왔을 때, 기본값 error page 띄우기 ?		
 }

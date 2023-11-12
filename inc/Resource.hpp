@@ -22,6 +22,7 @@ class Resource {
 		Resource& operator=(const Resource& other);
 		
 		ResourceStatus getStatus() const;
+		std::string getPath() const;
 
 		std::string makeResource() const;
 };

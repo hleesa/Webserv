@@ -14,3 +14,7 @@ std::vector<std::string> Server::getRequestLine() const {
 void Server::setRequest(HttpRequestMessage request) {
     this->request = request;
 }
+
+int Server::getListenSocket() const {
+    return listen_socket;
+}

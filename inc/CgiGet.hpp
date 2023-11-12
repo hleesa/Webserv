@@ -13,7 +13,7 @@ public:
     static bool isValidCgiGetUrl(const std::vector<std::string>& request_line, const std::map<int, Config>& configs,
                                  int con_socket);
 
-    static HttpResponseMessage processCgiGet(const std::string url, CgiLocation cgi_location);
+    static HttpResponseMessage processCgiGet(const std::string url, CgiLocation cgi_location,int conn_sock);
 
 };
 

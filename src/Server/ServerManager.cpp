@@ -70,6 +70,7 @@ void ServerManager::processEvents(const int events) {
         }
         else if (event->filter == EVFILT_WRITE && servers.find(event->ident) != servers.end()) {
             processWriteEvent(*event);
+            change_list.push_back(makeEvent(event->ident, EVFILT_WRITE, EV_DELETE, 0, 0, NULL));
         }
     }
 }
@@ -110,14 +111,15 @@ void ServerManager::processWriteEvent(const struct kevent& event) {
 
     std::vector<std::string> request_line = servers[event.ident].getRequestLine();
     try {
-        if (CgiGet::isValidCgiGetUrl(request_line, configs, event.ident)) {
-            std::map<int, Config>::const_iterator found_config = configs.find(event.ident);
+        if (CgiGet::isValidCgiGetUrl(request_line, configs, servers[event.ident].getListenSocket())) {
+            std::map<int, Config>::const_iterator found_config = configs.find(servers[event.ident].getListenSocket());
             if (found_config == configs.end()) {
                 // config not found
                 return;
             }
             HttpResponseMessage response = CgiGet::processCgiGet(request_line[1],
-                                                                 found_config->second.getCgiLocation().second);
+                                                                 found_config->second.getCgiLocation().second,
+                                                                 event.ident);
 
         }
     } catch (int status_code) {

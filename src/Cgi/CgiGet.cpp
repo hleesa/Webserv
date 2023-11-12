@@ -97,7 +97,7 @@ bool CgiGet::isValidCgiGetUrl(const std::vector<std::string>& request_line, cons
     if (url_vec.front() != cgi_location.first.substr(1)) {
         return false;
     }
-    const std::string cgi_script_url = url_vec.front() + "/" + url_vec[1];
+    const std::string cgi_script_url = "/Users/salee2/webserv/" + url_vec.front() + "/" + url_vec[1];
     if (access(cgi_script_url.c_str(), F_OK) == ERROR)
         return false;
     return true;
@@ -127,7 +127,7 @@ bool CgiGet::isValidCgiGetUrl(const std::vector<std::string>& request_line, cons
 std::map<std::string, std::string> setEnviron(const std::string query_string) {
     std::map<std::string, std::string> environ;
     environ["QUERY_STRING"] = query_string;
-    environ["REQUEST_METHOD"] = "";
+    environ["REQUEST_METHOD"] = "GET";
     return environ;
 };
 
@@ -150,7 +150,8 @@ std::string getScriptPath(const std::string url) {
     if (idx == std::string::npos) {
         return std::string();
     }
-    return url.substr(0, idx);
+    std::string script_path = "/Users/salee2/webserv" + url.substr(0, idx);
+    return script_path;
 }
 
 std::string getQueryString(const std::string url) {
@@ -161,10 +162,11 @@ std::string getQueryString(const std::string url) {
     return url.substr(idx+1);
 }
 // /cgi-bin/cgi_script.py?input=Hello
-HttpResponseMessage CgiGet::processCgiGet(const std::string url, CgiLocation cgi_location) {
+HttpResponseMessage CgiGet::processCgiGet(const std::string url, CgiLocation cgi_location, int conn_sock) {
     char** cgi_environ = createCgiEnviron(getQueryString(url));
     const char* python_interpreter = cgi_location.getCgiPath().c_str();
-    const char* python_script = getScriptPath(url).c_str();
+//    const char* python_script = getScriptPath(url).c_str();
+    const char* python_script = "/Users/salee2/webserv/cgi-bin/cgi_script.py";
     char* const command[] = {
             const_cast<char*>(python_interpreter),
             const_cast<char*>(python_script),
@@ -188,10 +190,11 @@ HttpResponseMessage CgiGet::processCgiGet(const std::string url, CgiLocation cgi
         }
         close(pipe_fd[READ]);
         char rcv_buffer[BUFSIZ];
+        memset(rcv_buffer, 0, sizeof(rcv_buffer));
         int n;
-        while ((n = read(pipe_fd[READ], rcv_buffer, sizeof(rcv_buffer))) != 0) {
-            rcv_buffer[n] = '\0';
-            write(STDOUT_FILENO, rcv_buffer, strlen(rcv_buffer));
+        while (n = read(STDIN_FILENO, rcv_buffer, sizeof(rcv_buffer))) {
+//            rcv_buffer[n] = '\0';
+            write(conn_sock, rcv_buffer, strlen(rcv_buffer));
             memset(rcv_buffer, 0, sizeof(rcv_buffer));
         }
         waitpid(pid, 0, 0);

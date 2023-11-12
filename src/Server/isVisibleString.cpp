@@ -7,4 +7,3 @@ bool isVisibleString(const std::string& str) {
     }
     return true;
 }
-

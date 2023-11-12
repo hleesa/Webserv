@@ -97,7 +97,7 @@ bool CgiGet::isValidCgiGetUrl(const std::vector<std::string>& request_line, cons
     if (url_vec.front() != cgi_location.first.substr(1)) {
         return false;
     }
-    const std::string cgi_script_url = "/Users/salee2/webserv/" + url_vec.front() + "/" + url_vec[1];
+    const std::string cgi_script_url = "/Users/yeepark/Desktop/webserv/" + url_vec.front() + "/" + url_vec[1];
     if (access(cgi_script_url.c_str(), F_OK) == ERROR)
         return false;
     return true;
@@ -166,7 +166,7 @@ HttpResponseMessage CgiGet::processCgiGet(const std::string url, CgiLocation cgi
     char** cgi_environ = createCgiEnviron(getQueryString(url));
     const char* python_interpreter = cgi_location.getCgiPath().c_str();
 //    const char* python_script = getScriptPath(url).c_str();
-    const char* python_script = "/Users/salee2/webserv/cgi-bin/cgi_script.py";
+    const char* python_script = "/Users/yeepark/Desktop/webserv/cgi-bin/cgi_script.py";
     char* const command[] = {
             const_cast<char*>(python_interpreter),
             const_cast<char*>(python_script),

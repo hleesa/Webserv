@@ -1,4 +1,5 @@
 #include "../../inc/Server.hpp"
+#include "../../inc/CgiGet.hpp"
 #include "../../inc/Get.hpp"
 #include "../../inc/Post.hpp"
 
@@ -9,19 +10,6 @@ Server::Server(int connection, int listen) {
 	listen_socket = listen;
 }
 
-
-std::vector<std::string> Server::getRequestLine() const {
-    return request.getRequestLine();
-}
-
-void Server::setRequest(HttpRequestMessage request) {
-    this->request = request;
-}
-
-int Server::getListenSocket() const {
-    return listen_socket;
-}
-
 void Server::setRequest(const HttpRequestMessage& request_message) {
 	this->request = request_message;
 }
@@ -29,13 +17,27 @@ void Server::setRequest(const HttpRequestMessage& request_message) {
 std::string Server::makeResponse(std::map<int, Config>& configs) {
 	if (request.getMethod() == "POST") {
 		Post method;
-		std::cout << method.run(request, configs[listen_socket]).toString() << std::endl;
 		return method.run(request, configs[listen_socket]).toString();
 	}
-	if (request.getMethod() == "GET") {
+	if (request.getMethod() == "GET" && request.getURL().find("cgi") == std::string::npos) {
 		Get method(request, configs[listen_socket]);
 		return method.makeHttpResponseMessage().toString();
 	}
-	std::cout << "come here222" << std::endl;
+    try {
+        if (CgiGet::isValidCgiGetUrl(request.getRequestLine(), configs, listen_socket)) {
+            std::map<int, Config>::const_iterator found_config = configs.find(listen_socket);
+            if (found_config == configs.end()) {
+                // config not found
+                return "";
+            }
+            HttpResponseMessage response = CgiGet::processCgiGet(request.getURL(),
+                                                                 found_config->second.getCgiLocation().second,
+                                                                 connection_socket);
+            return response.toString();
+        }
+    } 
+	catch (int status_code) {
+        return "";
+    }
 	return HttpResponseMessage().toString();
 }

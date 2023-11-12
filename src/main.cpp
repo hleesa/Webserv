@@ -7,7 +7,7 @@ int main() {
 
       //  std::vector<Config> configs =  ConfigParser::parseConfigFile("../ConfigFile/default.conf");
 
-        std::vector<Config> configs =  ConfigParser::parseConfigFile("ConfigFile/my.conf");
+        std::vector<Config> configs =  ConfigParser::parseConfigFile("ConfigFile/test.conf");
 
 		ServerManager manager(configs);
 

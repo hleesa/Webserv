@@ -7,9 +7,9 @@
 
 Resource::Resource() {}
 
-Resource::Resource(const std::string& resource_path, const ResourceStatus& status) {
+Resource::Resource(const std::string& resource_path, const bool isDirectoryList) {
 	this->path = resource_path;
-	this->status = status;
+	this->isDirectoryList = isDirectoryList;
 }
 
 Resource::Resource(const Resource& other) {
@@ -21,13 +21,9 @@ Resource::~Resource() {}
 Resource& Resource::operator=(const Resource& other) {
 	if (this != &other) {
 		this->path = other.path;
-		this->status = other.status;
+		this->isDirectoryList = other.isDirectoryList;
 	}
 	return *this;
-}
-
-ResourceStatus Resource::getStatus() const {
-	return this->status;
 }
 
 std::string Resource::getPath() const {
@@ -39,7 +35,7 @@ std::string Resource::read() const {
 	std::string content;
 	
 	if (!file_in.is_open()) {
-		return "";
+		throw 500;
 	}
 	file_in.seekg(0, std::ios::end);
 	int size = file_in.tellg();
@@ -49,7 +45,7 @@ std::string Resource::read() const {
 	return content;
 }
 
-std::string Resource::makeDirectoryList() const {
+std::string Resource::makeDirectoryList() {
 	std::string content = "<!DOCTYPE html>\n" 
 						 "<html lang=\"en\">\n"
 						 "<head>\n"
@@ -64,7 +60,7 @@ std::string Resource::makeDirectoryList() const {
 
 	dir = opendir(path.c_str());
 	if (dir == NULL) {
-		// 예외처리
+		throw 500;
 	}
 	while ((entry = readdir(dir)) != NULL) {
 		std::string name(entry->d_name);
@@ -75,11 +71,12 @@ std::string Resource::makeDirectoryList() const {
 	}
 	content += "\t\t</ul>\n</body>\n</html>\n";
     closedir(dir);
+	this->path += "/.html";
 	return content;
 }
 
-std::string Resource::make() const {
-	if (status == DirectoryList) {
+std::string Resource::make() {
+	if (isDirectoryList) {
 		return makeDirectoryList();
 	}
 	return read();

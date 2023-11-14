@@ -345,7 +345,7 @@ void RequestParser::parseRequestLine(ParsingData& data, const std::string& line)
     validateHttpVersion(request.back());
 	data.request_line = request;
 }
-
+/*
 bool isVisibleString(const std::string& str) {
     for (std::string::const_iterator ch = str.begin(); ch != str.end(); ++ch) {
         if (!isprint(*ch))
@@ -353,6 +353,7 @@ bool isVisibleString(const std::string& str) {
     }
     return true;
 }
+*/
 
 bool isValidFieldName(const std::string& field_name) {
     if (field_name.empty()) {

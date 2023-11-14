@@ -80,6 +80,13 @@ std::vector<std::string> parseUrl(const std::string url) {
     return url_vec;
 }
 
+std::string getScriptPath(const std::string url) {
+    size_t idx = url.find("?");
+    if (idx == std::string::npos) {
+        return std::string();
+    }
+    return "." + url.substr(0, idx);
+}
 
 bool CgiGet::isValidCgiGetUrl(const std::vector<std::string>& request_line, const std::map<int, Config>& configs,
                               int con_socket) {
@@ -92,14 +99,15 @@ bool CgiGet::isValidCgiGetUrl(const std::vector<std::string>& request_line, cons
         return false;
     }
     const Config& config = found_config->second;
-    std::map<std::string, Location>::iterator location = config.getLocations().find(url_vec.front());
     std::pair<std::string, CgiLocation> cgi_location = config.getCgiLocation();
     if (url_vec.front() != cgi_location.first.substr(1)) {
         return false;
     }
-    const std::string cgi_script_url = "/Users/yeepark/Desktop/webserv/" + url_vec.front() + "/" + url_vec[1];
-    if (access(cgi_script_url.c_str(), F_OK) == ERROR)
+//    const std::string cgi_script_url = "./" + url_vec.front() + "/" + url_vec[1];
+    const std::string cgi_script_url = getScriptPath(request_line[1]);
+    if (access(cgi_script_url.c_str(), F_OK | X_OK) == ERROR) {
         return false;
+    }
     return true;
 }
 
@@ -145,15 +153,6 @@ char** createCgiEnviron(const std::string query_string) {
     return cgi_environ;
 }
 
-std::string getScriptPath(const std::string url) {
-    size_t idx = url.find("?");
-    if (idx == std::string::npos) {
-        return std::string();
-    }
-    std::string script_path = "/Users/salee2/webserv" + url.substr(0, idx);
-    return script_path;
-}
-
 std::string getQueryString(const std::string url) {
     size_t idx = url.find("?");
     if (idx == std::string::npos) {
@@ -161,39 +160,53 @@ std::string getQueryString(const std::string url) {
     }
     return url.substr(idx+1);
 }
+
+void deleteExecveArg(char** cgi_environ, char* python_interpreter, char* python_script) {
+    int i = 0;
+    while(cgi_environ[i]) {
+        delete cgi_environ[i];
+        ++i;
+    }
+    delete[] cgi_environ;
+    free(python_interpreter);
+    free(python_script);
+    return;
+}
+
 // /cgi-bin/cgi_script.py?input=Hello
-HttpResponseMessage CgiGet::processCgiGet(const std::string url, CgiLocation cgi_location, int conn_sock) {
+HttpResponseMessage CgiGet::processCgiGet(const std::string url, CgiLocation cgi_location) {
     char** cgi_environ = createCgiEnviron(getQueryString(url));
-    const char* python_interpreter = cgi_location.getCgiPath().c_str();
-//    const char* python_script = getScriptPath(url).c_str();
-    const char* python_script = "/Users/yeepark/Desktop/webserv/cgi-bin/cgi_script.py";
+    char* python_interpreter = strdup(cgi_location.getCgiPath().c_str());
+    char* python_script = strdup(getScriptPath(url).c_str());
     char* const command[] = {
-            const_cast<char*>(python_interpreter),
-            const_cast<char*>(python_script),
+            python_interpreter,
+            python_script,
             NULL
     };
     std::string body;
+
     int pipe_fd[2];
     if (pipe(pipe_fd) == ERROR) {
-        // pipe error
-        return HttpResponseMessage(0, std::map<std::string, std::string>(), "");
+        throw 500;
     }
     pid_t pid = fork();
     if (pid == ERROR) {
-        // fork error
-        return HttpResponseMessage(0, std::map<std::string, std::string>(), "");
+        throw 500;
     }
     else if (pid > 0) {
-        close(pipe_fd[WRITE]);
-        if (dup2(pipe_fd[READ], STDIN_FILENO) == ERROR) {
-            // dup2 error
-            return HttpResponseMessage(0, std::map<std::string, std::string>(), "");
+        if (close(pipe_fd[WRITE]) == ERROR) {
+            throw 500;
         }
-        close(pipe_fd[READ]);
+        if (dup2(pipe_fd[READ], STDIN_FILENO) == ERROR) {
+            throw 500;
+        }
+        if (close(pipe_fd[READ]) == ERROR) {
+            throw 500;
+        }
         char rcv_buffer[BUFSIZ];
         memset(rcv_buffer, 0, sizeof(rcv_buffer));
         int n;
-        while (n = read(STDIN_FILENO, rcv_buffer, sizeof(rcv_buffer))) {
+        while ((n = read(STDIN_FILENO, rcv_buffer, sizeof(rcv_buffer)))) {
 //            if (n != 0) {
 //                rcv_buffer[n] = '\0';
                 body += std::string(rcv_buffer);
@@ -206,17 +219,20 @@ HttpResponseMessage CgiGet::processCgiGet(const std::string url, CgiLocation cgi
     else {
         close(pipe_fd[READ]);
         if (dup2(pipe_fd[WRITE], STDOUT_FILENO) == ERROR) {
-            // dup2 error
-            return HttpResponseMessage(0, std::map<std::string, std::string>(), "");
+            exit(EXIT_FAILURE);
         }
-        close(pipe_fd[WRITE]);
+        if ((close(pipe_fd[WRITE]) == ERROR)) {
+            exit(EXIT_FAILURE);
+        }
         if (access(python_script, F_OK | X_OK) == ERROR) {
-            // 존재하지 않거나 실행 불가
-            return HttpResponseMessage(0, std::map<std::string, std::string>(), "");
+            exit(EXIT_FAILURE);
         }
-        execve(python_interpreter, command, cgi_environ);
+        if (execve(python_interpreter, command, cgi_environ) == ERROR) {
+            exit(EXIT_FAILURE);
+        }
         exit(EXIT_FAILURE);
     }
+    // free()
     int status_code = 200;
     std::map<std::string, std::string> header_fields;
     header_fields["Content-type"] = "text/html";

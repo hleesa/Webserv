@@ -31,8 +31,7 @@ std::string Server::makeResponse(std::map<int, Config>& configs) {
                 return "";
             }
             HttpResponseMessage response = CgiGet::processCgiGet(request.getURL(),
-                                                                 found_config->second.getCgiLocation().second,
-                                                                 connection_socket);
+                                                                 found_config->second.getCgiLocation().second);
             return response.toString();
         }
     } 

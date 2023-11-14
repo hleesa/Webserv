@@ -31,7 +31,8 @@ RESPONSE_SRC = \
 			CgiGet.cpp \
 			Get.cpp \
 			Post.cpp \
-			Resource.cpp \
+			Delete.cpp \
+			Resource.cpp\
 			ErrorPage.cpp \
 			MediaType.cpp
 

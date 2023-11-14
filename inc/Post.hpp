@@ -16,9 +16,11 @@ class Post {
 		std::map<std::string, std::string> _header_fields;
 		std::string _message_body;
 
+		std::string location_key;
 		std::string abs_path;		//config->root + url rel_path
-		std::string request_url;	//요청에서의 url
-		std::string content_type;	//요청 type
+		std::string request_url;	//요청->url
+		std::string content_type;	//요청->type
+		std::string file_extention;	//요청->type에 따른 확장자
 		std::string boundary;
 		size_t content_length;		//요청 바디 length
 
@@ -31,13 +33,14 @@ class Post {
 
 		HttpResponseMessage run(HttpRequestMessage msg, Config config);
 
-		void check_request_line(std::vector<std::string> request_line, std::string root);
+		void check_request_line(std::vector<std::string> request_line, Config config);
+		std::string find_loc_key(std::string rel_path, Config config);
 		bool directory_exists(const std::string& path);
 		void check_header_field(std::map<std::string, std::vector<std::string> > header_field);
 
 //save string and make reponse
-		void saveTextPlainToFile(std::string message_body, Config config);
-		std::string generateTextPlainFileName(Config config);
+		void saveToFile(std::string message_body, Config config);
+		std::string generateFileName(Config config);
 		void saveMultipartToFile(std::string message_body, Config config);
 
 		void make_post_response(Config config);

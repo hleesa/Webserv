@@ -1,4 +1,6 @@
 #include "../../inc/Post.hpp"
+#include "../../inc/MediaType.hpp"
+#include "../../inc/Location.hpp"
 
 Post::Post() {
 	_status_code = 0;
@@ -34,21 +36,24 @@ HttpResponseMessage Post::run(HttpRequestMessage request_msg, Config config) {
 		_status_code = 300; 
 		request_url = request_msg.getRequestLine()[1];
 	} else {
-		check_request_line(request_msg.getRequestLine(), config.getRoot());
+		//요청 url 형태 및 실행 가능 여부 확인
+		check_request_line(request_msg.getRequestLine(), config);
+		//헤더 필드 확인 -> body가 있는 경우이기 때문에 필수 헤더 확인
 		check_header_field(request_msg.getHeaderFields());
 	}
 	//요청 헤더 파싱 후에 맞는 상황에 대하여  처리
-	if (content_type == "text/plain" && _status_code == 0) {
-		saveTextPlainToFile(request_msg.getMessageBody(), config);
-	} else if (content_type == "multipart/form-data" && _status_code == 0) {
-		saveMultipartToFile(request_msg.getMessageBody(), config);
+	if (_status_code == 0) {
+		saveToFile(request_msg.getMessageBody(), config);
 	}
+	//else if (content_type == "multipart/form-data" && _status_code == 0) {
+	//	saveMultipartToFile(request_msg.getMessageBody(), config);
+	//}
 
 	make_post_response(config);
 	return HttpResponseMessage(_status_code, _header_fields, _message_body);
 }
 
-void Post::check_request_line(std::vector<std::string> request_line, std::string root) {
+void Post::check_request_line(std::vector<std::string> request_line, Config config) {
 	std::string rel_path;
 	size_t pos;
 
@@ -64,17 +69,37 @@ void Post::check_request_line(std::vector<std::string> request_line, std::string
 		rel_path = request_line[1].substr(pos);
 	} else if (request_line[1][0] == '/') {
 		rel_path = request_line[1];
-	} else {	//상위 디렉토리 확인의  경우는  제외
+	} else {
+		//상위 디렉토리 확인의  경우는  제외
 		this->_status_code = 404;
 		return;
 	}
-	//해당 디렉토리가 있는지  확인
-	abs_path = root + rel_path;
 
+	//location 확인 후 그곳에서의 가능 메서드 확인
+	location_key = find_loc_key("//" + rel_path, config);
+	if (config.getLocations()[location_key].isNotAllowedMethod("POST") == true) {
+		_status_code = 405;
+		return;
+	}
+
+	//해당 디렉토리가 있는지  확인
+	abs_path = config.getRoot() + rel_path;
 	if (!directory_exists(abs_path)) {
 		_status_code = 404;
 		return;
 	}
+}
+
+std::string Post::find_loc_key(std::string rel_path, Config config) {
+	std::string path_checker = rel_path;
+	std::map<std::string, Location> locs = config.getLocations();
+	size_t pos = path_checker.length();
+
+	while (locs.find(path_checker) == locs.end() && path_checker != "/") {
+		pos = path_checker.rfind('/', pos - 1);
+		path_checker = path_checker.substr(0, pos);
+	}
+	return path_checker;
 }
 
 bool Post::directory_exists(const std::string& path) {
@@ -96,49 +121,66 @@ void Post::check_header_field(std::map<std::string, std::vector<std::string> > h
 
 //check request header field fn
 void Post::check_header_content_type(std::map<std::string, std::vector<std::string> > header_field) {
-	//HTML, JSON, TEXT data 세가지만 처리
 	if (header_field.find("content-type") == header_field.end()) {
 		_status_code = 400;
-		return;
-	} else if (header_field["content-type"][0] == "application/x-www-form-urlencoded") {
-		//HTML 폼 데이터를 인코딩한 것으로, 기본적인 폼 제출 방식
-		content_type = "application/x-www-form-urlencoded";
-		return;
-	} else if (header_field["content-type"][0] == "multipart/form-data" && header_field["content-type"].size() == 2) {
-		//폼 데이터를 여러 부분으로 나눠서 전송할 때 사용됩니다. 주로 파일 업로드와 함께 사용
-		content_type = "multipart/form-data";
-		if (header_field["content-type"][1].find("boundary=") == 0) {
-			boundary = header_field["content-type"][1].substr(9);
-		} else {
+		return ;
+	}
+	try {
+		content_type = header_field["content-type"][0];
+		file_extention = MediaType::getExtention(header_field["content-type"][0]);
+		if (file_extention == DEFAULT) {
 			_status_code = 400;
+			return;
 		}
-		return;
-	} else if (header_field["content-type"][0] == "application/json") {
-		//JSON 형식의 데이터를 전송할 때 사용
-		content_type = "application/json";
-		return;
-	} else if (header_field["content-type"][0] == "text/plain") {
-		//텍스트 데이터를 평문으로 전송
-		content_type = "text/plain";
-		return;
-	} else if (header_field["content-type"][0] == "application/xml") {
-		//XML 형식의 데이터를 전송할 때 사용
-		//처리 안함
-		content_type = "application/xml";
-
-		return;
-	} else if (header_field["content-type"][0] == "application/octet-stream") {
-		//이진 데이터를 전송할 때 사용
-		//처리 안함
-		content_type = "application/octet-stream";
-
-		return;
-	} else {
-		//post 요청이지만 content-type이 이상하기때문에 400에러 반환
+	} catch (const std::out_of_range& e) {
 		_status_code = 400;
 		return;
 	}
+
+	////HTML, JSON, TEXT data 세가지만 처리
+	//if (header_field.find("content-type") == header_field.end()) {
+	//	_status_code = 400;
+	//	return;
+	//} else if (header_field["content-type"][0] == "application/x-www-form-urlencoded") {
+	//	//HTML 폼 데이터를 인코딩한 것으로, 기본적인 폼 제출 방식
+	//	content_type = "application/x-www-form-urlencoded";
+	//	return;
+	//} else if (header_field["content-type"][0] == "multipart/form-data" && header_field["content-type"].size() == 2) {
+	//	//폼 데이터를 여러 부분으로 나눠서 전송할 때 사용됩니다. 주로 파일 업로드와 함께 사용
+	//	content_type = "multipart/form-data";
+	//	if (header_field["content-type"][1].find("boundary=") == 0) {
+	//		boundary = header_field["content-type"][1].substr(9);
+	//	} else {
+	//		_status_code = 400;
+	//	}
+	//	return;
+	//} else if (header_field["content-type"][0] == "application/json") {
+	//	//JSON 형식의 데이터를 전송할 때 사용
+	//	content_type = "application/json";
+	//	return;
+	//} else if (header_field["content-type"][0] == "text/plain") {
+	//	//텍스트 데이터를 평문으로 전송
+	//	content_type = "text/plain";
+	//	return;
+	//} else if (header_field["content-type"][0] == "application/xml") {
+	//	//XML 형식의 데이터를 전송할 때 사용
+	//	//처리 안함
+	//	content_type = "application/xml";
+
+	//	return;
+	//} else if (header_field["content-type"][0] == "application/octet-stream") {
+	//	//이진 데이터를 전송할 때 사용
+	//	//처리 안함
+	//	content_type = "application/octet-stream";
+
+	//	return;
+	//} else {
+	//	//post 요청이지만 content-type이 이상하기때문에 400에러 반환
+	//	_status_code = 400;
+	//	return;
+	//}
 }
+
 void Post::check_header_content_length(std::map<std::string, std::vector<std::string> > header_field) {
 	if (header_field.find("content-length") == header_field.end()) {
 		_status_code = 403;
@@ -177,8 +219,8 @@ void Post::check_header_authorization(std::map<std::string, std::vector<std::str
 
 }
 
-void Post::saveTextPlainToFile(std::string message_body, Config config) {
-	std::string filename = generateTextPlainFileName(config);
+void Post::saveToFile(std::string message_body, Config config) {
+	std::string filename = generateFileName(config);
 	std::string data_path = abs_path + "/" + filename;
 	std::ofstream file_write(data_path, std::ios::app);
 
@@ -198,16 +240,16 @@ void Post::saveTextPlainToFile(std::string message_body, Config config) {
 
 }
 
-std::string Post::generateTextPlainFileName(Config config) {
+std::string Post::generateFileName(Config config) {
 	static size_t fileIndex = 0;
 
 	std::stringstream filenameStream;
-	filenameStream << config.getPort() << "_" << config.getName()[0] << "_No_" << fileIndex++ << ".txt";
+	filenameStream << config.getPort() << "_" << config.getName()[0] << "_No_" << fileIndex++ << file_extention;
 	return filenameStream.str();
 }
 
 void Post::saveMultipartToFile(std::string message_body, Config config) {
-	std::string filename = generateTextPlainFileName(config);
+	std::string filename = generateFileName(config);
 	std::string data_path = abs_path + "/" + filename;
 	std::ofstream file_write(data_path, std::ios::app);
 	std::string in_boundary;

@@ -10,21 +10,17 @@ class Get {
 	private:
 		HttpRequestMessage request;
 		Config config;
-		int status_code;
 		std::string location_key;
-		Resource resource;
 	
 		std::string findLocationKey();
 		std::string findRoot();
 		std::string findResourcePath();
-		ResourceStatus getResourceStatus(const std::string path);
-		std::string findErrorPageFilePath();
+		bool isDirectoryList(const std::string path);
 		Resource makeResource();
-		std::string redefineResourcePath(const ResourceStatus status);
 
 		HttpResponseMessage processReturnDirective();
 		HttpResponseMessage makeRedirectionResponse(const std::pair<int, std::string> return_value);
-		std::map<std::string, std::string> makeHeaderFileds(const std::string& body);
+		std::map<std::string, std::string> makeHeaderFileds(const std::string& body, const std::string path);
 		std::string makeDate();
 
 	public:

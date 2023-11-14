@@ -6,10 +6,7 @@
 Get::Get(const HttpRequestMessage& request, const Config& config) {
 	this->request = request;
 	this->config = config;
-	this->status_code = 200;
 	this->location_key = findLocationKey();
-	this->resource = makeResource();
-	std::cout << "url : " << request.getURL() << "\n\n";
 }
 
 std::string Get::findLocationKey() {
@@ -34,17 +31,48 @@ std::string Get::findLocationKey() {
 	return "/";
 }
 
-std::string Get::findRoot() {
-	std::string root = config.getLocations()[location_key].getRoot();
+HttpResponseMessage Get::makeHttpResponseMessage() {
+	Location location = config.getLocations()[location_key];
 
-	if (root.empty()) {
-		root = config.getRoot();
+	if (location.hasReturnValue()) {
+		return processReturnDirective();
 	}
-	return root;
+	Resource resource = makeResource();
+	std::string body = resource.make();
+	return HttpResponseMessage(200, makeHeaderFileds(body, resource.getPath()), body);
 }
 
-bool checkFileExistence(const std::string file_name) {
-	return !access(file_name.c_str(), R_OK);
+HttpResponseMessage Get::processReturnDirective() {
+	std::pair<int, std::string> return_value = config.getLocations()[location_key].getReturnValue();
+	int status_code = return_value.first;
+
+	if (status_code / 100 == 3) { // redirection
+		return makeRedirectionResponse(return_value);
+	}
+	std::string body = return_value.second;
+	return HttpResponseMessage(status_code, makeHeaderFileds(body, ".txt"), body);
+}
+
+HttpResponseMessage Get::makeRedirectionResponse(const std::pair<int, std::string> return_value) {
+	std::string host = request.getHeaderFields()["host"].at(0);
+	std::string location = "http://" + host + return_value.second;
+	std::string body = "Moved Permanently. Redirecting to " + location + ".";
+	std::map<std::string, std::string> header = makeHeaderFileds(body, ".txt");
+
+	header["Location"] = location;
+	// header["Content-type"] = "text/plain";
+	return HttpResponseMessage(return_value.first, header, body);
+}
+
+Resource Get::makeResource() {
+	if (config.getLocations()[location_key].isNotAllowedMethod("GET")) {
+		throw 405;
+	}
+	std::string resource_path = findResourcePath();
+	if (isDirectoryList(resource_path)) {
+		return Resource(findRoot() + location_key, true);
+	}
+	return Resource(resource_path, false);
 }
 
 std::string Get::findResourcePath() {
@@ -72,84 +100,39 @@ std::string Get::findResourcePath() {
 	return itr != index.end() ? path : "";
 }
 
-ResourceStatus Get::getResourceStatus(const std::string path) {
+std::string Get::findRoot() {
+	std::string root = config.getLocations()[location_key].getRoot();
+
+	if (root.empty()) {
+		root = config.getRoot();
+	}
+	return root;
+}
+
+bool checkFileExistence(const std::string file_name) {
+	return !access(file_name.c_str(), R_OK);
+}
+
+bool Get::isDirectoryList(const std::string path) {
 	if (isDirectory(path)) {
-		status_code = 403;
-		return ERROR;	
+		throw 403;
 	}
 	if (path.size()) {
-		return FOUND;
+		return false;
 	}
-	return config.getLocations()[location_key].getAutoindex() ? DirectoryList : NotFound;
+	if (!config.getLocations()[location_key].getAutoindex()) {
+		throw 404;
+	}
+	return true;
 }
 
-std::string Get::findErrorPageFilePath() {
-	std::map<int, std::string> error_page = config.getErrorpage();
-
-	return config.getRoot() + "/" + error_page[status_code];
-}
-
-std::string Get::redefineResourcePath(const ResourceStatus status) {
-	if (status == DirectoryList) {
-		return findRoot() + location_key;
-	}
-	if (status == NotFound) {
-		status_code = 404;
-	}
-	return findErrorPageFilePath();
-}
-
-Resource Get::makeResource() {
-	if (config.getLocations()[location_key].isNotAllowedMethod("GET")) {
-		status_code = 405;
-		return  Resource(findErrorPageFilePath(), ERROR);	
-	}
-
-	std::string resource_path = findResourcePath();
-	ResourceStatus status = getResourceStatus(resource_path);
-	if (status != FOUND) {
-		resource_path = redefineResourcePath(status);
-	}
-	return Resource(resource_path, status);
-}
-
-HttpResponseMessage Get::makeHttpResponseMessage() {
-	std::string body = resource.make();
-	Location location = config.getLocations()[location_key];
-
-	if (location.hasReturnValue()) {
-		return processReturnDirective();
-	}
-	return HttpResponseMessage(status_code, makeHeaderFileds(body), body);
-}
-
-HttpResponseMessage Get::processReturnDirective() {
-	std::pair<int, std::string> return_value = config.getLocations()[location_key].getReturnValue();
-	int status_code = return_value.first;
-
-	if (status_code / 100 == 3) { // redirection
-		return makeRedirectionResponse(return_value);
-	}
-	std::string body = return_value.second;
-	return HttpResponseMessage(status_code, makeHeaderFileds(body), body);
-}
-
-HttpResponseMessage Get::makeRedirectionResponse(const std::pair<int, std::string> return_value) {
-	std::string host = request.getHeaderFields()["host"].at(0);
-	std::string location = "http://" + host + return_value.second;
-	std::string body = "Moved Permanently. Redirecting to " + location + ".";
-	std::map<std::string, std::string> header = makeHeaderFileds(body);
-
-	header["Location"] = location;
-	header["Content-type"] = "text/plain";
-	return HttpResponseMessage(return_value.first, header, body);
-}
-
-std::map<std::string, std::string> Get::makeHeaderFileds(const std::string& body) {
+std::map<std::string, std::string> Get::makeHeaderFileds(const std::string& body, const std::string path) {
 	std::map<std::string, std::string> header;
 
 	header["Content-length"] = std::to_string(body.length());
-	header["Content-type"] = MediaType::getType(resource.getPath());
+	if (!path.empty()) {
+		header["Content-type"] = MediaType::getType(path);
+	}
 	header["Date"] = makeDate();
 	header["Connection"] = "keep-alive";
 	header["Server"] = "Webserv";

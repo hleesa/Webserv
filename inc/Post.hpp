@@ -11,15 +11,17 @@
 
 class Post {
 	private :
-		//HttpResponseMessage msg_response;
+		//응답 요소 : HttpResponseMessage msg_response에 들어갈 3개의 필드
 		int _status_code;
 		std::map<std::string, std::string> _header_fields;
 		std::string _message_body;
 
-		std::string abs_path;
-		std::string request_url;
-		std::string content_type;
-		size_t content_length;
+		std::string abs_path;		//config->root + url rel_path
+		std::string request_url;	//요청에서의 url
+		std::string content_type;	//요청 type
+		std::string boundary;
+		size_t content_length;		//요청 바디 length
+
 
 	public :
 		Post();
@@ -34,8 +36,10 @@ class Post {
 		void check_header_field(std::map<std::string, std::vector<std::string> > header_field);
 
 //save string and make reponse
-		void saveStringToFile(std::string message_body);
-		std::string generateFileName();
+		void saveTextPlainToFile(std::string message_body, Config config);
+		std::string generateTextPlainFileName(Config config);
+		void saveMultipartToFile(std::string message_body, Config config);
+
 		void make_post_response(Config config);
 		std::string make_response_body(const std::string& file_path);
 

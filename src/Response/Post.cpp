@@ -2,7 +2,6 @@
 
 Post::Post() {
 	_status_code = 0;
-	//_header_fields = ;
 	_message_body = "";
 	abs_path = "";
 	content_type = "";
@@ -28,14 +27,11 @@ Post::~Post() {}
 HttpResponseMessage Post::run(HttpRequestMessage request_msg, Config config) {
 	if (request_msg.getMethod() != "POST") {
 		_status_code = 300;
-		_header_fields["content-type"] = "text/plain";
 		request_url = request_msg.getRequestLine()[1];
-
 	} else if (request_msg.getMessageBody() == "") {
 		//redirect to get
 		//make
-		_status_code = 300;
-		_header_fields["content-type"] = "text/plain";
+		_status_code = 300; 
 		request_url = request_msg.getRequestLine()[1];
 	} else {
 		check_request_line(request_msg.getRequestLine(), config.getRoot());
@@ -43,8 +39,9 @@ HttpResponseMessage Post::run(HttpRequestMessage request_msg, Config config) {
 	}
 	//요청 헤더 파싱 후에 맞는 상황에 대하여  처리
 	if (content_type == "text/plain" && _status_code == 0) {
-		std::cout << "come here>>>>" << std::endl;
-		saveStringToFile(request_msg.getMessageBody());
+		saveTextPlainToFile(request_msg.getMessageBody(), config);
+	} else if (content_type == "multipart/form-data" && _status_code == 0) {
+		saveMultipartToFile(request_msg.getMessageBody(), config);
 	}
 
 	make_post_response(config);
@@ -71,7 +68,7 @@ void Post::check_request_line(std::vector<std::string> request_line, std::string
 		this->_status_code = 404;
 		return;
 	}
-//해당 디렉토리가 있는지  확인
+	//해당 디렉토리가 있는지  확인
 	abs_path = root + rel_path;
 
 	if (!directory_exists(abs_path)) {
@@ -101,19 +98,20 @@ void Post::check_header_field(std::map<std::string, std::vector<std::string> > h
 void Post::check_header_content_type(std::map<std::string, std::vector<std::string> > header_field) {
 	//HTML, JSON, TEXT data 세가지만 처리
 	if (header_field.find("content-type") == header_field.end()) {
-		_status_code = 403;
-		return;
-	} else if (header_field["content-type"].size() != 1) {
-		//보통은 value에 공백으로 두개이상의 인자가 오지는 않기 때문에 일단은 예외처리
-		_status_code = 403;
+		_status_code = 400;
 		return;
 	} else if (header_field["content-type"][0] == "application/x-www-form-urlencoded") {
 		//HTML 폼 데이터를 인코딩한 것으로, 기본적인 폼 제출 방식
 		content_type = "application/x-www-form-urlencoded";
 		return;
-	} else if (header_field["content-type"][0] == "multipart/form-data") {
+	} else if (header_field["content-type"][0] == "multipart/form-data" && header_field["content-type"].size() == 2) {
 		//폼 데이터를 여러 부분으로 나눠서 전송할 때 사용됩니다. 주로 파일 업로드와 함께 사용
-		//따로 처리 안함
+		content_type = "multipart/form-data";
+		if (header_field["content-type"][1].find("boundary=") == 0) {
+			boundary = header_field["content-type"][1].substr(9);
+		} else {
+			_status_code = 400;
+		}
 		return;
 	} else if (header_field["content-type"][0] == "application/json") {
 		//JSON 형식의 데이터를 전송할 때 사용
@@ -126,14 +124,18 @@ void Post::check_header_content_type(std::map<std::string, std::vector<std::stri
 	} else if (header_field["content-type"][0] == "application/xml") {
 		//XML 형식의 데이터를 전송할 때 사용
 		//처리 안함
+		content_type = "application/xml";
 
 		return;
 	} else if (header_field["content-type"][0] == "application/octet-stream") {
 		//이진 데이터를 전송할 때 사용
 		//처리 안함
+		content_type = "application/octet-stream";
 
 		return;
 	} else {
+		//post 요청이지만 content-type이 이상하기때문에 400에러 반환
+		_status_code = 400;
 		return;
 	}
 }
@@ -175,8 +177,8 @@ void Post::check_header_authorization(std::map<std::string, std::vector<std::str
 
 }
 
-void Post::saveStringToFile(std::string message_body) {
-	std::string filename = generateFileName();
+void Post::saveTextPlainToFile(std::string message_body, Config config) {
+	std::string filename = generateTextPlainFileName(config);
 	std::string data_path = abs_path + "/" + filename;
 	std::ofstream file_write(data_path, std::ios::app);
 
@@ -196,25 +198,56 @@ void Post::saveStringToFile(std::string message_body) {
 
 }
 
-std::string Post::generateFileName() {
+std::string Post::generateTextPlainFileName(Config config) {
 	static size_t fileIndex = 0;
 
 	std::stringstream filenameStream;
-	filenameStream << "DB_" << fileIndex++ << ".txt";
+	filenameStream << config.getPort() << "_" << config.getName()[0] << "_No_" << fileIndex++ << ".txt";
 	return filenameStream.str();
 }
 
+void Post::saveMultipartToFile(std::string message_body, Config config) {
+	std::string filename = generateTextPlainFileName(config);
+	std::string data_path = abs_path + "/" + filename;
+	std::ofstream file_write(data_path, std::ios::app);
+	std::string in_boundary;
+
+	if (file_write.is_open()) {
+		size_t start_boundary = message_body.find(boundary);
+		if (start_boundary != std::string::npos) {
+			size_t end_boundary = message_body.find(boundary, start_boundary + 1);
+			if (end_boundary != std::string::npos) {
+				in_boundary = message_body.substr(start_boundary + boundary.size(), end_boundary - (start_boundary + boundary.size()));
+				file_write << in_boundary;
+				file_write.close();
+				_status_code = 200;
+			} else {
+				_status_code = 400;
+			}
+		} else {
+			_status_code = 400;
+		}
+	} else {
+		_status_code = 400;
+	}
+}
+
+
 void Post::make_post_response(Config config) {
-	std::string redirect_path = config.getRoot() + "/redirect_page/";
+	std::string redirect_path = "docroot/redirect_page/";
+	// std::string redirect_path = config.getRoot() + "/redirect_page/";
 	std::string errorpage_path = config.getRoot() + "/error_pages/";
 	std::ostringstream body_length;
 
 	if ((_status_code >= 200 && _status_code < 300) || _status_code == 0) {
 		if (content_type == "text/plain") {
-			_message_body = "데이터가 성공적으로 저장되었습니다.";
+			_message_body = "데이터가 성공적으로 저장되었습니다.\n";
+			_header_fields["content-type"] = "text/plain";
+		} else if (content_type == "multipart/form-data") {
+			_message_body = "File uploaded successfully\n";
 			_header_fields["content-type"] = "text/plain";
 		} else if (content_type == "application/x-www-form-urlencoded") {
-			_message_body = "제이슨 파일 처리가 필요합니다.";
+			_message_body = "제이슨 파일 처리가 필요합니다.\n";
 			_header_fields["content-type"] = "application/jason";
 		}
 		//5가지 각 형식에 대한 처리 
@@ -223,9 +256,9 @@ void Post::make_post_response(Config config) {
 		_header_fields["location"] = request_url;
 		_header_fields["content-type"] = "text/html";
 
-		//어떤 내용물을 반환하는  리다이렉션?
-		_message_body = "This page will be redirected";
-		//_message_body = make_response_body(errorpage_path + "redirection.html");
+		// 리다이렉트 될 경우에 html 페이지 띄워준다.
+		// _message_body = "This page will be redirected";
+		_message_body = make_response_body(redirect_path + "redirection.html");
 	} else if (_status_code >= 400 && _status_code < 500) {
 		_message_body = make_response_body(errorpage_path + "/400.html");
 		_header_fields["content-type"] = "text/html";

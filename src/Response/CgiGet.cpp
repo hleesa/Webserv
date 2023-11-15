@@ -2,6 +2,8 @@
 #include "CgiGet.hpp"
 #include <map>
 #include <unistd.h>
+#include "HttpRequestMessage.hpp"
+#include "Config.hpp"
 
 #define ERROR -1
 #define READ 0
@@ -52,14 +54,6 @@ void validateComponent(const std::vector<std::string>& url_vec) {
             throw 400;
         }
     }
-    /**
-     * https://datatracker.ietf.org/doc/html/rfc3986#page-12
-
-      gen-delims  = ":" / "/" / "?" / "#" / "[" / "]" / "@"
-
-      sub-delims  = "!" / "$" / "&" / "'" / "(" / ")"
-                  / "*" / "+" / "," / ";" / "="
-     */
     const std::string reserved_characters = ":/?#[]@!$&'()*+,;=";
     int cnt = 0;
     std::map<char, int> checker;
@@ -80,21 +74,22 @@ std::vector<std::string> parseUrl(const std::string url) {
     return url_vec;
 }
 
-std::string getScriptPath(const std::string url) {
+std::string getScriptPath(const std::string url, const std::string root) {
     size_t idx = url.find("?");
     if (idx == std::string::npos) {
-        return std::string();
+        throw 400;
     }
-    return "." + url.substr(0, idx);
+    std::string base_url = root.empty() ? "/." : root;
+    return base_url + url.substr(1, idx - 1);
 }
 
 bool CgiGet::isValidCgiGetUrl(const std::vector<std::string>& request_line, const std::map<int, Config>& configs,
-                              int con_socket) {
+                              int listen_socket) {
     const std::vector<std::string> url_vec = parseUrl(request_line[1]);
     if (request_line.front() != "GET" || url_vec.front().find("cgi") == std::string::npos) {
         return false;
     }
-    std::map<int, Config>::const_iterator found_config = configs.find(con_socket);
+    std::map<int, Config>::const_iterator found_config = configs.find(listen_socket);
     if (found_config == configs.end()) {
         return false;
     }
@@ -103,34 +98,17 @@ bool CgiGet::isValidCgiGetUrl(const std::vector<std::string>& request_line, cons
     if (url_vec.front() != cgi_location.first.substr(1)) {
         return false;
     }
-//    const std::string cgi_script_url = "./" + url_vec.front() + "/" + url_vec[1];
-    const std::string cgi_script_url = getScriptPath(request_line[1]);
-    if (access(cgi_script_url.c_str(), F_OK | X_OK) == ERROR) {
+    const std::string cgi_script_url = getScriptPath(request_line[1], cgi_location.second.getRoot());
+    if (cgi_script_url.length() < cgi_location.second.getCgiExt().length()) {
+        return false;
+    } else if (cgi_script_url.substr(cgi_script_url.length() - cgi_location.second.getCgiExt().length()) !=
+               cgi_location.second.getCgiExt()) {
+        return false;
+    } else if (access(cgi_script_url.c_str(), F_OK | X_OK) == ERROR) {
         return false;
     }
     return true;
 }
-
-/*
-      AUTH_TYPE
-      CONTENT_LENGTH
-      CONTENT_TYPE
-      GATEWAY_INTERFACE
-      HTTP_*
-      PATH_INFO
-      PATH_TRANSLATED
-      QUERY_STRING
-      REMOTE_ADDR
-      REMOTE_HOST
-      REMOTE_IDENT
-      REMOTE_USER
-      REQUEST_METHOD
-      SCRIPT_NAME
-      SERVER_NAME
-      SERVER_PORT
-      SERVER_PROTOCOL
-      SERVER_SOFTWARE
- */
 
 std::map<std::string, std::string> setEnviron(const std::string query_string) {
     std::map<std::string, std::string> environ;
@@ -156,9 +134,9 @@ char** createCgiEnviron(const std::string query_string) {
 std::string getQueryString(const std::string url) {
     size_t idx = url.find("?");
     if (idx == std::string::npos) {
-        return std::string();
+        throw 400;
     }
-    return url.substr(idx+1);
+    return url.substr(idx + 1);
 }
 
 void deleteExecveArg(char** cgi_environ, char* python_interpreter, char* python_script) {
@@ -174,10 +152,19 @@ void deleteExecveArg(char** cgi_environ, char* python_interpreter, char* python_
 }
 
 // /cgi-bin/cgi_script.py?input=Hello
-HttpResponseMessage CgiGet::processCgiGet(const std::string url, CgiLocation cgi_location) {
-    char** cgi_environ = createCgiEnviron(getQueryString(url));
+HttpResponseMessage CgiGet::processCgiGet(HttpRequestMessage request, const std::map<int, Config>& configs,
+                                          int listen_socket) {
+    if (!CgiGet::isValidCgiGetUrl(request.getRequestLine(), configs, listen_socket)) {
+        throw 400;
+    }
+    std::map<int, Config>::const_iterator found_config = configs.find(listen_socket);
+    if (found_config == configs.end()) {
+        throw 500;
+    }
+    CgiLocation cgi_location = found_config->second.getCgiLocation().second;
+    char** cgi_environ = createCgiEnviron(getQueryString(request.getURL()));
     char* python_interpreter = strdup(cgi_location.getCgiPath().c_str());
-    char* python_script = strdup(getScriptPath(url).c_str());
+    char* python_script = strdup(getScriptPath(request.getURL(), cgi_location.getRoot()).c_str());
     char* const command[] = {
             python_interpreter,
             python_script,
@@ -197,16 +184,10 @@ HttpResponseMessage CgiGet::processCgiGet(const std::string url, CgiLocation cgi
         if (close(pipe_fd[WRITE]) == ERROR) {
             throw 500;
         }
-        if (dup2(pipe_fd[READ], STDIN_FILENO) == ERROR) {
-            throw 500;
-        }
-        if (close(pipe_fd[READ]) == ERROR) {
-            throw 500;
-        }
         char rcv_buffer[BUFSIZ];
         memset(rcv_buffer, 0, sizeof(rcv_buffer));
         int n;
-        while ((n = read(STDIN_FILENO, rcv_buffer, sizeof(rcv_buffer)))) {
+        while ((n = read(pipe_fd[READ], rcv_buffer, sizeof(rcv_buffer)))) {
 //            if (n != 0) {
 //                rcv_buffer[n] = '\0';
                 body += std::string(rcv_buffer);
@@ -214,6 +195,10 @@ HttpResponseMessage CgiGet::processCgiGet(const std::string url, CgiLocation cgi
 //            write(conn_sock, rcv_buffer, strlen(rcv_buffer));
             memset(rcv_buffer, 0, sizeof(rcv_buffer));
         }
+        if (close(pipe_fd[READ]) == ERROR) {
+            throw 500;
+        }
+        // 수정
         waitpid(pid, 0, 0);
     }
     else {
@@ -232,10 +217,10 @@ HttpResponseMessage CgiGet::processCgiGet(const std::string url, CgiLocation cgi
         }
         exit(EXIT_FAILURE);
     }
-    // free()
+    deleteExecveArg(cgi_environ, python_interpreter, python_script);
     int status_code = 200;
     std::map<std::string, std::string> header_fields;
     header_fields["Content-type"] = "text/html";
-    header_fields["Content-Length"] = std::to_string(body.size()-1);
+    header_fields["Content-Length"] = std::to_string(body.size());
     return HttpResponseMessage(status_code, header_fields, body);
 }

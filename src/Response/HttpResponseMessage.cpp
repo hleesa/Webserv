@@ -22,12 +22,6 @@ std::string HttpResponseMessage::toString() {
         ss << header->first << ": " << header->second << "\r\n";
 	}   
 	ss << "\r\n";
-	if (!message_body.empty()) {
-	    ss << message_body;
-	}
+    ss << message_body;
     return ss.str();
-}
-
-int HttpResponseMessage::getBodySize() {
-    return message_body.size();
 }

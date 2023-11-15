@@ -35,19 +35,9 @@ std::string Server::makeResponse(std::map<int, Config>& configs) {
 		return ErrorPage::makeErrorPageResponse(status_code, configs[listen_socket]).toString();
 	}
     try {
-        if (CgiGet::isValidCgiGetUrl(request.getRequestLine(), configs, listen_socket)) {
-            std::map<int, Config>::const_iterator found_config = configs.find(listen_socket);
-            if (found_config == configs.end()) {
-                // config not found
-                return "";
-            }
-            HttpResponseMessage response = CgiGet::processCgiGet(request.getURL(),
-                                                                 found_config->second.getCgiLocation().second);
-            return response.toString();
-        }
-    } 
-	catch (int status_code) {
-        return "";
+        return CgiGet::processCgiGet(request, configs, listen_socket).toString();
+    }catch (int status_code) {
+        return ErrorPage::makeErrorPageResponse(status_code, configs[listen_socket]).toString();
     }
 	return HttpResponseMessage().toString();
 }

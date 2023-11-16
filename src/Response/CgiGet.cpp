@@ -195,6 +195,8 @@ std::string to_string(const T& value) {
 
 std::map<std::string, std::string> createHeaderFields(const std::string& body) {
     std::map<std::string, std::string> header_fields;
+    header_fields["Server"] = "webserv";
+    header_fields["Date"] = "";
     header_fields["Content-type"] = "text/html";
     header_fields["Content-Length"] = to_string(body.size());
     return header_fields;

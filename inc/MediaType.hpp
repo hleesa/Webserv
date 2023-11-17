@@ -1,5 +1,5 @@
-#ifndef MIME_HPP
-#define MIME_HPP
+#ifndef MEDIATYPE_HPP
+#define MEDIATYPE_HPP
 
 #include <map>
 #include <string>

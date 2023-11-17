@@ -20,11 +20,8 @@ std::string HttpResponseMessage::toString() {
 	ss << "HTTP/1.1 " << status_code << " " << code_to_reason.getReasonPharse(status_code) << "\r\n";
     for (std::map<std::string, std::string>::const_iterator header = header_fields.begin(); header != header_fields.end(); ++header) {
         ss << header->first << ": " << header->second << "\r\n";
-    }
-    ss << "\r\n" << message_body;
+	}   
+	ss << "\r\n";
+    ss << message_body;
     return ss.str();
-}
-
-int HttpResponseMessage::getBodySize() {
-    return message_body.size();
 }

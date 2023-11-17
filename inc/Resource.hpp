@@ -3,28 +3,25 @@
 
 #include <string>
 #include "Location.hpp"
-#include "ResourceStatus.hpp"
 
 class Resource {
 	private:
 		std::string path;
-		ResourceStatus status;
-		//MIME
-		
+		bool isDirectoryList;
+
 		std::string read() const;
-		std::string makeDirectoryList() const;
+		std::string makeDirectoryList();
 
 	public:
 		Resource();
-		Resource(const std::string& resource_path, const ResourceStatus& status);
+		Resource(const std::string& resource_path, const bool isDirectoryList);
 		Resource(const Resource& other);
 		~Resource();
 		Resource& operator=(const Resource& other);
 		
-		ResourceStatus getStatus() const;
 		std::string getPath() const;
 
-		std::string make() const;
+		std::string make();
 };
 
 bool isDirectory(const std::string& path);

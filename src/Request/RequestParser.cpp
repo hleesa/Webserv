@@ -346,14 +346,6 @@ void RequestParser::parseRequestLine(ParsingData& data, const std::string& line)
 	data.request_line = request;
 }
 
-bool isVisibleString(const std::string& str) {
-    for (std::string::const_iterator ch = str.begin(); ch != str.end(); ++ch) {
-        if (!isprint(*ch))
-            return false;
-    }
-    return true;
-}
-
 bool isValidFieldName(const std::string& field_name) {
     if (field_name.empty()) {
         return false;

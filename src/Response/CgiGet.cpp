@@ -160,11 +160,11 @@ std::string readCgiResponse(int* pipe_fd, pid_t pid) {
         throw 500;
     }
     char rcv_buffer[BUFSIZ];
-    int n_byte;
-    while ((n_byte = read(pipe_fd[READ], rcv_buffer, sizeof(rcv_buffer))) > 0) {
-        body.append(rcv_buffer, n_byte);
+    ssize_t bytes_read;
+    while ((bytes_read = read(pipe_fd[READ], rcv_buffer, sizeof(rcv_buffer))) > 0) {
+        body.append(rcv_buffer, bytes_read);
     }
-    if (n_byte == ERROR) {
+    if (bytes_read == ERROR) {
         throw 500;
     }
     if (close(pipe_fd[READ]) == ERROR) {

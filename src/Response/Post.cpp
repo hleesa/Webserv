@@ -43,7 +43,7 @@ HttpResponseMessage Post::run(HttpRequestMessage request_msg, Config config) {
 	}
 	if (location_key == "/cgi-bin") {
 		//cgi post 처리
-		
+		cgipost(config, request_msg.getHeaderFields());
 	} else {
 		//요청 헤더 파싱 후에 맞는 상황에 대하여  처리
 		if (_status_code == 0) {
@@ -52,7 +52,6 @@ HttpResponseMessage Post::run(HttpRequestMessage request_msg, Config config) {
 		//else if (content_type == "multipart/form-data" && _status_code == 0) {
 		//	saveMultipartToFile(request_msg.getMessageBody(), config);
 		//}
-
 		make_post_response(config);
 	}
 	return HttpResponseMessage(_status_code, _header_fields, _message_body);
@@ -177,6 +176,109 @@ void Post::check_header_authorization(std::map<std::string, std::vector<std::str
 	//처리 보류
 
 }
+
+void Post::cgipost(Config config, std::map<std::string, std::vector<std::string> > header_field) {
+
+	if (access(abs_path.c_str(), F_OK | X_OK) == -1) {
+		throw 400;
+	}
+	int pipe_write[2];
+	int pipe_read[2];
+	if (pipe(pipe_write) == -1 || pipe(pipe_read) == -1) {
+		throw 500;
+	}
+	pid_t pid = fork();
+	if (pid == -1)
+		throw 500;
+	else if (pid) {
+		_message_body = parent_read(pipe_write, pipe_read, pid);
+	} else {
+		child_write(pipe_write, pipe_read, config.getCgiLocation().second, header_field);
+	}
+
+}
+
+std::string Post::parent_read(int* pipe_write, int* pipe_read, pid_t pid) {
+	std::string body;
+
+	if (close(pipe_read[0]) == -1 || close(pipe_write[1] == -1)) {
+		throw 500;
+	}
+	if (write(pipe_write[1], _message_body.c_str(), content_length) == -1) {
+		throw 500;
+	}
+	char	recv_buffer[BUFSIZ];
+	int		nByte;
+	while ((nByte = read(pipe_read[0], recv_buffer, sizeof(recv_buffer))) > 0) {
+		body.append(recv_buffer, nByte);
+	}
+	if (nByte == -1)
+		throw 500;
+
+	int status;
+	if (waitpid(pid, &status, 0) == -1) {
+		throw 500;
+	}
+	if (WIFEXITED(status)) {
+		int exit_status = WEXITSTATUS(status);
+		if (exit_status == EXIT_FAILURE) {
+			throw 500;
+		}
+	} else {
+		throw 500;
+	}
+	return body;
+}
+
+void Post::child_write(int* pipe_write, int* pipe_read, CgiLocation cgi_location, std::map<std::string, std::vector<std::string> > header_field) {
+	char** cgi_environ = postCgiEnv(header_field);
+	char* python_interpreter = strdup(cgi_location.getCgiPath().c_str());
+	char* python_script = strdup(abs_path.c_str());
+	char* const command[] = {python_interpreter, python_script, NULL};
+
+	if (close(pipe_read[1]) == -1 || close(pipe_write[0]) == -1) {
+		exit(EXIT_FAILURE);
+	}
+	if (dup2(pipe_write[1], STDOUT_FILENO) == -1 || dup2(pipe_read[0], STDIN_FILENO) == -1) {
+		exit(EXIT_FAILURE);
+	}
+	if (execve(python_interpreter, command, cgi_environ) == -1 ) {
+		exit(EXIT_FAILURE);
+	}
+	exit(EXIT_SUCCESS);
+}
+
+char** Post::postCgiEnv(std::map<std::string, std::vector<std::string> > header_field) {
+	std::map<std::string, std::string> env;
+	env["REQUEST_METHOD"] = "POST";
+	env["CONTENT_LENGTH"] = header_field["content-length"][0];
+	env["CONTENT_TYPE"] = header_field["content-type"][0];
+	//env["SERVER_NAME"] = ""
+
+	char ** cgi_env = new char* [env.size() + 1];
+	int i = 0;
+	for (std::map<std::string, std::string>::iterator ite = env.begin(); ite != env.end(); ++ite) {
+		std::string tmp = ite->first + '=' + ite->second;
+		cgi_env[i] = new char[tmp.length() + 1];
+		strcpy(cgi_env[i], tmp.c_str());
+		++i;
+	}
+	cgi_env[i] = NULL;
+	return cgi_env;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 void Post::saveToFile(std::string message_body, Config config) {
 	std::string filename = generateFileName(config);

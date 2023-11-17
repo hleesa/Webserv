@@ -38,7 +38,8 @@ RESPONSE_SRC = \
 
 SERVER_SRC = \
 			Server.cpp \
-			ServerManager.cpp
+			ServerManager.cpp \
+			isVisibleString.cpp
 
 FILES = main.cpp \
 

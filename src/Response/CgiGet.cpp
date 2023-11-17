@@ -78,7 +78,7 @@ std::string getScriptPath(const std::string url, const std::string root) {
     if (idx == std::string::npos) {
         throw 400;
     }
-    std::string base_url = root.empty() ? "/." : root;
+    std::string base_url = root.empty() ? "./" : root;
     return base_url + url.substr(1, idx - 1);
 }
 
@@ -160,11 +160,11 @@ std::string readCgiResponse(int* pipe_fd, pid_t pid) {
         throw 500;
     }
     char rcv_buffer[BUFSIZ];
-    int nByte;
-    while ((nByte = read(pipe_fd[READ], rcv_buffer, sizeof(rcv_buffer))) > 0) {
-        body.append(rcv_buffer, nByte);
+    int n_byte;
+    while ((n_byte = read(pipe_fd[READ], rcv_buffer, sizeof(rcv_buffer))) > 0) {
+        body.append(rcv_buffer, n_byte);
     }
-    if (nByte == ERROR) {
+    if (n_byte == ERROR) {
         throw 500;
     }
     if (close(pipe_fd[READ]) == ERROR) {
@@ -184,13 +184,6 @@ std::string readCgiResponse(int* pipe_fd, pid_t pid) {
         throw 500;
     }
     return body;
-}
-
-template <typename T>
-std::string to_string(const T& value) {
-    std::ostringstream oss;
-    oss << value;
-    return oss.str();
 }
 
 std::map<std::string, std::string> createHeaderFields(const std::string& body) {

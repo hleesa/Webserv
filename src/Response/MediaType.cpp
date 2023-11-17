@@ -5,7 +5,7 @@ void MediaType::init(std::map<std::string, std::string>& mime_table) {
 	mime_table[".css"] = "text/css";
 	mime_table[".gif"] = "image/gif";
 	mime_table[".gif"] = "image/gif";
-	mime_table[".htm"] = "text/html";
+	mime_table[".htm"] = "text/htm";
 	mime_table[".html"] = "text/html";
 	mime_table[".gz"] = "application/gzip";
 	mime_table[".ico"] = "image/vnd.microsoft.icon";

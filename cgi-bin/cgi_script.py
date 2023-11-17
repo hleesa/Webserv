@@ -1,10 +1,12 @@
 #!/usr/bin/env python
 
 import os
+import sys
 
-query_string = os.environ.get("QUERY_STRING", "")
-query_params = query_string.split('=')
-param = query_params[1] if len(query_params) > 1 else ""
+# query_string = os.environ.get("QUERY_STRING", "")
+input_string = sys.stdin.read()
+params = input_string.split('=')
+param = params[1] if len(params) > 1 else ""
 
 response_body = f"""
     <!DOCTYPE html>

@@ -41,6 +41,7 @@ HttpResponseMessage Post::run(HttpRequestMessage request_msg, Config config) {
 		//헤더 필드 확인 -> body가 있는 경우이기 때문에 필수 헤더 확인
 		check_header_field(request_msg.getHeaderFields());
 	}
+	std::cout << "4." << location_key << std::endl;
 	if (location_key == "/cgi-bin") {
 		//cgi post 처리
 		cgipost(config, request_msg.getHeaderFields());
@@ -77,18 +78,28 @@ void Post::check_request_line(std::vector<std::string> request_line, Config conf
 		throw 404;
 		return;
 	}
-
-	//location 확인 후 그곳에서의 가능 메서드 확인
-	location_key = find_loc_key(rel_path, config);
-	if (config.getLocations()[location_key].isNotAllowedMethod("POST") == true) {
-		throw 405;
+	std::cout << "2." << rel_path << std::endl;
+	if (rel_path.find("cgi") == std::string::npos) {
+		//location 확인 후 그곳에서의 가능 메서드 확인
+		location_key = find_loc_key(rel_path, config);
+		if (config.getLocations()[location_key].isNotAllowedMethod("POST") == true) {
+			throw 405;
+		}
+		abs_path = config.getRoot() + rel_path;
+		if (!directory_exists(abs_path)) {
+			throw 404;
+		}
+	} else {
+		//cgi 인 경우
+		location_key = find_cgi_loc_key(rel_path, config);
+		if (location_key == "/")
+			throw 405;
+		abs_path = config.getCgiLocation().second.getRoot() + rel_path;
 	}
+	std::cout << "1." << location_key << std::endl;
 
 	//해당 디렉토리가 있는지  확인
-	abs_path = config.getRoot() + rel_path;
-	if (!directory_exists(abs_path)) {
-		throw 404;
-	}
+	std::cout << "5." << abs_path << std::endl;
 }
 
 std::string Post::find_loc_key(std::string rel_path, Config config) {
@@ -97,6 +108,22 @@ std::string Post::find_loc_key(std::string rel_path, Config config) {
 	size_t pos = path_checker.length();
 
 	while (locs.find(path_checker) == locs.end()) {
+		pos = path_checker.rfind('/', pos - 1);
+		if (pos == 0)
+			path_checker = '/';
+		else
+			path_checker = path_checker.substr(0, pos);
+	}
+	return path_checker;
+}
+
+std::string Post::find_cgi_loc_key(std::string rel_path, Config config) {
+	std::string path_checker = rel_path;
+	std::pair<std::string, CgiLocation> locs = config.getCgiLocation();
+	size_t pos = path_checker.length();
+
+	std::cout << "3." << path_checker << std::endl;
+	while (locs.first != path_checker) {
 		pos = path_checker.rfind('/', pos - 1);
 		if (pos == 0)
 			path_checker = '/';
@@ -178,47 +205,56 @@ void Post::check_header_authorization(std::map<std::string, std::vector<std::str
 }
 
 void Post::cgipost(Config config, std::map<std::string, std::vector<std::string> > header_field) {
+	std::ostringstream body_length;
 
 	if (access(abs_path.c_str(), F_OK | X_OK) == -1) {
 		throw 400;
 	}
-	int pipe_write[2];
-	int pipe_read[2];
-	if (pipe(pipe_write) == -1 || pipe(pipe_read) == -1) {
+	int pipe_ptoc[2];
+	int pipe_ctop[2];
+	if (pipe(pipe_ptoc) == -1 || pipe(pipe_ctop) == -1) {
 		throw 500;
 	}
 	pid_t pid = fork();
 	if (pid == -1)
 		throw 500;
 	else if (pid) {
-		_message_body = parent_read(pipe_write, pipe_read, pid);
+		_message_body = parent_read(pipe_ptoc, pipe_ctop, pid);
 	} else {
-		child_write(pipe_write, pipe_read, config.getCgiLocation().second, header_field);
+		child_write(pipe_ptoc, pipe_ctop, config.getCgiLocation().second, header_field);
 	}
-
+	body_length << _message_body.size();
+	_header_fields["content-length"] = body_length.str();
+	_header_fields["content-type"] = "text/html";
 }
 
-std::string Post::parent_read(int* pipe_write, int* pipe_read, pid_t pid) {
+std::string Post::parent_read(int* pipe_ptoc, int* pipe_ctop, pid_t pid) {
 	std::string body;
 
-	if (close(pipe_read[0]) == -1 || close(pipe_write[1] == -1)) {
+	std::cout << "p1." << std::endl;
+	if (close(pipe_ptoc[0]) == -1 || close(pipe_ctop[1] == -1)) {
 		throw 500;
 	}
-	if (write(pipe_write[1], _message_body.c_str(), content_length) == -1) {
+	std::cout << "p2." << std::endl;
+	if (write(pipe_ptoc[1], _message_body.c_str(), content_length) == -1) {
 		throw 500;
 	}
+	std::cout << "p3." << std::endl;
 	char	recv_buffer[BUFSIZ];
 	int		nByte;
-	while ((nByte = read(pipe_read[0], recv_buffer, sizeof(recv_buffer))) > 0) {
+	while ((nByte = read(pipe_ctop[0], recv_buffer, sizeof(recv_buffer))) > 0) {
 		body.append(recv_buffer, nByte);
 	}
+	std::cout << "p4." << std::endl;
 	if (nByte == -1)
 		throw 500;
 
 	int status;
+	std::cout << "p5." << std::endl;
 	if (waitpid(pid, &status, 0) == -1) {
 		throw 500;
 	}
+	std::cout << "p6." << std::endl;
 	if (WIFEXITED(status)) {
 		int exit_status = WEXITSTATUS(status);
 		if (exit_status == EXIT_FAILURE) {
@@ -227,24 +263,30 @@ std::string Post::parent_read(int* pipe_write, int* pipe_read, pid_t pid) {
 	} else {
 		throw 500;
 	}
+	std::cout << "p7." << std::endl;
 	return body;
 }
 
-void Post::child_write(int* pipe_write, int* pipe_read, CgiLocation cgi_location, std::map<std::string, std::vector<std::string> > header_field) {
+void Post::child_write(int* pipe_ptoc, int* pipe_ctop, CgiLocation cgi_location, std::map<std::string, std::vector<std::string> > header_field) {
 	char** cgi_environ = postCgiEnv(header_field);
 	char* python_interpreter = strdup(cgi_location.getCgiPath().c_str());
 	char* python_script = strdup(abs_path.c_str());
 	char* const command[] = {python_interpreter, python_script, NULL};
 
-	if (close(pipe_read[1]) == -1 || close(pipe_write[0]) == -1) {
+	std::cout << "c1." << std::endl;
+	if (close(pipe_ptoc[1]) == -1 || close(pipe_ctop[0]) == -1) {
 		exit(EXIT_FAILURE);
 	}
-	if (dup2(pipe_write[1], STDOUT_FILENO) == -1 || dup2(pipe_read[0], STDIN_FILENO) == -1) {
+	std::cout << "c2." << std::endl;
+	if (dup2(pipe_ptoc[0], STDIN_FILENO) == -1 || dup2(pipe_ctop[1], STDOUT_FILENO) == -1) {
+	std::cout << "checker---->" << std::endl;
 		exit(EXIT_FAILURE);
 	}
+	std::cout << "c3." << std::endl;
 	if (execve(python_interpreter, command, cgi_environ) == -1 ) {
 		exit(EXIT_FAILURE);
 	}
+	std::cout << "c4." << std::endl;
 	exit(EXIT_SUCCESS);
 }
 
@@ -266,16 +308,6 @@ char** Post::postCgiEnv(std::map<std::string, std::vector<std::string> > header_
 	cgi_env[i] = NULL;
 	return cgi_env;
 }
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -331,7 +363,6 @@ void Post::saveMultipartToFile(std::string message_body, Config config) {
 		throw 400;
 	}
 }
-
 
 void Post::make_post_response(Config config) {
 	std::string redirect_path = "docroot/redirect_page/";

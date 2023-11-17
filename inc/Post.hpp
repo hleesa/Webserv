@@ -37,6 +37,7 @@ class Post {
 
 		void check_request_line(std::vector<std::string> request_line, Config config);
 		std::string find_loc_key(std::string rel_path, Config config);
+		std::string find_cgi_loc_key(std::string rel_path, Config config);
 		bool directory_exists(const std::string& path);
 		void check_header_field(std::map<std::string, std::vector<std::string> > header_field);
 

@@ -1,30 +1,22 @@
 #ifndef DELETE_HPP
 #define DELETE_HPP
 
+#include "Method.hpp"
 #include "HttpRequestMessage.hpp"
 #include "HttpResponseMessage.hpp"
 #include "Config.hpp"
 #include "Resource.hpp"
 
-class Delete {
+class Delete : public Method {
 	private:
-		HttpRequestMessage request;
-		Config config;
-		int status_code;
-		std::string location_key;
 		
-		std::string findLocationKey();
-		void handleError(const std::string path);
-		std::string findRoot();
-		std::string findPath();
+		void handleError(const std::string path) const;
+		std::string findPath() const;
 		
-		std::map<std::string, std::string> makeHeaderFileds();
-		std::string makeDate();
-
 	public:
-		Delete(const HttpRequestMessage& request, const Config& config);
+		Delete(const HttpRequestMessage* request, const Config* config);
 
-		HttpResponseMessage makeHttpResponseMessage();
+		HttpResponseMessage makeHttpResponseMessage() const;
 };
 
 #endif

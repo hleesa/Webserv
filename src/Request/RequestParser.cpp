@@ -24,9 +24,12 @@ ReadingStatus RequestParser::getReadingStatus(const int ident) {
 	return parsing_data[ident].status;
 }
 
-HttpRequestMessage RequestParser::getHttpRequestMessage(const int ident) {
+HttpRequestMessage RequestParser::getHttpRequestMessage(const int ident, const long limit_body_size) {
 	ParsingData data = parsing_data[ident];
     
+	if (data.body.content.size() > static_cast<unsigned long>(limit_body_size)) {
+		data.status_code = 413;
+	}	
 	return HttpRequestMessage(data.request_line, data.header_fields, data.body.content, data.status_code);
 }
 
@@ -129,7 +132,7 @@ ReadingStatus RequestParser::processBody(ParsingData& data) {
 	}
 	return BODY;
 }
-#include <iostream>
+
 ReadingStatus RequestParser::processEncoding(Body& body, std::string& buffer) {
 	int size_pos;
 	int size;
@@ -200,8 +203,9 @@ BodyStatus RequestParser::getBodyStatus(const std::string line, Body& body) {
 	if (hasTransferEncoding(line)) {
 		return ENCODING;
 	}
-	if (body.status == ContentLength)
+	if (body.status == ContentLength) {
 		return ContentLength;
+	}
 	int length = getContentLength(line);
 	if (length > 0) {
 		body.length = length;

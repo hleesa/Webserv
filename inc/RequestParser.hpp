@@ -13,6 +13,7 @@ class RequestParser {
 	private:
 		std::map<int, ParsingData> parsing_data;
 
+		void checkReadingStatus(ParsingData& data);
 		bool processStartLine(ParsingData& data);
 		std::string getMethod(const std::string& line);
 		bool processHeader(ParsingData& data);
@@ -37,9 +38,8 @@ class RequestParser {
 		~RequestParser();
 		
 		ReadingStatus getReadingStatus(const int ident);
-		HttpRequestMessage getHttpRequestMessage(const int ident);
+		HttpRequestMessage getHttpRequestMessage(const int ident, const long limit_body_size);
 		void run(const int ident, const char* newContent);
-		void checkReadingStatus(ParsingData& data);
 		void clear(const int ident);
 };
 

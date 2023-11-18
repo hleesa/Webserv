@@ -3,12 +3,16 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <unistd.h>
-#include "../../inc/CgiGet.hpp"
+#include <fcntl.h>
 
 ServerManager::ServerManager(const std::vector<Config>& configs) {
     for (unsigned long idx = 0; idx < configs.size(); idx++) {
-        this->configs[openListenSocket(configs[idx].getPort())] = configs[idx];
-    }
+		int socket = openListenSocket(configs[idx].getPort());
+		if (fcntl(socket, F_SETFL, O_NONBLOCK, FD_CLOEXEC) == ERROR) {
+			throw (strerror(errno));
+		}
+        this->configs[socket] = configs[idx];
+	}
     memset((void*) event_list, 0, sizeof(struct kevent) * NUMBER_OF_EVENT);
     kq = kqueue();
     if (kq == ERROR)
@@ -60,15 +64,20 @@ void ServerManager::processEvents(const int events) {
         else if (event->filter == EVFILT_READ && servers.find(event->ident) != servers.end()) {
             processReadEvent(*event);
 			if (parser.getReadingStatus(event->ident) == END) {
-				servers[event->ident].setRequest(parser.getHttpRequestMessage(event->ident));
+				int limit_body_size = configs[servers[event->ident].getListenSocket()].getLimitBodySize();
+				servers[event->ident].setRequest(parser.getHttpRequestMessage(event->ident, limit_body_size));
 				parser.clear(event->ident);
-    			change_list.push_back(makeEvent(event->ident, EVFILT_WRITE, EV_ENABLE, 0, 0, NULL));
-				// write event 추가
+    			change_list.push_back(makeEvent(event->ident, EVFILT_WRITE, EV_ADD | EV_ONESHOT, 0, 0, NULL));
 			}
         }
         else if (event->filter == EVFILT_WRITE && servers.find(event->ident) != servers.end()) {
             processWriteEvent(*event);
-            // change_list.push_back(makeEvent(event->ident, EVFILT_WRITE, EV_DELETE, 0, 0, NULL));
+            change_list.push_back(makeEvent(event->ident, EVFILT_TIMER, EV_ADD | EV_ONESHOT, 0, TIMEOUT_MSEC, NULL));
+        }
+        else if (event->filter == EVFILT_TIMER) {
+            std::cout << "time out\n";
+            change_list.push_back(makeEvent(event->ident, EVFILT_READ, EV_DISABLE, 0, 0, NULL));
+            disconnectWithClient(*event);
         }
     }
 }
@@ -84,40 +93,39 @@ void ServerManager::processListenEvent(const struct kevent& event) {
     socklen_t client_address_len = sizeof(client_address);
     int connection_socket = accept(event.ident, (struct sockaddr*) &client_address, &client_address_len);
 
-    if (connection_socket == ERROR)
+    if (connection_socket == ERROR) {
         throw (strerror(errno));
+	}
+	if (fcntl(connection_socket, F_SETFL, O_NONBLOCK, FD_CLOEXEC) == ERROR) {
+        throw (strerror(errno));
+	}
+    servers[connection_socket] = Server(connection_socket, event.ident);
     change_list.push_back(makeEvent(connection_socket, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, NULL));
-    change_list.push_back(makeEvent(connection_socket, EVFILT_WRITE, EV_ADD | EV_DISABLE, 0, 0, NULL));
-	servers[connection_socket] = Server(connection_socket, event.ident);
+    change_list.push_back(makeEvent(connection_socket, EVFILT_TIMER, EV_ADD | EV_ONESHOT, 0, TIMEOUT_MSEC, NULL));
 }
 
 void ServerManager::processReadEvent(const struct kevent& event) {
-    int n;
     char buff[BUFFER_SIZE + 1];
-
-    memset(buff, 0, sizeof(buff));
-    n = read(event.ident, &buff, BUFFER_SIZE); // recv
-    if (n < 1) {
-        disconnectWithClient(event);
+    ssize_t bytes_recv = recv(event.ident, &buff, BUFFER_SIZE, 0);
+    
+	if (bytes_recv == ERROR) {
+        if (!(errno == EAGAIN || errno == EWOULDBLOCK)) {
+            disconnectWithClient(event);
+        }
         return;
     }
-    buff[n] = 0;
+    buff[bytes_recv] = '\0';
 	parser.run(event.ident, buff);
 }
 
 void ServerManager::processWriteEvent(const struct kevent& event) {
-    int n = 0;
-
-	// TO DO : Request -> Response
-	// send(event.ident, response_content, response_content.size());
 	std::string response = servers[event.ident].makeResponse(configs);
-	write(event.ident, response.c_str(), response.size());
-    change_list.push_back(makeEvent(event.ident, EVFILT_WRITE, EV_DISABLE, 0, 0, NULL));
-	// send(event.ident, response, response.size());
-
-    if (n == ERROR) {
-        disconnectWithClient(event);
-        return;
+    ssize_t bytes_send = send(event.ident, response.c_str(), response.length(), 0);
+ 
+    if (bytes_send == ERROR) {
+        if (!(errno == EAGAIN || errno == EWOULDBLOCK)) {
+            disconnectWithClient(event);
+        }
     }
 }
 

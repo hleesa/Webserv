@@ -27,6 +27,7 @@ std::string Server::makeResponse(std::map<int, Config>& configs) {
 			throw(request.getStatusCode());
 		}
         Method *method = Method::generate(request.getMethod(), &request, &configs[listen_socket]);
+		method->checkAllowed(request.getMethod());
         std::string response = method->makeHttpResponseMessage().toString();
         delete method;
         return response;

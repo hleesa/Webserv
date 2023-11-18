@@ -28,8 +28,8 @@ RESPONSE_SRC = \
 			HttpResponseMessage.cpp \
 			CodeToReason.cpp \
 			Method.cpp \
-			CgiGet.cpp \
 			Get.cpp \
+			GetCgi.cpp \
 			Post.cpp \
 			Delete.cpp \
 			Resource.cpp\

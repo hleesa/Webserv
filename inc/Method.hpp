@@ -14,17 +14,16 @@ class Method {
 		
 		std::string findLocationKey() const;
 		std::string findRoot() const;
-		void checkAllowed(const std::string method) const;
 		
 		std::map<std::string, std::string> makeHeaderFileds() const;
 		std::string makeDate() const;
 
 	public:
 		Method();
-		Method(const HttpRequestMessage* request, const Config* config);
 		virtual ~Method();
 
 		static Method* generate(const std::string method, const HttpRequestMessage* request, const Config* config);
+		void checkAllowed(const std::string method) const;
 		virtual HttpResponseMessage makeHttpResponseMessage() const = 0;
 };
 

@@ -10,7 +10,6 @@ Get::Get(const HttpRequestMessage* request, const Config* config) {
 }
 
 HttpResponseMessage Get::makeHttpResponseMessage() const {
-	checkAllowed("GET");
 	Location location = config->getLocations()[location_key];
 	if (location.hasReturnValue()) {
 		return processReturnDirective();

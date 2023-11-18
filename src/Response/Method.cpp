@@ -2,16 +2,12 @@
 #include "../../inc/MediaType.hpp"
 #include "../../inc/ToString.hpp"
 #include "../../inc/Get.hpp"
+#include "../../inc/GetCgi.hpp"
+#include "../../inc/Delete.hpp"
 #include <unistd.h>
 #include <ctime>
-#include "GetCgi.hpp"
 
 Method::Method() {}
-
-Method::Method(const HttpRequestMessage* request, const Config* config)
-: request(request), config(config) {
-	this->location_key = findLocationKey();
-}
 
 Method::~Method() {}
 
@@ -23,7 +19,9 @@ Method* Method::generate(const std::string method, const HttpRequestMessage* req
         else {
             return dynamic_cast<Method*>(new GetCgi(request, config));
         }
-
+	}
+	if (method == "DELETE") {
+		return dynamic_cast<Method*>(new Delete(request, config));
 	}
 	return NULL;
 }

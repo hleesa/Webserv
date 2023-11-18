@@ -42,8 +42,8 @@ class Post {
 		void check_header_field(std::map<std::string, std::vector<std::string> > header_field);
 
 //cgi response
-		void cgipost(Config config, std::map<std::string, std::vector<std::string> > header_field);
-		std::string parent_read(int* pipe_write, int* pipe_read, pid_t pid);
+		void cgipost(Config config, HttpRequestMessage msg);
+		std::string parent_read(int* pipe_write, int* pipe_read, pid_t pid, HttpRequestMessage msg);
 		void child_write(int* pipe_write, int* pipe_read, CgiLocation cgi_location, std::map<std::string, std::vector<std::string> > header_field);
 		char** postCgiEnv(std::map<std::string, std::vector<std::string> > header_field);
 //save string and make reponse

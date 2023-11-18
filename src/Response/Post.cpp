@@ -1,6 +1,7 @@
 #include "../../inc/Post.hpp"
 #include "../../inc/MediaType.hpp"
 #include "../../inc/Location.hpp"
+#include <fcntl.h>
 
 Post::Post() {
 	_status_code = 0;
@@ -44,7 +45,7 @@ HttpResponseMessage Post::run(HttpRequestMessage request_msg, Config config) {
 	std::cout << "4." << location_key << std::endl;
 	if (location_key == "/cgi-bin") {
 		//cgi post 처리
-		cgipost(config, request_msg.getHeaderFields());
+		cgipost(config, request_msg);
 	} else {
 		//요청 헤더 파싱 후에 맞는 상황에 대하여  처리
 		if (_status_code == 0) {
@@ -204,7 +205,7 @@ void Post::check_header_authorization(std::map<std::string, std::vector<std::str
 
 }
 
-void Post::cgipost(Config config, std::map<std::string, std::vector<std::string> > header_field) {
+void Post::cgipost(Config config, HttpRequestMessage msg) {
 	std::ostringstream body_length;
 
 	if (access(abs_path.c_str(), F_OK | X_OK) == -1) {
@@ -219,35 +220,42 @@ void Post::cgipost(Config config, std::map<std::string, std::vector<std::string>
 	if (pid == -1)
 		throw 500;
 	else if (pid) {
-		_message_body = parent_read(pipe_ptoc, pipe_ctop, pid);
+		_message_body = parent_read(pipe_ptoc, pipe_ctop, pid, msg);
 	} else {
-		child_write(pipe_ptoc, pipe_ctop, config.getCgiLocation().second, header_field);
+		child_write(pipe_ptoc, pipe_ctop, config.getCgiLocation().second, msg.getHeaderFields());
 	}
 	body_length << _message_body.size();
 	_header_fields["content-length"] = body_length.str();
 	_header_fields["content-type"] = "text/html";
 }
 
-std::string Post::parent_read(int* pipe_ptoc, int* pipe_ctop, pid_t pid) {
+std::string Post::parent_read(int* pipe_ptoc, int* pipe_ctop, pid_t pid, HttpRequestMessage msg) {
 	std::string body;
 
 	std::cout << "p1." << std::endl;
 	if (close(pipe_ptoc[0]) == -1 || close(pipe_ctop[1] == -1)) {
 		throw 500;
 	}
-	std::cout << "p2." << std::endl;
-	if (write(pipe_ptoc[1], _message_body.c_str(), content_length) == -1) {
+	if (write(pipe_ptoc[1], msg.getMessageBody().c_str(), content_length) == -1) {
+		throw 500;
+	}
+	if (close(pipe_ptoc[1]) == -1) {
 		throw 500;
 	}
 	std::cout << "p3." << std::endl;
 	char	recv_buffer[BUFSIZ];
 	int		nByte;
-	while ((nByte = read(pipe_ctop[0], recv_buffer, sizeof(recv_buffer))) > 0) {
+	if ((nByte = read(pipe_ctop[0], recv_buffer, sizeof(recv_buffer))) > 0) {
 		body.append(recv_buffer, nByte);
+		std::cout << body << std::endl;
 	}
-	std::cout << "p4." << std::endl;
+	std::cout << body << std::endl;
 	if (nByte == -1)
 		throw 500;
+	std::cout << "p4." << std::endl;
+	//if (close(pipe_ctop[0] == -1)) {
+	//	throw 500;
+	//}
 
 	int status;
 	std::cout << "p5." << std::endl;
@@ -273,21 +281,21 @@ void Post::child_write(int* pipe_ptoc, int* pipe_ctop, CgiLocation cgi_location,
 	char* python_script = strdup(abs_path.c_str());
 	char* const command[] = {python_interpreter, python_script, NULL};
 
-	std::cout << "c1." << std::endl;
 	if (close(pipe_ptoc[1]) == -1 || close(pipe_ctop[0]) == -1) {
 		exit(EXIT_FAILURE);
 	}
-	std::cout << "c2." << std::endl;
+	//char buf[50];
+	//read(pipe_ptoc[0], buf, 50);
+	//std::cout << buf << std::endl;
 	if (dup2(pipe_ptoc[0], STDIN_FILENO) == -1 || dup2(pipe_ctop[1], STDOUT_FILENO) == -1) {
-	std::cout << "checker---->" << std::endl;
 		exit(EXIT_FAILURE);
 	}
-	std::cout << "c3." << std::endl;
+	if (close(pipe_ptoc[0]) == -1 || close(pipe_ctop[1]) == -1) {
+		exit(EXIT_FAILURE);
+	}
 	if (execve(python_interpreter, command, cgi_environ) == -1 ) {
 		exit(EXIT_FAILURE);
 	}
-	std::cout << "c4." << std::endl;
-	exit(EXIT_SUCCESS);
 }
 
 char** Post::postCgiEnv(std::map<std::string, std::vector<std::string> > header_field) {

@@ -12,12 +12,19 @@ Server::Server(int connection, int listen) {
     listen_socket = listen;
 }
 
+int Server::getListenSocket() const {
+	return this->listen_socket;
+}
+
 void Server::setRequest(const HttpRequestMessage& request_message) {
     this->request = request_message;
 }
 
 std::string Server::makeResponse(std::map<int, Config>& configs) {
     try {
+		if (request.getStatusCode()) {
+			throw(request.getStatusCode());
+		}
         if (request.getMethod() == "POST") {
             Post method;
             return method.run(request, configs[listen_socket]).toString();

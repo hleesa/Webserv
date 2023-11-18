@@ -5,12 +5,10 @@
 #include <unistd.h>
 #include "../../inc/CgiGet.hpp"
 
-#define TIMEOUT_MSEC 10000
-
 ServerManager::ServerManager(const std::vector<Config>& configs) {
     for (unsigned long idx = 0; idx < configs.size(); idx++) {
         this->configs[openListenSocket(configs[idx].getPort())] = configs[idx];
-    }
+	}
     memset((void*) event_list, 0, sizeof(struct kevent) * NUMBER_OF_EVENT);
     kq = kqueue();
     if (kq == ERROR)
@@ -62,7 +60,8 @@ void ServerManager::processEvents(const int events) {
         else if (event->filter == EVFILT_READ && servers.find(event->ident) != servers.end()) {
             processReadEvent(*event);
 			if (parser.getReadingStatus(event->ident) == END) {
-				servers[event->ident].setRequest(parser.getHttpRequestMessage(event->ident));
+				int limit_body_size = configs[servers[event->ident].getListenSocket()].getLimitBodySize();
+				servers[event->ident].setRequest(parser.getHttpRequestMessage(event->ident, limit_body_size));
 				parser.clear(event->ident);
     			change_list.push_back(makeEvent(event->ident, EVFILT_WRITE, EV_ADD | EV_ONESHOT, 0, 0, NULL));
 			}

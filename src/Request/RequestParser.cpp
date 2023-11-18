@@ -24,10 +24,10 @@ ReadingStatus RequestParser::getReadingStatus(const int ident) {
 	return parsing_data[ident].status;
 }
 
-HttpRequestMessage RequestParser::getHttpRequestMessage(const int ident, const int limit_body_size) {
+HttpRequestMessage RequestParser::getHttpRequestMessage(const int ident, const long limit_body_size) {
 	ParsingData data = parsing_data[ident];
     
-	if (data.body.content.size() > limit_body_size) {
+	if (data.body.content.size() > static_cast<unsigned long>(limit_body_size)) {
 		data.status_code = 413;
 	}	
 	return HttpRequestMessage(data.request_line, data.header_fields, data.body.content, data.status_code);

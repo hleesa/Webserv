@@ -4,6 +4,7 @@
 #include "../../inc/Get.hpp"
 #include <unistd.h>
 #include <ctime>
+#include "GetCgi.hpp"
 
 Method::Method() {}
 
@@ -16,7 +17,13 @@ Method::~Method() {}
 
 Method* Method::generate(const std::string method, const HttpRequestMessage* request, const Config* config) {
 	if (method == "GET") {
-		return dynamic_cast<Method*>(new Get(request, config));
+        if (request->getURL().find("cgi") == std::string::npos){
+            return dynamic_cast<Method*>(new Get(request, config));
+        }
+        else {
+            return dynamic_cast<Method*>(new GetCgi(request, config));
+        }
+
 	}
 	return NULL;
 }

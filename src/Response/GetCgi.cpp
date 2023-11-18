@@ -1,15 +1,16 @@
 
-#include "CgiGet.hpp"
+#include "GetCgi.hpp"
 #include <map>
 #include <unistd.h>
-#include "HttpRequestMessage.hpp"
-#include "Config.hpp"
 
 #define ERROR -1
 #define READ 0
 #define WRITE 1
 
-//중복 RequestParser.cpp
+GetCgi::GetCgi(const HttpRequestMessage* request, const Config* config) {
+    this->request = request;
+    this->config = config;
+}
 
 // http://example.com
 // /cgi-bin/cgi_script.py?input=Hello
@@ -82,12 +83,14 @@ std::string getScriptPath(const std::string url, const std::string root) {
     return base_url + url.substr(1, idx - 1);
 }
 
-bool CgiGet::isValidCgiGetUrl(const std::vector<std::string>& request_line, const Config& config) {
+bool GetCgi::isValidCgiGetUrl() const {
+    const std::vector<std::string>& request_line = request->getRequestLine();
+
     const std::vector<std::string> url_vec = parseUrl(request_line[1]);
     if (request_line.front() != "GET" || url_vec.front().find("cgi") == std::string::npos) {
         return false;
     }
-    std::pair<std::string, CgiLocation> cgi_location = config.getCgiLocation();
+    std::pair<std::string, CgiLocation> cgi_location = config->getCgiLocation();
     if (url_vec.front() != cgi_location.first.substr(1)) {
         return false;
     }
@@ -103,12 +106,12 @@ bool CgiGet::isValidCgiGetUrl(const std::vector<std::string>& request_line, cons
         return false;
     }
     return true;
+
 }
 
 std::map<std::string, std::string> setEnviron(const std::string query_string) {
     std::map<std::string, std::string> environ;
     environ["QUERY_STRING"] = query_string;
-    environ["REQUEST_METHOD"] = "GET";
     return environ;
 };
 
@@ -186,18 +189,15 @@ std::string readCgiResponse(int* pipe_fd, pid_t pid) {
     return body;
 }
 
-std::map<std::string, std::string> createHeaderFields(const std::string& body) {
-    std::map<std::string, std::string> header_fields;
-    header_fields["Server"] = "webserv";
-    header_fields["Date"] = "";
-    header_fields["Content-type"] = "text/html";
+std::map<std::string, std::string> GetCgi::createHeaderFields(const std::string& body) const {
+    std::map<std::string, std::string> header_fields = makeHeaderFileds();
     header_fields["Content-Length"] = to_string(body.size());
     return header_fields;
 }
 
 // /cgi-bin/cgi_script.py?input=Hello
-HttpResponseMessage CgiGet::processCgiGet(HttpRequestMessage request, const Config& config) {
-    if (!CgiGet::isValidCgiGetUrl(request.getRequestLine(), config)) {
+HttpResponseMessage GetCgi::makeHttpResponseMessage() const {
+    if (!isValidCgiGetUrl()) {
         throw 400;
     }
     std::string body;
@@ -213,7 +213,7 @@ HttpResponseMessage CgiGet::processCgiGet(HttpRequestMessage request, const Conf
         body = readCgiResponse(pipe_fd, pid);
     }
     else {
-        execveCgiScript(pipe_fd, request.getURL(), config.getCgiLocation().second);
+        execveCgiScript(pipe_fd, request->getURL(), config->getCgiLocation().second);
     }
     int status_code = 200;
     std::map<std::string, std::string> header_fields = createHeaderFields(body);

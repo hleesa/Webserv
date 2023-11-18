@@ -5,6 +5,7 @@
 #include "Config.hpp"
 #include "HttpResponseMessage.hpp"
 #include "HttpRequestMessage.hpp"
+#include "ToString.hpp"
 #include <vector>
 #include <string>
 
@@ -18,12 +19,5 @@ public:
 };
 
 bool isVisibleString(const std::string& str);
-
-template <typename T>
-std::string to_string(const T& value) {
-    std::ostringstream oss;
-    oss << value;
-    return oss.str();
-}
 
 #endif //WEBSERV_CGIGET_HPP

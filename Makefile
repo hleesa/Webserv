@@ -41,7 +41,6 @@ SERVER_SRC = \
 			ServerManager.cpp \
 			isVisibleString.cpp
 
-
 FILES = main.cpp \
 
 SRCS = \

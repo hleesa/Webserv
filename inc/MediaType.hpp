@@ -1,5 +1,5 @@
-#ifndef MIME_HPP
-#define MIME_HPP
+#ifndef MEDIATYPE_HPP
+#define MEDIATYPE_HPP
 
 #include <map>
 #include <string>
@@ -12,6 +12,7 @@ class MediaType {
 
 	public:
 		static std::string getType(const std::string resource_path);
+		static std::string getExtention(const std::string content_type);
 };
 
 #endif

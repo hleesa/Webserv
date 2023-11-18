@@ -23,11 +23,27 @@ void MediaType::init(std::map<std::string, std::string>& mime_table) {
 
 std::string MediaType::getType(const std::string resource_path) {
 	static std::map<std::string, std::string> mime_table;
-	std::string filename_extenstion = resource_path.substr(resource_path.rfind("."));
-
+	int pos = resource_path.rfind(".");
+	if (pos == std::string::npos) {
+		return DEFAULT;
+	}
+	std::string filename_extenstion = resource_path.substr(pos);
 	init(mime_table);
 	if (mime_table.find(filename_extenstion) == mime_table.end()) {
 		return DEFAULT;
 	}
 	return mime_table[filename_extenstion];
+}
+
+std::string MediaType::getExtention(const std::string content_type) {
+	static std::map<std::string, std::string> mime_table;
+	std::map<std::string, std::string>::const_iterator ite;
+
+	init(mime_table);
+	for (ite = mime_table.begin(); ite != mime_table.end(); ++ite) {
+		if (ite->second == content_type) {
+			return ite->first;
+		}
+	}
+	return DEFAULT;
 }

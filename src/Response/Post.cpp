@@ -239,9 +239,7 @@ std::string Post::parent_read(int* pipe_ptoc, int* pipe_ctop, pid_t pid, HttpReq
 	int		nByte;
 	while ((nByte = read(pipe_ctop[0], recv_buffer, sizeof(recv_buffer))) > 0) {
 		body.append(recv_buffer, nByte);
-		std::cout << body << std::endl;
 	}
-	std::cout << body << std::endl;
 	if (nByte == -1)
 		throw 500;
 	if (close(pipe_ctop[0]) == -1) {
@@ -272,9 +270,6 @@ void Post::child_write(int* pipe_ptoc, int* pipe_ctop, CgiLocation cgi_location,
 	if (close(pipe_ptoc[1]) == -1 || close(pipe_ctop[0]) == -1) {
 		exit(EXIT_FAILURE);
 	}
-	//char buf[50];
-	//read(pipe_ptoc[0], buf, 50);
-	//std::cout << buf << std::endl;
 	if (dup2(pipe_ptoc[0], STDIN_FILENO) == -1 || dup2(pipe_ctop[1], STDOUT_FILENO) == -1) {
 		exit(EXIT_FAILURE);
 	}
@@ -304,9 +299,6 @@ char** Post::postCgiEnv(std::map<std::string, std::vector<std::string> > header_
 	cgi_env[i] = NULL;
 	return cgi_env;
 }
-
-
-
 
 void Post::saveToFile(std::string message_body, Config config) {
 	std::string filename = generateFileName(config);

@@ -1,6 +1,7 @@
 #include "../../inc/Method.hpp"
 #include "../../inc/MediaType.hpp"
 #include "../../inc/ToString.hpp"
+#include "../../inc/Get.hpp"
 #include <unistd.h>
 #include <ctime>
 
@@ -13,7 +14,14 @@ Method::Method(const HttpRequestMessage* request, const Config* config)
 
 Method::~Method() {}
 
-std::string Method::findLocationKey() {
+Method* Method::generate(const std::string method, const HttpRequestMessage* request, const Config* config) {
+	if (method == "GET") {
+		return dynamic_cast<Method*>(new Get(request, config));
+	}
+	return NULL;
+}
+
+std::string Method::findLocationKey() const {
 	std::string url = request->getURL();
 	std::map<std::string, Location> locations = config->getLocations();
 
@@ -35,7 +43,7 @@ std::string Method::findLocationKey() {
 	return "/";
 }
 
-std::string Method::findRoot() {
+std::string Method::findRoot() const {
 	std::string root = config->getLocations()[location_key].getRoot();
 
 	if (root.empty()) {
@@ -44,7 +52,13 @@ std::string Method::findRoot() {
 	return root;
 }
 
-std::map<std::string, std::string> Method::makeHeaderFileds(const std::string& body, const std::string path) {
+void Method::checkAllowed(const std::string method) const {
+	if (config->getLocations()[location_key].isNotAllowedMethod(method)) {
+		throw 405;
+	}
+}
+
+std::map<std::string, std::string> Method::makeHeaderFileds() const {
 	std::map<std::string, std::string> header;
 
 	header["Date"] = makeDate();
@@ -53,7 +67,7 @@ std::map<std::string, std::string> Method::makeHeaderFileds(const std::string& b
 	return header;
 }
 
-std::string Method::makeDate() {
+std::string Method::makeDate() const {
 	time_t timer = time(NULL);
 	struct tm* t = localtime(&timer);
 	std::string day_names[7] = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};

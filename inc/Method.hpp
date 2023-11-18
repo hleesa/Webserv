@@ -12,18 +12,20 @@ class Method {
 		const Config* config;
 		std::string location_key;
 		
-		std::string findLocationKey();
-		std::string findRoot();
+		std::string findLocationKey() const;
+		std::string findRoot() const;
+		void checkAllowed(const std::string method) const;
 		
-		std::map<std::string, std::string> makeHeaderFileds(const std::string& body, const std::string path);
-		std::string makeDate();
+		std::map<std::string, std::string> makeHeaderFileds() const;
+		std::string makeDate() const;
 
 	public:
 		Method();
 		Method(const HttpRequestMessage* request, const Config* config);
 		virtual ~Method();
 
-		virtual HttpResponseMessage makeHttpResponseMessage() = 0;
+		static Method* generate(const std::string method, const HttpRequestMessage* request, const Config* config);
+		virtual HttpResponseMessage makeHttpResponseMessage() const = 0;
 };
 
 #endif

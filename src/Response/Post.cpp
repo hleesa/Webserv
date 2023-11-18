@@ -79,7 +79,6 @@ void Post::check_request_line(std::vector<std::string> request_line, Config conf
 		throw 404;
 		return;
 	}
-	std::cout << "2." << rel_path << std::endl;
 	if (rel_path.find("cgi") == std::string::npos) {
 		//location 확인 후 그곳에서의 가능 메서드 확인
 		location_key = find_loc_key(rel_path, config);
@@ -97,10 +96,6 @@ void Post::check_request_line(std::vector<std::string> request_line, Config conf
 			throw 405;
 		abs_path = config.getCgiLocation().second.getRoot() + rel_path;
 	}
-	std::cout << "1." << location_key << std::endl;
-
-	//해당 디렉토리가 있는지  확인
-	std::cout << "5." << abs_path << std::endl;
 }
 
 std::string Post::find_loc_key(std::string rel_path, Config config) {
@@ -123,7 +118,6 @@ std::string Post::find_cgi_loc_key(std::string rel_path, Config config) {
 	std::pair<std::string, CgiLocation> locs = config.getCgiLocation();
 	size_t pos = path_checker.length();
 
-	std::cout << "3." << path_checker << std::endl;
 	while (locs.first != path_checker) {
 		pos = path_checker.rfind('/', pos - 1);
 		if (pos == 0)
@@ -166,7 +160,7 @@ void Post::check_header_content_type(std::map<std::string, std::vector<std::stri
 	if (file_extention == DEFAULT) {
 		//_status_code = 400;
 		//return;
-		throw 400;
+		throw 415;
 	}
 }
 
@@ -232,37 +226,32 @@ void Post::cgipost(Config config, HttpRequestMessage msg) {
 std::string Post::parent_read(int* pipe_ptoc, int* pipe_ctop, pid_t pid, HttpRequestMessage msg) {
 	std::string body;
 
-	std::cout << "p1." << std::endl;
-	if (close(pipe_ptoc[0]) == -1 || close(pipe_ctop[1] == -1)) {
+	if (close(pipe_ptoc[0]) == -1 || close(pipe_ctop[1]) == -1) {
 		throw 500;
 	}
-	if (write(pipe_ptoc[1], msg.getMessageBody().c_str(), content_length) == -1) {
+	if (write(pipe_ptoc[1], msg.getMessageBody().c_str(), msg.getMessageBody().length()) == -1) {
 		throw 500;
 	}
 	if (close(pipe_ptoc[1]) == -1) {
 		throw 500;
 	}
-	std::cout << "p3." << std::endl;
 	char	recv_buffer[BUFSIZ];
 	int		nByte;
-	if ((nByte = read(pipe_ctop[0], recv_buffer, sizeof(recv_buffer))) > 0) {
+	while ((nByte = read(pipe_ctop[0], recv_buffer, sizeof(recv_buffer))) > 0) {
 		body.append(recv_buffer, nByte);
 		std::cout << body << std::endl;
 	}
 	std::cout << body << std::endl;
 	if (nByte == -1)
 		throw 500;
-	std::cout << "p4." << std::endl;
-	//if (close(pipe_ctop[0] == -1)) {
-	//	throw 500;
-	//}
+	if (close(pipe_ctop[0]) == -1) {
+		throw 500;
+	}
 
 	int status;
-	std::cout << "p5." << std::endl;
 	if (waitpid(pid, &status, 0) == -1) {
 		throw 500;
 	}
-	std::cout << "p6." << std::endl;
 	if (WIFEXITED(status)) {
 		int exit_status = WEXITSTATUS(status);
 		if (exit_status == EXIT_FAILURE) {
@@ -271,7 +260,6 @@ std::string Post::parent_read(int* pipe_ptoc, int* pipe_ctop, pid_t pid, HttpReq
 	} else {
 		throw 500;
 	}
-	std::cout << "p7." << std::endl;
 	return body;
 }
 

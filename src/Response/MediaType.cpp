@@ -4,13 +4,12 @@ void MediaType::init(std::map<std::string, std::string>& mime_table) {
 	mime_table[".bin"] = "application/octet-stream";
 	mime_table[".css"] = "text/css";
 	mime_table[".gif"] = "image/gif";
-	mime_table[".gif"] = "image/gif";
-	mime_table[".htm"] = "text/htm";
+	mime_table[".htm"] = "text/html";
 	mime_table[".html"] = "text/html";
 	mime_table[".gz"] = "application/gzip";
 	mime_table[".ico"] = "image/vnd.microsoft.icon";
 	mime_table[".jpeg"] = "image/jpeg";
-	mime_table[".jpg"] = "image/jpg";
+	mime_table[".jpg"] = "image/jpeg";
 	mime_table[".js"] = "text/javascript";
 	mime_table[".json"] = "application/json";
 	mime_table[".mjs"] = "text/javascript";

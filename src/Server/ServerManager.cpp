@@ -3,11 +3,15 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <unistd.h>
-#include "../../inc/CgiGet.hpp"
+#include <fcntl.h>
 
 ServerManager::ServerManager(const std::vector<Config>& configs) {
     for (unsigned long idx = 0; idx < configs.size(); idx++) {
-        this->configs[openListenSocket(configs[idx].getPort())] = configs[idx];
+		int socket = openListenSocket(configs[idx].getPort());
+		if (fcntl(socket, F_SETFL, O_NONBLOCK, FD_CLOEXEC) == ERROR) {
+			throw (strerror(errno));
+		}
+        this->configs[socket] = configs[idx];
 	}
     memset((void*) event_list, 0, sizeof(struct kevent) * NUMBER_OF_EVENT);
     kq = kqueue();
@@ -89,8 +93,12 @@ void ServerManager::processListenEvent(const struct kevent& event) {
     socklen_t client_address_len = sizeof(client_address);
     int connection_socket = accept(event.ident, (struct sockaddr*) &client_address, &client_address_len);
 
-    if (connection_socket == ERROR)
+    if (connection_socket == ERROR) {
         throw (strerror(errno));
+	}
+	if (fcntl(connection_socket, F_SETFL, O_NONBLOCK, FD_CLOEXEC) == ERROR) {
+        throw (strerror(errno));
+	}
     servers[connection_socket] = Server(connection_socket, event.ident);
     change_list.push_back(makeEvent(connection_socket, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, NULL));
     change_list.push_back(makeEvent(connection_socket, EVFILT_TIMER, EV_ADD | EV_ONESHOT, 0, TIMEOUT_MSEC, NULL));
@@ -98,10 +106,12 @@ void ServerManager::processListenEvent(const struct kevent& event) {
 
 void ServerManager::processReadEvent(const struct kevent& event) {
     char buff[BUFFER_SIZE + 1];
-
     ssize_t bytes_recv = recv(event.ident, &buff, BUFFER_SIZE, 0);
-    if (bytes_recv == ERROR) {
-        disconnectWithClient(event);
+    
+	if (bytes_recv == ERROR) {
+        if (!(errno == EAGAIN || errno == EWOULDBLOCK)) {
+            disconnectWithClient(event);
+        }
         return;
     }
     buff[bytes_recv] = '\0';
@@ -109,9 +119,9 @@ void ServerManager::processReadEvent(const struct kevent& event) {
 }
 
 void ServerManager::processWriteEvent(const struct kevent& event) {
-	// TO DO : Request -> Response
 	std::string response = servers[event.ident].makeResponse(configs);
     ssize_t bytes_send = send(event.ident, response.c_str(), response.length(), 0);
+ 
     if (bytes_send == ERROR) {
         if (!(errno == EAGAIN || errno == EWOULDBLOCK)) {
             disconnectWithClient(event);

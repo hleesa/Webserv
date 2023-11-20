@@ -21,6 +21,14 @@ void Server::setRequest(const HttpRequestMessage& request_message) {
     this->request = request_message;
 }
 
+void Server::setResponse(std::string response_str) {
+    char *response_message = new char[response_str.length() + 1];
+    strcpy(response_message, response_str.c_str());
+    this->response = response_message;
+    this->response_length = response_str.length();
+    this->bytes_send = 0;
+}
+
 std::string Server::makeResponse(std::map<int, Config>& configs) {
     try {
 		if (request.getStatusCode()) {
@@ -28,9 +36,9 @@ std::string Server::makeResponse(std::map<int, Config>& configs) {
 		}
         Method *method = Method::generate(request.getMethod(), &request, &configs[listen_socket]);
 		method->checkAllowed(request.getMethod());
-        std::string response = method->makeHttpResponseMessage().toString();
+        std::string response_message = method->makeHttpResponseMessage().toString();
         delete method;
-        return response;
+        return response_message;
 
         // if (request.getMethod() == "POST") {
         //     Post method;
@@ -53,3 +61,22 @@ std::string Server::makeResponse(std::map<int, Config>& configs) {
     }
     return HttpResponseMessage().toString();
 }
+
+ssize_t Server::getBytesSend() {
+    return bytes_send;
+}
+
+size_t Server::getResponseLength() {
+    return response_length;
+}
+
+char *Server::getResponse() {
+    return response;
+}
+
+void Server::setBytesSend(ssize_t bytes) {
+    this->bytes_send = bytes;
+}
+//void Server::setResponseLength(size_t response_size) {
+//    this->response_length = response_size;
+//}

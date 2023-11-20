@@ -23,6 +23,14 @@ HttpResponseMessage Post::makeHttpResponseMessage(){
 	return HttpResponseMessage(_status_code, _header_fields, _message_body);
 }
 
+void Post::checkAllowed(const std::string method) const {
+	if (request->getURL().find("cgi") == std::string::npos) {
+		if (config->getLocations()[location_key].isNotAllowedMethod(method)) {
+			throw 405;
+		}
+	}
+}
+
 void Post::set_member() {
 	if (request->getMethod() != "POST") {
 		_status_code = 300;
@@ -69,13 +77,11 @@ void Post::check_request_line(std::vector<std::string> request_line) {
 	} else if (request_line[1][0] == '/') {
 		rel_path = request_line[1];
 	} else {
-		std::cout << "asdlkfjas;ldfja;sldj" << std::endl;
 		//상위 디렉토리 확인의  경우는  제외
 		//this->_status_code = 404;
 		throw 404;
 		return;
 	}
-	std::cout << rel_path << std::endl;
 	if (rel_path.find("cgi") == std::string::npos) {
 		//location 확인 후 그곳에서의 가능 메서드 확인
 		location_key_post = find_loc_key(rel_path);

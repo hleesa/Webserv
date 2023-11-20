@@ -32,7 +32,7 @@ class Post : public Method {
 		Post(const HttpRequestMessage* request, const Config* config);
 
 		virtual HttpResponseMessage makeHttpResponseMessage();
-
+		virtual void checkAllowed(const std::string method) const;
 		void set_member();
 
 		void check_request_line(std::vector<std::string> request_line);

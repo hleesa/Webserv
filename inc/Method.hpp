@@ -23,7 +23,7 @@ class Method {
 		virtual ~Method();
 
 		static Method* generate(const std::string method, const HttpRequestMessage* request, const Config* config);
-		virtual checkAllowed(const std::string method) const;
+		virtual void checkAllowed(const std::string method) const;
 		virtual HttpResponseMessage makeHttpResponseMessage() = 0;
 };
 

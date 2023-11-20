@@ -61,6 +61,12 @@ std::string Method::findRoot() const {
 	return root;
 }
 
+void Method::checkAllowed(const std::string method) const {
+	if (config->getLocations()[location_key].isNotAllowedMethod(method)) {
+		throw 405;
+	}
+}
+
 std::map<std::string, std::string> Method::makeHeaderFileds() const {
 	std::map<std::string, std::string> header;
 

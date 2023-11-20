@@ -24,7 +24,7 @@ class Method {
 
 		static Method* generate(const std::string method, const HttpRequestMessage* request, const Config* config);
 		virtual void checkAllowed(const std::string method) const;
-		virtual HttpResponseMessage makeHttpResponseMessage() const = 0;
+		virtual HttpResponseMessage makeHttpResponseMessage() = 0;
 };
 
 #endif

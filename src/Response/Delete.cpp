@@ -7,7 +7,7 @@ Delete::Delete(const HttpRequestMessage* request, const Config* config) {
 	this->location_key = findLocationKey();
 }
 
-HttpResponseMessage Delete::makeHttpResponseMessage() const {
+HttpResponseMessage Delete::makeHttpResponseMessage() {
 	std::string path = findPath();
 
 	if (remove(path.c_str()) == -1) {

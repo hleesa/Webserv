@@ -3,6 +3,7 @@
 #include "../../inc/ToString.hpp"
 #include "../../inc/Get.hpp"
 #include "../../inc/GetCgi.hpp"
+#include "../../inc/Post.hpp"
 #include "../../inc/Delete.hpp"
 #include <unistd.h>
 #include <ctime>
@@ -19,6 +20,9 @@ Method* Method::generate(const std::string method, const HttpRequestMessage* req
         else {
             return dynamic_cast<Method*>(new GetCgi(request, config));
         }
+	}
+	if (method == "POST") {
+        return dynamic_cast<Method*>(new Post(request, config));
 	}
 	if (method == "DELETE") {
 		return dynamic_cast<Method*>(new Delete(request, config));

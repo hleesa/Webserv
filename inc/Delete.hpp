@@ -16,7 +16,7 @@ class Delete : public Method {
 	public:
 		Delete(const HttpRequestMessage* request, const Config* config);
 
-		HttpResponseMessage makeHttpResponseMessage() const;
+		HttpResponseMessage makeHttpResponseMessage();
 };
 
 #endif

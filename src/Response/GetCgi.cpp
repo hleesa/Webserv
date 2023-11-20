@@ -196,7 +196,7 @@ std::map<std::string, std::string> GetCgi::createHeaderFields(const std::string&
 }
 
 // /cgi-bin/cgi_script.py?input=Hello
-HttpResponseMessage GetCgi::makeHttpResponseMessage() const {
+HttpResponseMessage GetCgi::makeHttpResponseMessage(){
     if (!isValidCgiGetUrl()) {
         throw 400;
     }

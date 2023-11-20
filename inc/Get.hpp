@@ -21,7 +21,7 @@ class Get : public Method {
 	public:
 		Get(const HttpRequestMessage* request, const Config* config);
 
-		virtual HttpResponseMessage makeHttpResponseMessage() const;
+		virtual HttpResponseMessage makeHttpResponseMessage();
 };
 
 bool checkFileExistence(const std::string file_name);

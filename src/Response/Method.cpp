@@ -3,6 +3,7 @@
 #include "../../inc/ToString.hpp"
 #include "../../inc/Get.hpp"
 #include "../../inc/GetCgi.hpp"
+#include "../../inc/Post.hpp"
 #include "../../inc/Delete.hpp"
 #include <unistd.h>
 #include <ctime>
@@ -19,6 +20,9 @@ Method* Method::generate(const std::string method, const HttpRequestMessage* req
         else {
             return dynamic_cast<Method*>(new GetCgi(request, config));
         }
+	}
+	if (method == "POST") {
+        return dynamic_cast<Method*>(new Post(request, config));
 	}
 	if (method == "DELETE") {
 		return dynamic_cast<Method*>(new Delete(request, config));
@@ -55,12 +59,6 @@ std::string Method::findRoot() const {
 		root = config->getRoot();
 	}
 	return root;
-}
-
-void Method::checkAllowed(const std::string method) const {
-	if (config->getLocations()[location_key].isNotAllowedMethod(method)) {
-		throw 405;
-	}
 }
 
 std::map<std::string, std::string> Method::makeHeaderFileds() const {

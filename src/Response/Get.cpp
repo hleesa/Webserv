@@ -9,7 +9,7 @@ Get::Get(const HttpRequestMessage* request, const Config* config) {
 	this->location_key = findLocationKey();
 }
 
-HttpResponseMessage Get::makeHttpResponseMessage() const {
+HttpResponseMessage Get::makeHttpResponseMessage(){
 	Location location = config->getLocations()[location_key];
 	if (location.hasReturnValue()) {
 		return processReturnDirective();

@@ -3,7 +3,14 @@
 #include "../../inc/Location.hpp"
 #include <fcntl.h>
 
-Post::Post() {
+Post::Post(const HttpRequestMessage* request, const Config* config) {
+	this->request = request;
+	this->config = config;
+	if (request->getURL().find("cgi") == std::string::npos) {
+		this->location_key = findLocationKey();
+	} else {
+		this->location_key_post = find_cgi_loc_key(request->getURL());
+	}
 	_status_code = 0;
 	_message_body = "";
 	abs_path = "";
@@ -11,55 +18,43 @@ Post::Post() {
 	content_length = 0;
 }
 
-Post::Post(const Post& other) {
-	*this = other;
-}
-
-Post& Post::operator=(const Post& other) {
-	if (this != &other) {
-		this->_status_code = other._status_code;
-		this->abs_path = other.abs_path;
-		this->content_type = other.content_type;
-		this->content_length = other.content_length;
-	}
-	return *this;
-}
-
-Post::~Post() {}
-
-HttpResponseMessage Post::run(HttpRequestMessage request_msg, Config config) {
-	if (request_msg.getMethod() != "POST") {
-		_status_code = 300;
-		request_url = request_msg.getRequestLine()[1];
-	} else if (request_msg.getMessageBody() == "") {
-		//redirect to get
-		//make
-		_status_code = 300; 
-		request_url = request_msg.getRequestLine()[1];
-	} else {
-		//요청 url 형태 및 실행 가능 여부 확인
-		check_request_line(request_msg.getRequestLine(), config);
-		//헤더 필드 확인 -> body가 있는 경우이기 때문에 필수 헤더 확인
-		check_header_field(request_msg.getHeaderFields());
-	}
-	std::cout << "4." << location_key << std::endl;
-	if (location_key == "/cgi-bin") {
-		//cgi post 처리
-		cgipost(config, request_msg);
-	} else {
-		//요청 헤더 파싱 후에 맞는 상황에 대하여  처리
-		if (_status_code == 0) {
-			saveToFile(request_msg.getMessageBody(), config);
-		}
-		//else if (content_type == "multipart/form-data" && _status_code == 0) {
-		//	saveMultipartToFile(request_msg.getMessageBody(), config);
-		//}
-		make_post_response(config);
-	}
+HttpResponseMessage Post::makeHttpResponseMessage(){
+	set_member();
 	return HttpResponseMessage(_status_code, _header_fields, _message_body);
 }
 
-void Post::check_request_line(std::vector<std::string> request_line, Config config) {
+void Post::set_member() {
+	if (request->getMethod() != "POST") {
+		_status_code = 300;
+		request_url = request->getRequestLine()[1];
+	} else if (request->getMessageBody() == "") {
+		//redirect to get
+		//make
+		_status_code = 300;
+		request_url = request->getRequestLine()[1];
+	} else {
+		//요청 url 형태 및 실행 가능 여부 확인
+		check_request_line(request->getRequestLine());
+		//헤더 필드 확인 -> body가 있는 경우이기 때문에 필수 헤더 확인
+		check_header_field(request->getHeaderFields());
+	}
+	if (location_key_post == "/cgi-bin") {
+		//cgi post 처리
+		cgipost();
+	} else {
+		//요청 헤더 파싱 후에 맞는 상황에 대하여  처리
+		if (_status_code == 0) {
+			saveToFile(request->getMessageBody());
+		}
+		//else if (content_type == "multipart/form-data" && _status_code == 0) {
+		//	saveMultipartToFile(request.getMessageBody());
+		//}
+		make_post_response();
+	}
+}
+
+
+void Post::check_request_line(std::vector<std::string> request_line) {
 	std::string rel_path;
 	size_t pos;
 
@@ -74,33 +69,35 @@ void Post::check_request_line(std::vector<std::string> request_line, Config conf
 	} else if (request_line[1][0] == '/') {
 		rel_path = request_line[1];
 	} else {
+		std::cout << "asdlkfjas;ldfja;sldj" << std::endl;
 		//상위 디렉토리 확인의  경우는  제외
 		//this->_status_code = 404;
 		throw 404;
 		return;
 	}
+	std::cout << rel_path << std::endl;
 	if (rel_path.find("cgi") == std::string::npos) {
 		//location 확인 후 그곳에서의 가능 메서드 확인
-		location_key = find_loc_key(rel_path, config);
-		if (config.getLocations()[location_key].isNotAllowedMethod("POST") == true) {
+		location_key_post = find_loc_key(rel_path);
+		if (config->getLocations()[location_key_post].isNotAllowedMethod("POST") == true) {
 			throw 405;
 		}
-		abs_path = config.getRoot() + rel_path;
+		abs_path = config->getRoot() + rel_path;
 		if (!directory_exists(abs_path)) {
 			throw 404;
 		}
 	} else {
 		//cgi 인 경우
-		location_key = find_cgi_loc_key(rel_path, config);
-		if (location_key == "/")
+		location_key_post = find_cgi_loc_key(rel_path);
+		if (location_key_post == "/")
 			throw 405;
-		abs_path = config.getCgiLocation().second.getRoot() + rel_path;
+		abs_path = config->getCgiLocation().second.getRoot() + rel_path;
 	}
 }
 
-std::string Post::find_loc_key(std::string rel_path, Config config) {
+std::string Post::find_loc_key(std::string rel_path) {
 	std::string path_checker = rel_path;
-	std::map<std::string, Location> locs = config.getLocations();
+	std::map<std::string, Location> locs = config->getLocations();
 	size_t pos = path_checker.length();
 
 	while (locs.find(path_checker) == locs.end()) {
@@ -113,9 +110,9 @@ std::string Post::find_loc_key(std::string rel_path, Config config) {
 	return path_checker;
 }
 
-std::string Post::find_cgi_loc_key(std::string rel_path, Config config) {
+std::string Post::find_cgi_loc_key(std::string rel_path) {
 	std::string path_checker = rel_path;
-	std::pair<std::string, CgiLocation> locs = config.getCgiLocation();
+	std::pair<std::string, CgiLocation> locs = config->getCgiLocation();
 	size_t pos = path_checker.length();
 
 	while (locs.first != path_checker) {
@@ -199,7 +196,7 @@ void Post::check_header_authorization(std::map<std::string, std::vector<std::str
 
 }
 
-void Post::cgipost(Config config, HttpRequestMessage msg) {
+void Post::cgipost() {
 	std::ostringstream body_length;
 
 	if (access(abs_path.c_str(), F_OK | X_OK) == -1) {
@@ -214,22 +211,22 @@ void Post::cgipost(Config config, HttpRequestMessage msg) {
 	if (pid == -1)
 		throw 500;
 	else if (pid) {
-		_message_body = parent_read(pipe_ptoc, pipe_ctop, pid, msg);
+		_message_body = parent_read(pipe_ptoc, pipe_ctop, pid);
 	} else {
-		child_write(pipe_ptoc, pipe_ctop, config.getCgiLocation().second, msg.getHeaderFields());
+		child_write(pipe_ptoc, pipe_ctop, config->getCgiLocation().second, request->getHeaderFields());
 	}
 	body_length << _message_body.size();
 	_header_fields["content-length"] = body_length.str();
 	_header_fields["content-type"] = "text/html";
 }
 
-std::string Post::parent_read(int* pipe_ptoc, int* pipe_ctop, pid_t pid, HttpRequestMessage msg) {
+std::string Post::parent_read(int* pipe_ptoc, int* pipe_ctop, pid_t pid) {
 	std::string body;
 
 	if (close(pipe_ptoc[0]) == -1 || close(pipe_ctop[1]) == -1) {
 		throw 500;
 	}
-	if (write(pipe_ptoc[1], msg.getMessageBody().c_str(), msg.getMessageBody().length()) == -1) {
+	if (write(pipe_ptoc[1], request->getMessageBody().c_str(), request->getMessageBody().length()) == -1) {
 		throw 500;
 	}
 	if (close(pipe_ptoc[1]) == -1) {
@@ -300,7 +297,7 @@ char** Post::postCgiEnv(std::map<std::string, std::vector<std::string> > header_
 	return cgi_env;
 }
 
-void Post::saveToFile(std::string message_body, Config config) {
+void Post::saveToFile(std::string message_body) {
 	std::string filename = generateFileName(config);
 	std::string data_path = abs_path + "/" + filename;
 	std::ofstream file_write(data_path, std::ios::app);
@@ -318,15 +315,15 @@ void Post::saveToFile(std::string message_body, Config config) {
 	}
 }
 
-std::string Post::generateFileName(Config config) {
+std::string Post::generateFileName(const Config* config) {
 	static size_t fileIndex = 0;
 
 	std::stringstream filenameStream;
-	filenameStream << config.getPort() << "_" << config.getName()[0] << "_No_" << fileIndex++ << file_extention;
+	filenameStream << config->getPort() << "_" << config->getName()[0] << "_No_" << fileIndex++ << file_extention;
 	return filenameStream.str();
 }
 
-void Post::saveMultipartToFile(std::string message_body, Config config) {
+void Post::saveMultipartToFile(std::string message_body) {
 	std::string filename = generateFileName(config);
 	std::string data_path = abs_path + "/" + filename;
 	std::ofstream file_write(data_path, std::ios::app);
@@ -352,10 +349,10 @@ void Post::saveMultipartToFile(std::string message_body, Config config) {
 	}
 }
 
-void Post::make_post_response(Config config) {
+void Post::make_post_response() {
 	std::string redirect_path = "docroot/redirect_page/";
 	// std::string redirect_path = config.getRoot() + "/redirect_page/";
-	std::string errorpage_path = config.getRoot() + "/error_pages/";
+	std::string errorpage_path = config->getRoot() + "/error_pages/";
 	std::ostringstream body_length;
 
 	if ((_status_code >= 200 && _status_code < 300) || _status_code == 0) {

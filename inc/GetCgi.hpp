@@ -17,7 +17,7 @@ private:
 public:
     GetCgi(const HttpRequestMessage* request, const Config* config);
 
-    HttpResponseMessage makeHttpResponseMessage() const;
+    HttpResponseMessage makeHttpResponseMessage();
 };
 
 bool isVisibleString(const std::string& str);

@@ -23,7 +23,7 @@ void MediaType::init(std::map<std::string, std::string>& mime_table) {
 
 std::string MediaType::getType(const std::string resource_path) {
 	static std::map<std::string, std::string> mime_table;
-	int pos = resource_path.rfind(".");
+	size_t pos = resource_path.rfind(".");
 	if (pos == std::string::npos) {
 		return DEFAULT;
 	}

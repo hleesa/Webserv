@@ -2,15 +2,16 @@
 #include "../inc/ConfigParser.hpp"
 #include "../inc/ServerManager.hpp"
 
-int main() {
+#define DEFAULT_CONF "ConfigFile/test.conf"
+
+int main(int argc, char *argv[]) {
     try {
-
-      //  std::vector<Config> configs =  ConfigParser::parseConfigFile("../ConfigFile/default.conf");
-
-        std::vector<Config> configs =  ConfigParser::parseConfigFile("ConfigFile/test.conf");
-
+		std::string config_file(DEFAULT_CONF);
+		if (argc > 1) {
+			config_file = argv[1];
+		}
+        std::vector<Config> configs =  ConfigParser::parseConfigFile(config_file);
 		ServerManager manager(configs);
-
 		manager.run();
     } 
 	catch (std::exception &exception) {

@@ -39,22 +39,6 @@ std::string Server::makeResponse(std::map<int, Config>& configs) {
         std::string response_message = method->makeHttpResponseMessage().toString();
         delete method;
         return response_message;
-
-        // if (request.getMethod() == "POST") {
-        //     Post method;
-        //     return method.run(request, configs[listen_socket]).toString();
-        // }
-//        if (request.getMethod() == "GET" && request.getURL().find("cgi") == std::string::npos) {
-//            return method->makeHttpResponseMessage().toString();
-//        }
-        // if (request.getMethod() == "DELETE") {
-        //     Delete method(request, configs[listen_socket]);
-        //     return method.makeHttpResponseMessage().toString();
-        // }
-//         if (request.getMethod() == "GET" && request.getURL().find("cgi") != std::string::npos) {
-//             return me
-//             return CgiGet::processCgiGet(request, configs[listen_socket]).toString();
-//         }
     }
     catch (const int status_code) {
         return ErrorPage::makeErrorPageResponse(status_code, configs[listen_socket]).toString();
@@ -77,6 +61,7 @@ char *Server::getResponse() {
 void Server::setBytesSend(ssize_t bytes) {
     this->bytes_send = bytes;
 }
+
 //void Server::setResponseLength(size_t response_size) {
 //    this->response_length = response_size;
 //}

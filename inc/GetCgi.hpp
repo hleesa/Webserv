@@ -18,6 +18,7 @@ public:
     GetCgi(const HttpRequestMessage* request, const Config* config);
 
     HttpResponseMessage makeHttpResponseMessage();
+    void checkAllowed(const std::string method) const;
 };
 
 bool isVisibleString(const std::string& str);

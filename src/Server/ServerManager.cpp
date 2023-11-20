@@ -41,14 +41,18 @@ int ServerManager::openListenSocket(const int port) const {
 
 void ServerManager::run() {
     addListenEvent();
-    while (true) {
-        int events = kevent(kq, &(change_list[0]), change_list.size(), event_list, NUMBER_OF_EVENT, 0);
+    try {
+        while (true) {
+            int events = kevent(kq, &(change_list[0]), change_list.size(), event_list, NUMBER_OF_EVENT, 0);
 
-        if (events == ERROR)
-            throw (strerror(errno));
-        change_list.clear();
-        processEvents(events);
-    }
+            if (events == ERROR)
+                throw (strerror(errno));
+            change_list.clear();
+            processEvents(events);
+        }
+    } catch (std::exception &e) {
+        std::cerr << "exception: " << e.what() << '\n';    }
+
 }
 
 void ServerManager::processEvents(const int events) {
@@ -67,7 +71,9 @@ void ServerManager::processEvents(const int events) {
 				int limit_body_size = configs[servers[event->ident].getListenSocket()].getLimitBodySize();
 				servers[event->ident].setRequest(parser.getHttpRequestMessage(event->ident, limit_body_size));
 				parser.clear(event->ident);
-    			change_list.push_back(makeEvent(event->ident, EVFILT_WRITE, EV_ADD | EV_ONESHOT, 0, 0, NULL));
+    			change_list.push_back(makeEvent(event->ident, EVFILT_WRITE, EV_ADD, 0, 0, NULL));
+                servers[event->ident].setResponse(servers[event->ident].makeResponse(configs));
+
 			}
         }
         else if (event->filter == EVFILT_WRITE && servers.find(event->ident) != servers.end()) {
@@ -119,13 +125,16 @@ void ServerManager::processReadEvent(const struct kevent& event) {
 }
 
 void ServerManager::processWriteEvent(const struct kevent& event) {
-	std::string response = servers[event.ident].makeResponse(configs);
-    ssize_t bytes_send = send(event.ident, response.c_str(), response.length(), 0);
- 
+//	std::string response = servers[event.ident].makeResponse(configs);
+    Server *server = &servers[event.ident];
+    int bytes_send = send(event.ident, &server->getResponse()[server->getBytesSend()], server->getResponseLength() - server->getBytesSend(), 0);
     if (bytes_send == ERROR) {
         if (!(errno == EAGAIN || errno == EWOULDBLOCK)) {
             disconnectWithClient(event);
         }
+    }
+    else {
+        server->setBytesSend(server->getBytesSend() + bytes_send);
     }
 }
 

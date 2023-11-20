@@ -219,3 +219,8 @@ HttpResponseMessage GetCgi::makeHttpResponseMessage(){
     std::map<std::string, std::string> header_fields = createHeaderFields(body);
     return HttpResponseMessage(status_code, header_fields, body);
 }
+
+void GetCgi::checkAllowed(const std::string method) const {
+    if (method != "GET")
+        throw 405;
+}

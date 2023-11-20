@@ -17,6 +17,8 @@ private:
 public:
     GetCgi(const HttpRequestMessage* request, const Config* config);
 
+    void checkAllowed(const std::string method) const;
+
     HttpResponseMessage makeHttpResponseMessage() const;
 };
 

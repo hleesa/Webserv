@@ -37,9 +37,9 @@ std::string Method::findLocationKey() const {
 	if (locations.find(url) != locations.end()) {
 		return url;
 	}
-	if (url.size() > 1 && url.back() != '/') {
-		url += "/";
-	}
+    if(!url.empty() && *url.rbegin() != '/'){
+        url += "/";
+    }
 	unsigned long pos = url.rfind('/');
 	while (pos != std::string::npos) {
 		std::string key = url.substr(0, pos);

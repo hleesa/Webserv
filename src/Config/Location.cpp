@@ -1,15 +1,13 @@
 
 #include "../../inc/Location.hpp"
 
-#include <iostream>
-
 bool isHttpMethod(const std::string& method);
 bool isNumber(const std::string& string);
+bool isValidRangeStatusCode(const int status_code);
 
 Location::Location() {}
 
 Location::Location(std::vector<std::vector<std::string> >& location_block) : autoindex(false) {
-
 	std::set<std::string> duplicated;
 	std::vector<std::vector<std::string> >::iterator itr;
 
@@ -24,12 +22,10 @@ Location::Location(std::vector<std::vector<std::string> >& location_block) : aut
 }
 
 Location::Location(const Location &other) {
-
 	*this = other;
 }
 
 Location &Location::operator=(const Location &other) {
-
 	if (this != &other) {
 		this->http_methods = other.http_methods;
 		this->return_value = other.return_value;
@@ -71,7 +67,6 @@ bool Location::getAutoindex() const {
 }
 
 void Location::parse(std::vector<std::string>& line, std::set<std::string>& duplicated) {
-
 	std::string	directive;
 	
 	if (line.empty())
@@ -101,19 +96,16 @@ void Location::parse(std::vector<std::string>& line, std::set<std::string>& dupl
 }
 
 void Location::checkDuplicated(const std::set<std::string>& duplicated, const std::string& directive) {
-
 	if (duplicated.find(directive) != duplicated.end())
 		throw (std::invalid_argument("Error: '" + directive + "' directive is duplicate"));
 }
 
 void Location::checkInvalidNumber(bool isValid, const std::string& directive) {
-
 	if (isValid == false)
 		throw (std::invalid_argument("Error: Invalid number of arguments in '" + directive + "' directive"));
 }
 
 void Location::parseHttpMethod(std::vector<std::string>& line, std::set<std::string>& duplicated) {
-
 	std::string method;
 	std::string directive("limit_except");
 	std::vector<std::string>::iterator itr = line.begin() + 1;
@@ -128,13 +120,11 @@ void Location::parseHttpMethod(std::vector<std::string>& line, std::set<std::str
 }
 
 void Location::checkHttpMethod(const std::string& value) const {
-
 	if (isHttpMethod(value) == false)
 		throw (std::invalid_argument("Error: Invalid value '" + value + "' in 'limit_except' directive"));
 }
 
 void Location::parseReturnValue(std::vector<std::string>& line) {
-
 	std::string directive("return");
 	std::vector<std::string>::iterator itr = line.begin();
 
@@ -146,20 +136,21 @@ void Location::parseReturnValue(std::vector<std::string>& line) {
 }
 
 void Location::setReturnCode(const std::string& value) {
-	
-	if (isNumber(value) == false)
+	if (!isNumber(value)) {
 		throw (std::invalid_argument("Error: Invalid return code '" + value + "'"));
+	}
 	std::stringstream ss(value);
 	ss >> return_value.first;
+	if (!isValidRangeStatusCode(return_value.first)) {
+		throw (std::invalid_argument("Error: Invalid return code '" + value + "'"));
+	}
 }
 
 void Location::setReturnString(const std::string& value) {
-
 	return_value.second = value;
 }
 
 void Location::parseRoot(std::vector<std::string>& line, std::set<std::string>& duplicated) {
-
 	std::string directive("root");
 
 	checkDuplicated(duplicated, directive);
@@ -169,7 +160,6 @@ void Location::parseRoot(std::vector<std::string>& line, std::set<std::string>& 
 }
 
 void Location::parseIndex(std::vector<std::string>& line, std::set<std::string>& duplicated) {
-
 	std::string directive("index");
 	std::vector<std::string>::iterator itr = line.begin() + 1;
 
@@ -181,7 +171,6 @@ void Location::parseIndex(std::vector<std::string>& line, std::set<std::string>&
 }
 
 void Location::parseAutoindex(std::vector<std::string>& line, std::set<std::string>& duplicated) {
-
 	std::string directive("autoindex");
 
 	checkDuplicated(duplicated, directive);
@@ -192,13 +181,11 @@ void Location::parseAutoindex(std::vector<std::string>& line, std::set<std::stri
 }
 
 void Location::checkAutoindexFormat(const std::string& value) const {
-
 	if (!(value == "on" || value == "off"))
 		throw (std::invalid_argument("Error: Invalid value '" + value + "' in 'autoindex' directive"));
 }
 
 std::ostream& operator<<(std::ostream& out, Location& l) {
-
 	out << "\n-----http methods-----\n";
 	for (std::set<std::string>::iterator itr = l.http_methods.begin(); itr != l.http_methods.end(); itr++)
 		out << *itr << " ";

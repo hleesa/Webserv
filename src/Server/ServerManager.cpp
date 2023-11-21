@@ -15,8 +15,9 @@ ServerManager::ServerManager(const std::vector<Config>& configs) {
 	}
     memset((void*) event_list, 0, sizeof(struct kevent) * NUMBER_OF_EVENT);
     kq = kqueue();
-    if (kq == ERROR)
+    if (kq == ERROR) {
         throw (strerror(errno));
+	}
 }
 
 ServerManager::~ServerManager() {}
@@ -26,33 +27,45 @@ int ServerManager::openListenSocket(const int port) const {
     struct sockaddr_in server_address;
 
     listen_socket = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
-    if (listen_socket == ERROR)
+    if (listen_socket == ERROR) {
         throw (strerror(errno));
-    memset((void*) &server_address, 0, sizeof(server_address));
+	}
+	int option_value = 1;
+	handleError(setsockopt(listen_socket, SOL_SOCKET, SO_REUSEADDR, &option_value, sizeof(option_value)), listen_socket);
+	memset((void*) &server_address, 0, sizeof(server_address));
     server_address.sin_family = AF_INET;
     server_address.sin_port = htons(port);
     server_address.sin_addr.s_addr = htonl(INADDR_ANY);
-    if (bind(listen_socket, (struct sockaddr*) &server_address, sizeof(server_address)) == -1)
-        throw (strerror(errno));
-    if (listen(listen_socket, NUMBER_OF_BACKLOG) == ERROR)
-        throw (strerror(errno));
+	handleError(bind(listen_socket, reinterpret_cast<sockaddr*>(&server_address), sizeof(server_address)), listen_socket);
+	handleError(listen(listen_socket, NUMBER_OF_BACKLOG), listen_socket);
     return listen_socket;
+}
+
+void ServerManager::handleError(const int return_value, const int listen_socket) const {
+	if (return_value == ERROR) {
+		close(listen_socket);
+        throw (strerror(errno));
+	}
 }
 
 void ServerManager::run() {
     addListenEvent();
-    try {
-        while (true) {
-            int events = kevent(kq, &(change_list[0]), change_list.size(), event_list, NUMBER_OF_EVENT, 0);
+    while (true) {
+		try {
+			int events = kevent(kq, &(change_list[0]), change_list.size(), event_list, NUMBER_OF_EVENT, 0);
 
-            if (events == ERROR)
-                throw (strerror(errno));
-            change_list.clear();
-            processEvents(events);
-        }
-    } catch (std::exception &e) {
-        std::cerr << "exception: " << e.what() << '\n';    }
-
+			if (events == ERROR)
+				throw (strerror(errno));
+			change_list.clear();
+			processEvents(events);
+		}
+		catch (std::exception e) {
+			std::cerr << e.what() << std::endl;
+		}
+		catch (int e) {
+			std::cerr << e << std::endl;
+		}
+    }
 }
 
 void ServerManager::processEvents(const int events) {
@@ -60,6 +73,7 @@ void ServerManager::processEvents(const int events) {
         struct kevent* event = event_list + idx;
 
         if (event->flags & EV_ERROR) {
+			std::cout << "error\n";
             checkEventError(*event);
         }
         else if (event->filter == EVFILT_READ && configs.find(event->ident) != configs.end()) {
@@ -71,9 +85,8 @@ void ServerManager::processEvents(const int events) {
 				int limit_body_size = configs[servers[event->ident].getListenSocket()].getLimitBodySize();
 				servers[event->ident].setRequest(parser.getHttpRequestMessage(event->ident, limit_body_size));
 				parser.clear(event->ident);
-    			change_list.push_back(makeEvent(event->ident, EVFILT_WRITE, EV_ADD, 0, 0, NULL));
+    			change_list.push_back(makeEvent(event->ident, EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, NULL));
                 servers[event->ident].setResponse(servers[event->ident].makeResponse(configs));
-
 			}
         }
         else if (event->filter == EVFILT_WRITE && servers.find(event->ident) != servers.end()) {
@@ -125,16 +138,19 @@ void ServerManager::processReadEvent(const struct kevent& event) {
 }
 
 void ServerManager::processWriteEvent(const struct kevent& event) {
-//	std::string response = servers[event.ident].makeResponse(configs);
     Server *server = &servers[event.ident];
-    int bytes_send = send(event.ident, &server->getResponse()[server->getBytesSend()], server->getResponseLength() - server->getBytesSend(), 0);
-    if (bytes_send == ERROR) {
+    ssize_t bytes_sent = send(event.ident, server->getResponse().c_str(), server->getResponse().length(), 0);
+    if (bytes_sent == ERROR) {
         if (!(errno == EAGAIN || errno == EWOULDBLOCK)) {
             disconnectWithClient(event);
         }
     }
     else {
-        server->setBytesSend(server->getBytesSend() + bytes_send);
+        server->updateResponse(bytes_sent);
+        if (server->isSendComplete()) {
+            server->clearResponse();
+            change_list.push_back(makeEvent(event.ident, EVFILT_WRITE, EV_DISABLE, 0, 0, NULL));
+        }
     }
 }
 
@@ -160,6 +176,11 @@ struct kevent ServerManager::makeEvent(
 }
 
 void ServerManager::disconnectWithClient(const struct kevent& event) {
+	// struct linger linger;
+	
+	// linger.l_onoff = 1;
+	// linger.l_linger = 0;
+	// setsockopt(event.ident, SOL_SOCKET, SO_LINGER, &linger, sizeof(linger)); // Linger option
     close(event.ident);
     servers.erase(event.ident);
 }

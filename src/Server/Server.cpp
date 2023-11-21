@@ -21,12 +21,11 @@ void Server::setRequest(const HttpRequestMessage& request_message) {
     this->request = request_message;
 }
 
-void Server::setResponse(std::string response_str) {
-    char *response_message = new char[response_str.length() + 1];
-    strcpy(response_message, response_str.c_str());
-    this->response = response_message;
-    this->response_length = response_str.length();
-    this->bytes_send = 0;
+void Server::setResponse(std::string http_response) {
+    response = http_response;
+    bytes_sent = 0;
+    bytes_response = http_response.length();
+    return;
 }
 
 std::string Server::makeResponse(std::map<int, Config>& configs) {
@@ -39,22 +38,6 @@ std::string Server::makeResponse(std::map<int, Config>& configs) {
         std::string response_message = method->makeHttpResponseMessage().toString();
         delete method;
         return response_message;
-
-        // if (request.getMethod() == "POST") {
-        //     Post method;
-        //     return method.run(request, configs[listen_socket]).toString();
-        // }
-//        if (request.getMethod() == "GET" && request.getURL().find("cgi") == std::string::npos) {
-//            return method->makeHttpResponseMessage().toString();
-//        }
-        // if (request.getMethod() == "DELETE") {
-        //     Delete method(request, configs[listen_socket]);
-        //     return method.makeHttpResponseMessage().toString();
-        // }
-//         if (request.getMethod() == "GET" && request.getURL().find("cgi") != std::string::npos) {
-//             return me
-//             return CgiGet::processCgiGet(request, configs[listen_socket]).toString();
-//         }
     }
     catch (const int status_code) {
         return ErrorPage::makeErrorPageResponse(status_code, configs[listen_socket]).toString();
@@ -62,21 +45,24 @@ std::string Server::makeResponse(std::map<int, Config>& configs) {
     return HttpResponseMessage().toString();
 }
 
-ssize_t Server::getBytesSend() {
-    return bytes_send;
+void Server::clearResponse() {
+    bytes_sent = 0;
+    bytes_response = 0;
 }
 
-size_t Server::getResponseLength() {
-    return response_length;
+bool Server::isSendComplete() {
+    return bytes_sent == bytes_response;
 }
 
-char *Server::getResponse() {
+void Server::updateByteSend(ssize_t new_bytes_sent) {
+    this->bytes_sent += static_cast<size_t>(new_bytes_sent);
+}
+
+std::string Server::getResponse() {
     return response;
 }
 
-void Server::setBytesSend(ssize_t bytes) {
-    this->bytes_send = bytes;
+void Server::updateResponse(ssize_t new_bytes_sent) {
+    updateByteSend(new_bytes_sent);
+    response.substr(new_bytes_sent);
 }
-//void Server::setResponseLength(size_t response_size) {
-//    this->response_length = response_size;
-//}

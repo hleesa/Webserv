@@ -156,7 +156,7 @@ ReadingStatus RequestParser::processEncoding(Body& body, std::string& buffer) {
 		return BODY;
 	}
 	// size == 0
-	if (buffer.size() < 4) {
+	if (buffer.size() < 5) {
 		return BODY;
 	}
 	pos = buffer.substr(size_pos + 1).find("\n");
@@ -207,7 +207,7 @@ BodyStatus RequestParser::getBodyStatus(const std::string line, Body& body) {
 		return ContentLength;
 	}
 	int length = getContentLength(line);
-	if (length > 0) {
+	if (length >= 0) {
 		body.length = length;
 		return ContentLength;	
 	}
@@ -248,7 +248,7 @@ bool RequestParser::isCRLF(const std::string line) {
 }
 
 void RequestParser::trimCarriageReturn(std::string& line) {
-	if (*--line.end() == '\r')
+	if (line.back() == '\r')
 		line.resize(line.size() - 1);
 }
 

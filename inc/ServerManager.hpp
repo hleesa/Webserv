@@ -40,6 +40,7 @@ class ServerManager {
 		void processReadEvent(const struct kevent& event);
 		void processWriteEvent(const struct kevent& event);
 		void disconnectWithClient(const struct kevent& event);
+		void handleError(const int return_value, const int listen_socket) const;
 
 	public:
 		ServerManager(const std::vector<Config>& configs);

@@ -17,7 +17,7 @@ bool isValidLineTerminator(const std::vector<std::string>& server_content) {
     if (server_content.empty()) {
         return true;
     }
-    else if (line_term.find(server_content.back().back()) == std::string::npos) {
+    else if (!server_content.back().empty() && line_term.find(*server_content.back().rbegin()) == std::string::npos) {
         return false;
     }
     const int char_size = 256;
@@ -49,7 +49,7 @@ bool isTargetBlockOpen(const std::vector<std::string> words, const std::string t
     if (words.size() != num_of_words) {
         return false;
     }
-    return (words.front() == target) && (words.back() == "{");
+    return (*words.begin() == target) && (*words.rbegin() == "{");
 }
 
 bool isServerOpen(const std::vector<std::string>& words) {
@@ -70,7 +70,7 @@ enum lineType getLineType(const std::vector<std::string>& server_content, const 
     else if (server_content.front().front() == '#') {
         return COMMENT;
     }
-    else if (server_content.back().back() == '{') {
+    else if (!server_content.front().empty() && *server_content.back().rbegin() == '{') {
         if (brace_stack.empty() && isServerOpen(server_content)) {
             return SERVER_OPEN;
         }
@@ -78,10 +78,10 @@ enum lineType getLineType(const std::vector<std::string>& server_content, const 
             return LOCATION_OPEN;
         }
     }
-    else if (server_content.back().back() == ';') {
+    else if (!server_content.back().empty() && *server_content.back().rbegin() == ';') {
         return SEMICOLON;
     }
-    else if (server_content.back().back() == '}') {
+    else if (!server_content.back().empty() && *server_content.back().rbegin() == '}') {
         if (brace_stack.empty() || brace_stack.top() != '{' || server_content.size() != 1) {
             return INVALID;
         }
@@ -112,20 +112,20 @@ std::vector<std::vector<std::vector<std::string> > > getSeverContents(std::ifstr
                 throw std::invalid_argument("Error: Syntax");
                 break;
             case SERVER_OPEN:
-                brace_stack.push(line.back());
+                brace_stack.push(*line.rbegin());
                 server_content.clear();
                 break;
             case LOCATION_OPEN:
-                brace_stack.push(line.back());
+                brace_stack.push(*line.rbegin());
                 server_content.push_back(one_line);
                 break;
             case SEMICOLON:
-                line.pop_back();
+                line.erase(line.end() - 1);
                 if(one_line.back().size() == 1) {
                     one_line.pop_back();
                 }
                 else {
-                    one_line.back().pop_back();
+                    one_line.back().erase(one_line.back().end() - 1);
                 }
                 server_content.push_back(one_line);
                 break;

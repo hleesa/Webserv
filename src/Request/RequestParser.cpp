@@ -156,13 +156,9 @@ ReadingStatus RequestParser::processEncoding(Body& body, std::string& buffer) {
 		return BODY;
 	}
 	// size == 0
-	if (buffer.size() < 5) {
-		return BODY;
-	}
 	pos = buffer.substr(size_pos + 1).find("\n");
 	if (static_cast<unsigned long>(pos) == std::string::npos) {
-		buffer = buffer.substr(size_pos + 1);
-		throw 400;
+		return BODY;
 	}
 	line = buffer.substr(size_pos + 1, pos);
 	trimCarriageReturn(line);
@@ -237,7 +233,7 @@ int RequestParser::getContentLength(const std::string line) {
 	std::getline(ss, tmp, ':');
 	convertLowerCase(tmp);
 	if (tmp != key) {
-		return 0;
+		return -1;
 	}
 	ss >> value;
 	return value;

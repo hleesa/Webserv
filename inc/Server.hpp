@@ -12,12 +12,11 @@ class Server {
 		int connection_socket;
 		int listen_socket;
 		HttpRequestMessage request;
-        char* response;
+        std::string response;
         size_t bytes_response;
         size_t bytes_sent;
 
-        std::string httpResponse; //debug
-
+        void updateByteSend(ssize_t new_bytes_sent);
     public:
 		Server();
         Server(int connection, int listen);
@@ -26,9 +25,8 @@ class Server {
 		void setRequest(const HttpRequestMessage& msg);
         void setResponse(std::string http_response);
 
-        char* getBuffer();
-        size_t getSendBytes();
-        void updateByteSend(ssize_t new_bytes_sent);
+        std::string getResponse();
+        void updateResponse(ssize_t bytes_sent);
         bool isSendComplete();
         void clearResponse();
 

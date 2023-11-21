@@ -85,7 +85,7 @@ void ServerManager::processEvents(const int events) {
 				int limit_body_size = configs[servers[event->ident].getListenSocket()].getLimitBodySize();
 				servers[event->ident].setRequest(parser.getHttpRequestMessage(event->ident, limit_body_size));
 				parser.clear(event->ident);
-    			change_list.push_back(makeEvent(event->ident, EVFILT_WRITE, EV_ADD, 0, 0, NULL));
+    			change_list.push_back(makeEvent(event->ident, EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, NULL));
                 servers[event->ident].setResponse(servers[event->ident].makeResponse(configs));
 			}
         }
@@ -139,14 +139,14 @@ void ServerManager::processReadEvent(const struct kevent& event) {
 
 void ServerManager::processWriteEvent(const struct kevent& event) {
     Server *server = &servers[event.ident];
-    ssize_t bytes_sent = send(event.ident, server->getBuffer(), server->getSendBytes(), 0);
+    ssize_t bytes_sent = send(event.ident, server->getResponse().c_str(), server->getResponse().length(), 0);
     if (bytes_sent == ERROR) {
         if (!(errno == EAGAIN || errno == EWOULDBLOCK)) {
             disconnectWithClient(event);
         }
     }
     else {
-        server->updateByteSend(bytes_sent);
+        server->updateResponse(bytes_sent);
         if (server->isSendComplete()) {
             server->clearResponse();
             change_list.push_back(makeEvent(event.ident, EVFILT_WRITE, EV_DISABLE, 0, 0, NULL));

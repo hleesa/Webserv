@@ -139,7 +139,7 @@ void ServerManager::processReadEvent(const struct kevent& event) {
 
 void ServerManager::processWriteEvent(const struct kevent& event) {
     Server *server = &servers[event.ident];
-    ssize_t bytes_sent = send(event.ident, server->getBuffer(), server->getSendBytes(), 0);
+    ssize_t bytes_sent = send(event.ident, server->getResponse().c_str(), server->getResponse().length(), 0);
     if (bytes_sent == ERROR) {
         if (!(errno == EAGAIN || errno == EWOULDBLOCK)) {
             disconnectWithClient(event);
@@ -151,6 +151,12 @@ void ServerManager::processWriteEvent(const struct kevent& event) {
             server->clearResponse();
             change_list.push_back(makeEvent(event.ident, EVFILT_WRITE, EV_DISABLE, 0, 0, NULL));
         }
+
+//        if () {
+//
+//            change_list.push_back(makeEvent(event.ident, EVFILT_WRITE, EV_DISABLE, 0, 0, NULL));
+//        }
+
     }
 }
 

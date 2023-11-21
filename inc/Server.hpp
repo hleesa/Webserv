@@ -12,11 +12,12 @@ class Server {
 		int connection_socket;
 		int listen_socket;
 		HttpRequestMessage request;
-        char* response;
+        std::string response;
+//        char* response;
         size_t bytes_response;
         size_t bytes_sent;
 
-        std::string httpResponse; //debug
+//        std::string httpResponse; //debug
 
     public:
 		Server();
@@ -25,6 +26,9 @@ class Server {
 		int getListenSocket() const;
 		void setRequest(const HttpRequestMessage& msg);
         void setResponse(std::string http_response);
+
+        std::string getResponse();
+        void updateResponse(ssize_t bytes_sent);
 
         char* getBuffer();
         size_t getSendBytes();

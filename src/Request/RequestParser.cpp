@@ -244,8 +244,8 @@ bool RequestParser::isCRLF(const std::string line) {
 }
 
 void RequestParser::trimCarriageReturn(std::string& line) {
-	if (line.back() == '\r')
-		line.resize(line.size() - 1);
+    if (!line.empty() && *line.rbegin() == '\r')
+        line.erase(line.end() - 1);
 }
 
 void RequestParser::clear(const int ident) {
@@ -288,7 +288,7 @@ bool	isIntegerLiteral(std::string literal) {
 /* parse */
 
 bool isValidRequestLineFormat(const std::string& request_line) {
-    if (request_line.front() == ' ' || request_line.back() == ' ')
+    if (!request_line.empty() && (*request_line.begin() == ' ' || *request_line.rbegin() == ' '))
         return false;
     std::vector<size_t> spaces;
     int num_of_other_whitespace = 0;
@@ -304,7 +304,8 @@ bool isValidRequestLineFormat(const std::string& request_line) {
             ++num_of_other_whitespace;
         }
     }
-    return (spaces.size() == 2 && num_of_other_whitespace == 0) && (spaces.back() - spaces.front() > 1);
+    return (spaces.size() == 2 && num_of_other_whitespace == 0) && (*spaces.rbegin() - *spaces.begin() > 1);
+
 }
 
 std::vector<std::string> tokenizeRequestLine(const std::string& request_line) {

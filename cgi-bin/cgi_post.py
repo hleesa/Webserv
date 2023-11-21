@@ -3,7 +3,6 @@
 import os
 import sys
 
-# query_string = os.environ.get("QUERY_STRING", "")
 input_string = sys.stdin.read()
 params = input_string.split('=')
 param = params[1] if len(params) > 1 else ""
@@ -17,8 +16,8 @@ response_body = f"""
         <title>Awesome HTML</title>
     </head>
     <body>
-        <h1>Hello, this is an awesome HTML file!</h1>
-        <p>Received value from query string: <strong>{param}</strong></p>
+        <h1>Hello {param}!! this is an awesome HTML file!</h1>
+        <p><h2>This message is Response of "POST CGI" with message body</h2></p>
     </body>
     </html>
     """

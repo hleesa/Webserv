@@ -377,6 +377,7 @@ void Post::make_post_response() {
 		// 600 번대 이상의 코드 처리?
 		throw 500;
 	}
+	_status_code = 200;
 	body_length << _message_body.size();
 	_header_fields["content-length"] = body_length.str();
 }

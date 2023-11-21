@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTTP 요청 메시지 전송</title>
+</head>
+<body>
+    <h1>당신의 42 intra ID를 입력해주세요.</h1>
+    <form id="myForm">
+        <label for="inputText">입력값:</label>
+        <input type="text" id="inputText" name="text" required>
+        <button type="button" onclick="sendRequest()">요청 메시지 전송</button>
+    </form>
+
+    <div id="renderedHTML" style="margin-top: 20px;">
+        <h2></h2>
+        <div id="renderedHTMLContent"></div>
+    </div>
+
+    <script>
+        function sendRequest() {
+            var inputTextValue = document.getElementById('inputText').value;
+
+            // 요청 메시지 생성
+            var requestLine = "POST /cgi-bin/cgi_post.py HTTP/1.1";
+            var headers = [
+                "Content-Length: " + (inputTextValue.length + 6), // 추가된 "input="의 길이도 포함
+                "Content-Type: text/plain",
+                "Host: localhost"
+            ];
+
+            // 요청 메시지의 body 생성
+            var requestBody = "input=" + encodeURIComponent(inputTextValue);
+
+            // 생성된 요청 메시지 표시
+            // document.getElementById('requestMessageContent').textContent = fullRequestMessage;
+
+            // 서버로 요청 전송
+            var xhr = new XMLHttpRequest();
+            xhr.open("POST", "/cgi-bin/cgi_post.py", true);
+            xhr.setRequestHeader("Content-Type", "text/plain");
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState == 4) {
+                    // 서버 응답을 표시
+                    // document.getElementById('responseContent').textContent = xhr.responseText;
+                    
+                    // 응답된 HTML을 화면에 표시
+                    document.getElementById('renderedHTMLContent').innerHTML = xhr.responseText;
+                }
+            };
+            xhr.send(requestBody);
+        }
+    </script>
+</body>
+</html>

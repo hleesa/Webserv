@@ -67,7 +67,7 @@ enum lineType getLineType(const std::vector<std::string>& server_content, const 
     else if (server_content.empty()) {
         return SPACE;
     }
-    else if (server_content.front().front() == '#') {
+    else if (!server_content.front().empty() && *server_content.front().begin() == '#') {
         return COMMENT;
     }
     else if (!server_content.front().empty() && *server_content.back().rbegin() == '{') {

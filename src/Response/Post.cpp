@@ -168,18 +168,18 @@ void Post::check_header_content_type(std::map<std::string, std::vector<std::stri
 }
 
 void Post::check_header_content_length(std::map<std::string, std::vector<std::string> > header_field) {
-	if (header_field.find("content-length") == header_field.end()) {
+	if (header_field.find("transfer-encoding") != header_field.end() && header_field["transfer-encoding"].front() == "chunked") {
+		content_length=request->getMessageBody().size();
+	} else if ((header_field.find("content-length") != header_field.end()) && (header_field["content-length"].size() == 1)) {
+		std::stringstream ss(header_field["content-length"][0]);
+		if (!(ss >> content_length)) {
+			throw 403;
+		}
+	} else {
 		throw 403;
-	}
-	if ((header_field["content-length"].size() != 1)) {
-		throw 403;
-	}
-	try {
-		content_length = std::stoi(header_field["content-length"][0]);
-	} catch (const std::invalid_argument& e) {
-		 throw 403;
 	}
 }
+
 void Post::check_header_content_desposition(std::map<std::string, std::vector<std::string> > header_field){
 	if (header_field.find("content-desposition") == header_field.end()) {
 		return;

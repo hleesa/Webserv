@@ -11,6 +11,9 @@ Server::Server() {}
 Server::Server(int connection, int listen) {
     connection_socket = connection;
     listen_socket = listen;
+    response = NULL;
+    bytes_sent = 0;
+    bytes_response = 0;
 }
 
 int Server::getListenSocket() const {
@@ -21,12 +24,12 @@ void Server::setRequest(const HttpRequestMessage& request_message) {
     this->request = request_message;
 }
 
-void Server::setResponse(std::string response_str) {
-    char *response_message = new char[response_str.length() + 1];
-    strcpy(response_message, response_str.c_str());
+void Server::setResponse(std::string http_response) {
+    this->httpResponse = http_response; // debug
+    char *response_message = new char[http_response.length() + 1];
+    strcpy(response_message, http_response.c_str());
     this->response = response_message;
-    this->response_length = response_str.length();
-    this->bytes_send = 0;
+    this->bytes_response = http_response.length() + 1;
 }
 
 std::string Server::makeResponse(std::map<int, Config>& configs) {
@@ -46,22 +49,25 @@ std::string Server::makeResponse(std::map<int, Config>& configs) {
     return HttpResponseMessage().toString();
 }
 
-ssize_t Server::getBytesSend() {
-    return bytes_send;
+char* Server::getBuffer() {
+    return response + bytes_sent;
 }
 
-size_t Server::getResponseLength() {
-    return response_length;
+size_t Server::getSendBytes() {
+    return bytes_response - bytes_sent;
 }
 
-char *Server::getResponse() {
-    return response;
+void Server::updateByteSend(ssize_t new_bytes_sent) {
+    this->bytes_sent += static_cast<size_t>(new_bytes_sent);
 }
 
-void Server::setBytesSend(ssize_t bytes) {
-    this->bytes_send = bytes;
+bool Server::isSendComplete() {
+    return bytes_sent == bytes_response;
 }
 
-//void Server::setResponseLength(size_t response_size) {
-//    this->response_length = response_size;
-//}
+void Server::clearResponse() {
+    delete response;
+    response = NULL;
+    bytes_sent = 0;
+    bytes_response = 0;
+}

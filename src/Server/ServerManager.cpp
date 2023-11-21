@@ -72,7 +72,7 @@ void ServerManager::processEvents(const int events) {
     for (int idx = 0; idx < events; idx++) {
         struct kevent* event = event_list + idx;
 
-        if (event->flags & EV_ERROR || event->flags & EV_EOF) {
+        if (event->flags & EV_ERROR) {
 			std::cout << "error\n";
             checkEventError(*event);
         }
@@ -87,7 +87,6 @@ void ServerManager::processEvents(const int events) {
 				parser.clear(event->ident);
     			change_list.push_back(makeEvent(event->ident, EVFILT_WRITE, EV_ADD, 0, 0, NULL));
                 servers[event->ident].setResponse(servers[event->ident].makeResponse(configs));
-
 			}
         }
         else if (event->filter == EVFILT_WRITE && servers.find(event->ident) != servers.end()) {
@@ -139,17 +138,19 @@ void ServerManager::processReadEvent(const struct kevent& event) {
 }
 
 void ServerManager::processWriteEvent(const struct kevent& event) {
-	// wrtie 이벤트 끄고, 리스폰스 deletes
-//	std::string response = servers[event.ident].makeResponse(configs);
     Server *server = &servers[event.ident];
-    int bytes_send = send(event.ident, &server->getResponse()[server->getBytesSend()], server->getResponseLength() - server->getBytesSend(), 0);
-    if (bytes_send == ERROR) {
+    ssize_t bytes_sent = send(event.ident, server->getBuffer(), server->getSendBytes(), 0);
+    if (bytes_sent == ERROR) {
         if (!(errno == EAGAIN || errno == EWOULDBLOCK)) {
             disconnectWithClient(event);
         }
     }
     else {
-        server->setBytesSend(server->getBytesSend() + bytes_send);
+        server->updateByteSend(bytes_sent);
+        if (server->isSendComplete()) {
+            server->clearResponse();
+            change_list.push_back(makeEvent(event.ident, EVFILT_WRITE, EV_DISABLE, 0, 0, NULL));
+        }
     }
 }
 

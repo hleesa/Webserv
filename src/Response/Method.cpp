@@ -5,6 +5,7 @@
 #include "../../inc/GetCgi.hpp"
 #include "../../inc/Post.hpp"
 #include "../../inc/Delete.hpp"
+#include "../../inc/Head.hpp"
 #include <unistd.h>
 #include <ctime>
 
@@ -26,6 +27,9 @@ Method* Method::generate(const std::string method, const HttpRequestMessage* req
 	}
 	if (method == "DELETE") {
 		return dynamic_cast<Method*>(new Delete(request, config));
+	}
+	if (method == "HEAD") {
+		return dynamic_cast<Method*>(new Head(request, config));
 	}
 	return NULL;
 }

@@ -2,17 +2,17 @@
 #include "../../inc/HttpRequestMessage.hpp"
 #include "../../inc/Resource.hpp"
 
-HttpResponseMessage ErrorPage::makeErrorPageResponse(const int status_code, const Config& config) {
+HttpResponseMessage ErrorPage::makeErrorPageResponse(const int status_code, const Config* config) {
 	Resource resource(findErrorPageFilePath(status_code, config), false);
 	std::string body = resource.make();
 	
 	return HttpResponseMessage(status_code, makeHeaderFileds(body), body);
 }
 
-std::string ErrorPage::findErrorPageFilePath(const int status_code, const Config& config) {
-	std::map<int, std::string> error_page = config.getErrorpage();
+std::string ErrorPage::findErrorPageFilePath(const int status_code, const Config* config) {
+	std::map<int, std::string> error_page = config->getErrorpage();
 
-	return config.getRoot() + "/" + error_page[status_code];
+	return config->getRoot() + "/" + error_page[status_code];
 }
 
 std::map<std::string, std::string> ErrorPage::makeHeaderFileds(const std::string& body) {

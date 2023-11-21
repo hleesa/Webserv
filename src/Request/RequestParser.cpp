@@ -321,7 +321,7 @@ std::vector<std::string> tokenizeRequestLine(const std::string& request_line) {
 }
 
 void validateMethod(const std::string& method) {
-    std::string allow_method_list[] = {"GET", "POST", "DELETE"};
+    std::string allow_method_list[] = {"GET", "POST", "DELETE", "HEAD"};
     std::vector<std::string> allow_method(allow_method_list, allow_method_list + NUM_OF_ALLOW_METHOD);
     if (std::find(allow_method.begin(), allow_method.end(), method) == allow_method.end()) {
 		throw 501;

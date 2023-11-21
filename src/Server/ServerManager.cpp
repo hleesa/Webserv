@@ -85,7 +85,7 @@ void ServerManager::processEvents(const int events) {
 				int limit_body_size = configs[servers[event->ident].getListenSocket()].getLimitBodySize();
 				servers[event->ident].setRequest(parser.getHttpRequestMessage(event->ident, limit_body_size));
 				parser.clear(event->ident);
-    			change_list.push_back(makeEvent(event->ident, EVFILT_WRITE, EV_ADD, 0, 0, NULL));
+    			change_list.push_back(makeEvent(event->ident, EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, NULL));
                 servers[event->ident].setResponse(servers[event->ident].makeResponse(configs));
 			}
         }
@@ -146,17 +146,11 @@ void ServerManager::processWriteEvent(const struct kevent& event) {
         }
     }
     else {
-        server->updateByteSend(bytes_sent);
+        server->updateResponse(bytes_sent);
         if (server->isSendComplete()) {
             server->clearResponse();
             change_list.push_back(makeEvent(event.ident, EVFILT_WRITE, EV_DISABLE, 0, 0, NULL));
         }
-
-//        if () {
-//
-//            change_list.push_back(makeEvent(event.ident, EVFILT_WRITE, EV_DISABLE, 0, 0, NULL));
-//        }
-
     }
 }
 

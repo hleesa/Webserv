@@ -11,9 +11,6 @@ Server::Server() {}
 Server::Server(int connection, int listen) {
     connection_socket = connection;
     listen_socket = listen;
-//    response = NULL;
-    bytes_sent = 0;
-//    bytes_response = 0;
 }
 
 int Server::getListenSocket() const {
@@ -26,12 +23,8 @@ void Server::setRequest(const HttpRequestMessage& request_message) {
 
 void Server::setResponse(std::string http_response) {
     response = http_response;
+    bytes_sent = 0;
     bytes_response = http_response.length();
-//    this->httpResponse = http_response; // debug
-//    char *response_message = new char[http_response.length()];
-//    strcpy(response_message, http_response.c_str());
-//    this->response = response_message;
-//    this->bytes_response = http_response.length();
     return;
 }
 
@@ -52,29 +45,10 @@ std::string Server::makeResponse(std::map<int, Config>& configs) {
     return HttpResponseMessage().toString();
 }
 
-/*
-char* Server::getBuffer() {
-    return response + bytes_sent;
-}
-
-size_t Server::getSendBytes() {
-    return bytes_response - bytes_sent;
-}
-
-void Server::updateByteSend(ssize_t new_bytes_sent) {
-    this->bytes_sent += static_cast<size_t>(new_bytes_sent);
-}
-
-bool Server::isSendComplete() {
-    return bytes_sent == bytes_response;
-}
-*/
-
 void Server::clearResponse() {
     bytes_sent = 0;
     bytes_response = 0;
 }
-
 
 bool Server::isSendComplete() {
     return bytes_sent == bytes_response;
@@ -89,5 +63,6 @@ std::string Server::getResponse() {
 }
 
 void Server::updateResponse(ssize_t new_bytes_sent) {
+    updateByteSend(new_bytes_sent);
     response.substr(new_bytes_sent);
 }

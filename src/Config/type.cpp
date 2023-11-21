@@ -1,12 +1,14 @@
 #include <string>
 
+#define NUMBER_OF_METHOD 4
+
 bool isHttpMethod(const std::string& method) {
-	std::string allow_methods[3] = {"GET", "POST", "DELETE"};
+	std::string allow_methods[NUMBER_OF_METHOD] = {"GET", "POST", "DELETE", "HEAD"};
 	int idx = 0;
 
-	while (idx < 3 && method != allow_methods[idx])
+	while (idx < NUMBER_OF_METHOD && method != allow_methods[idx])
 		idx++;
-	return idx != 3;
+	return idx != NUMBER_OF_METHOD;
 }
 
 bool	isNumber(const std::string& string) {

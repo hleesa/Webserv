@@ -18,6 +18,7 @@ Location::Location(std::vector<std::vector<std::string> >& location_block) : aut
 		http_methods.insert("GET");
 		http_methods.insert("POST");
 		http_methods.insert("DELETE");
+		http_methods.insert("HEAD");
 	}
 }
 

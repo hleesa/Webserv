@@ -40,7 +40,7 @@ std::string Server::makeResponse(std::map<int, Config>& configs) {
         return response_message;
     }
     catch (const int status_code) {
-        return ErrorPage::makeErrorPageResponse(status_code, configs[listen_socket]).toString();
+        return ErrorPage::makeErrorPageResponse(status_code, &configs[listen_socket]).toString();
     }
     return HttpResponseMessage().toString();
 }

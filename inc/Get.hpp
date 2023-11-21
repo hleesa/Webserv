@@ -8,13 +8,13 @@
 #include "Resource.hpp"
 
 class Get : public Method {
-	private:
+	protected:
 		std::string findResourcePath() const;
 		bool isDirectoryList(const std::string path) const;
 		Resource makeResource() const;
 
-		HttpResponseMessage processReturnDirective() const;
-		HttpResponseMessage makeRedirectionResponse(const std::pair<int, std::string> return_value) const;
+		virtual HttpResponseMessage processReturnDirective() const;
+		virtual HttpResponseMessage makeRedirectionResponse(const std::pair<int, std::string> return_value) const;
 
 		std::map<std::string, std::string> makeHeaderFileds(const std::string& body, const std::string path) const;
 

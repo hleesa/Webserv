@@ -2,7 +2,7 @@
 #include "../../inc/MediaType.hpp"
 #include "../../inc/ToString.hpp"
 #include "../../inc/Get.hpp"
-#include "../../inc/GetCgi.hpp"
+//#include "../../inc/GetCgi.hpp"
 #include "../../inc/Post.hpp"
 #include "../../inc/Delete.hpp"
 #include "../../inc/Head.hpp"
@@ -22,12 +22,12 @@ Method* Method::generate(const std::string method, const HttpRequestMessage* req
 	std::cout << request->getMessageBody() << std::endl;
 
 	if (method == "GET") {
-        if (request->getURL().find("cgi") == std::string::npos){
-            return dynamic_cast<Method*>(new Get(request, config));
-        }
-        else {
-            return dynamic_cast<Method*>(new GetCgi(request, config));
-        }
+        return dynamic_cast<Method*>(new Get(request, config));
+        // if (request->getURL().find("cgi") == std::string::npos){
+        // }
+        // else {
+        //     return dynamic_cast<Method*>(new GetCgi(request, config));
+        // }
 	}
 	if (method == "POST") {
         return dynamic_cast<Method*>(new Post(request, config));
@@ -39,6 +39,23 @@ Method* Method::generate(const std::string method, const HttpRequestMessage* req
 		return dynamic_cast<Method*>(new Head(request, config));
 	}
 	return NULL;
+}
+
+bool Method::isCgi() const {
+	std::string extension = config->getLocations()[location_key].getCgiExt();
+	std::string url = request->getURL();
+
+	if (extension.empty()) {
+		return false;
+	}
+	if (request->getMethod() == "GET") {
+		size_t queryPos = url.find("?");
+		url = queryPos != std::string::npos ? url.substr(0, queryPos) : url;
+	}
+	if (url.size() < extension.size()) {
+		return false;
+	}
+	return url.substr(url.size() - extension.size()) == extension; 
 }
 
 std::string Method::findLocationKey() const {

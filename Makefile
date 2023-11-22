@@ -28,13 +28,13 @@ RESPONSE_SRC = \
 			CodeToReason.cpp \
 			Method.cpp \
 			Get.cpp \
-			GetCgi.cpp \
 			Post.cpp \
 			Delete.cpp \
 			Head.cpp \
 			Resource.cpp\
 			ErrorPage.cpp \
 			MediaType.cpp
+#GetCgi.cpp 
 
 SERVER_SRC = \
 			Server.cpp \

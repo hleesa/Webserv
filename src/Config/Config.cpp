@@ -36,6 +36,7 @@ Config::Config(std::vector< std::vector< std::string> >& server_block)
 		index.push_back("index.html");
 	}
 	setDefaultErrorPage();
+	// print_checker();
 }
 
 Config::Config(const Config& other) {

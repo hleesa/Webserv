@@ -34,6 +34,8 @@ Location &Location::operator=(const Location &other) {
 		this->root = other.root;
 		this->index = other.index;
 		this->autoindex = other.autoindex;
+		this->cgi_ext = other.cgi_ext;
+		this->cgi_path = other.cgi_path;
 	}
 	return *this;
 }
@@ -232,5 +234,7 @@ std::ostream& operator<<(std::ostream& out, Location& l) {
 	for (std::vector<std::string>::iterator itr = l.index.begin(); itr != l.index.end(); itr++)
 		out << *itr << " ";
 	out << "\n-----autoindex-----\n" << std::boolalpha << l.autoindex << std::endl;
+	out << "\n-----cgi_ext-----\n" << l.cgi_ext << std::endl;
+	out << "\n-----cgi_path-----\n" << l.cgi_path << std::endl;
 	return out;
 }

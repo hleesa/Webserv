@@ -22,8 +22,9 @@ class Method {
 		Method();
 		virtual ~Method();
 
+		bool isCgi() const;
 		static Method* generate(const std::string method, const HttpRequestMessage* request, const Config* config);
-		virtual void checkAllowed(const std::string method) const;
+		void checkAllowed(const std::string method) const;
 		virtual HttpResponseMessage makeHttpResponseMessage() = 0;
 };
 

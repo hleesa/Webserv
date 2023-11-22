@@ -5,11 +5,10 @@
 Config::Config() {}
 
 Config::Config(std::vector< std::vector< std::string> >& server_block)
-	:	port(80), host(""), root("./"), limit_body_size(100000000)
+: port(80), host(""), root("./"), limit_body_size(100000000)
 {
 	std::set<std::string> duplicated;
 	unsigned long i = 0;
-	bool hasCgi = false;
 
 	for (;i < server_block.size(); i++) {
 		if (server_block[i][0] == "location") {
@@ -29,26 +28,14 @@ Config::Config(std::vector< std::vector< std::string> >& server_block)
 			for (; server_block[i][0] != "}"; ++i) {
 				loc_block.push_back(server_block[i]);
 			}
-			setLocation(loc_block, key, hasCgi);
+			Location unit_loc(loc_block);
+			locations.insert(make_pair(key, unit_loc));
 		}
 	}
 	if (index.empty()) {
 		index.push_back("index.html");
 	}
 	setDefaultErrorPage();
-}
-
-void Config::setLocation(std::vector< std::vector<std::string> >& loc_block, const std::string key, bool& hasCgi) {
-	if (key.find("cgi") != std::string::npos) {
-		if (hasCgi) {
-			throw std::invalid_argument("Error: too many cgi location block.");
-		}
-		cgi_location = std::make_pair(key, CgiLocation(loc_block));
-		hasCgi = true;
-		return ;
-	}
-	Location unit_loc(loc_block);
-	locations.insert(make_pair(key, unit_loc));
 }
 
 Config::Config(const Config& other) {
@@ -65,7 +52,6 @@ Config& Config::operator=(const Config& other) {
 		index = other.index;
 		limit_body_size = other.limit_body_size;
 		locations = other.locations;
-		cgi_location = other.cgi_location;
 	}
 	return (*this);
 }
@@ -102,10 +88,6 @@ long Config::getLimitBodySize() const {
 
 std::map<std::string, Location> Config::getLocations() const {
 	return this->locations;
-}
-
-std::pair<std::string, CgiLocation> Config::getCgiLocation() const {
-	return this->cgi_location;
 }
 
 void Config::setDefaultErrorPage() {
@@ -176,36 +158,35 @@ void Config::server_token_parser(std::vector<std::string> one_line, std::set<std
 
 // 인자 확인하는 함수
 
+// void Config::print_checker(void) {
+// 	std::cout << "============server block=============\n";
+// 	std::cout << "port : " << port << std::endl;
+// 	std::cout << std::endl;
+// 	std::cout << "host : " << host << std::endl;
+// 	std::cout << std::endl;
+// 	for (int i = 0; i < name.size(); i++) {
+// 		std::cout << "name : " << name[i]<< std::endl;
+// 	}
+// 	std::cout << std::endl;
+// 	std::cout << "error_page : " << std::endl;
+// 	print_map(error_page);
+// 	std::cout << std::endl;
+// 	std::cout << "root : " << root << std::endl;
+// 	std::cout << std::endl;
+// 	for (int i = 0; i < index.size(); i++) {
+// 		std::cout << "index : " << index[i]<< std::endl;
+// 	}
+// 	std::cout << std::endl;
+// 	std::cout << "limit_body_size : " << limit_body_size << std::endl;
+// 	std::cout << std::endl;
+// 	std::cout << "locations : " << std::endl;
+// 	print_map(locations);
+// 	std::cout << std::endl;
+// }
 
-//void Config::print_checker(void) {
-//	std::cout << "============server block=============\n";
-//	std::cout << "port : " << port << std::endl;
-//	std::cout << std::endl;
-//	std::cout << "host : " << host << std::endl;
-//	std::cout << std::endl;
-//	for (int i = 0; i < name.size(); i++) {
-//		std::cout << "name : " << name[i]<< std::endl;
-//	}
-//	std::cout << std::endl;
-//	std::cout << "error_page : " << std::endl;
-//	print_map(error_page);
-//	std::cout << std::endl;
-//	std::cout << "root : " << root << std::endl;
-//	std::cout << std::endl;
-//	for (int i = 0; i < index.size(); i++) {
-//		std::cout << "index : " << index[i]<< std::endl;
-//	}
-//	std::cout << std::endl;
-//	std::cout << "limit_body_size : " << limit_body_size << std::endl;
-//	std::cout << std::endl;
-//	std::cout << "locations : " << std::endl;
-//	print_map(locations);
-//	std::cout << std::endl;
-//}
-
-//template<typename K, typename V>
-//void Config::print_map(std::map<K, V> &m) {
-//	for (auto &pair: m) {
-//		std::cout << "-------------first-------------\n" << pair.first << "\n-------------second-------------\n" << pair.second << "\n";
-//	}
-//}
+// template<typename K, typename V>
+// void Config::print_map(std::map<K, V> &m) {
+// 	for (auto &pair: m) {
+// 		std::cout << "location key : " << pair.first << "\ncontent\n" << pair.second << "\n";
+// 	}
+// }

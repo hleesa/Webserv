@@ -9,13 +9,14 @@
 #include <stdexcept>
 
 class Location {
-
 protected:
 	std::set<std::string> http_methods;
     std::pair<int, std::string> return_value;
     std::string root;
     std::vector<std::string> index;
     bool autoindex;
+    std::string cgi_path;
+    std::string cgi_ext;
 	
 	virtual void parse(std::vector<std::string>& line, std::set<std::string>& duplicated);
 	void parseHttpMethod(std::vector<std::string>& line, std::set<std::string>& duplicated);
@@ -23,6 +24,8 @@ protected:
 	void parseRoot(std::vector<std::string>& line, std::set<std::string>& duplicated);
 	void parseIndex(std::vector<std::string>& line, std::set<std::string>& duplicated);
 	void parseAutoindex(std::vector<std::string>& line, std::set<std::string>& duplicated);
+	void parseCgiPath(std::vector<std::string>& line, std::set<std::string>& duplicated);
+	void parseCgiExt(std::vector<std::string>& line, std::set<std::string>& duplicated);
 
 	void checkDuplicated(const std::set<std::string>& duplicated, const std::string& directive);
 	void checkInvalidNumber(bool isValid, const std::string& directive);
@@ -43,6 +46,8 @@ public:
     std::string getRoot() const;
     std::vector<std::string> getIndex() const;
     bool getAutoindex() const;
+	std::string getCgiPath() const;
+    std::string getCgiExt() const;
 	
 	bool hasReturnValue() const;
 	bool isNotAllowedMethod(const std::string method) const;

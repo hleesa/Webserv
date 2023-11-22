@@ -7,7 +7,8 @@ bool isValidRangeStatusCode(const int status_code);
 
 Location::Location() {}
 
-Location::Location(std::vector<std::vector<std::string> >& location_block) : root(""), autoindex(false) {
+Location::Location(std::vector<std::vector<std::string> >& location_block)
+: root(""), autoindex(false), cgi_path(""), cgi_ext("") {
 	std::set<std::string> duplicated;
 	std::vector<std::vector<std::string> >::iterator itr;
 
@@ -67,6 +68,14 @@ bool Location::getAutoindex() const {
 	return this->autoindex;
 }
 
+std::string Location::getCgiPath() const {
+	return this->cgi_path;
+}
+
+std::string Location::getCgiExt() const {
+	return this->cgi_ext;
+}
+
 void Location::parse(std::vector<std::string>& line, std::set<std::string>& duplicated) {
 	std::string	directive;
 	
@@ -91,6 +100,14 @@ void Location::parse(std::vector<std::string>& line, std::set<std::string>& dupl
 	}
 	if (directive == "autoindex") {
 		parseAutoindex(line, duplicated);
+		return ;
+	}
+	if (directive == "cgi_path") {
+		parseCgiPath(line, duplicated);
+		return ;
+	}
+	if (directive == "cgi_ext") {
+		parseCgiExt(line, duplicated);
 		return ;
 	}
 	throw (std::invalid_argument("Error: unknown directive '" + directive + "'"));
@@ -184,6 +201,24 @@ void Location::parseAutoindex(std::vector<std::string>& line, std::set<std::stri
 void Location::checkAutoindexFormat(const std::string& value) const {
 	if (!(value == "on" || value == "off"))
 		throw (std::invalid_argument("Error: Invalid value '" + value + "' in 'autoindex' directive"));
+}
+
+void Location::parseCgiPath(std::vector<std::string>& line, std::set<std::string>& duplicated) {
+	std::string directive("cgi_path");
+
+	checkDuplicated(duplicated, directive);
+	checkInvalidNumber(line.size() == 2, directive);
+	cgi_path = line[1];
+	duplicated.insert(directive);
+}
+
+void Location::parseCgiExt(std::vector<std::string>& line, std::set<std::string>& duplicated) {
+	std::string directive("cgi_ext");
+
+	checkDuplicated(duplicated, directive);
+	checkInvalidNumber(line.size() == 2, directive);
+	cgi_ext = line[1];
+	duplicated.insert(directive);
 }
 
 std::ostream& operator<<(std::ostream& out, Location& l) {

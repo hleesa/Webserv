@@ -5,7 +5,7 @@
 Config::Config() {}
 
 Config::Config(std::vector< std::vector< std::string> >& server_block)
-	:	port(80), host(""), root("docs/"), limit_body_size(1e6)
+	:	port(80), host(""), root("./"), limit_body_size(100000000)
 {
 	std::set<std::string> duplicated;
 	unsigned long i = 0;

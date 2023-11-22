@@ -10,6 +10,7 @@
 class Get : public Method {
 	protected:
 		std::string findResourcePath() const;
+		std::string findPathByRoot(const std::string url) const;
 		bool isDirectoryList(const std::string path) const;
 		Resource makeResource() const;
 

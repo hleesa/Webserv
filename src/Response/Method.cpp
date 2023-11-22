@@ -41,12 +41,13 @@ std::string Method::findLocationKey() const {
 	if (locations.find(url) != locations.end()) {
 		return url;
 	}
-    if(!url.empty() && *url.rbegin() != '/'){
-        url += "/";
-    }
 	unsigned long pos = url.rfind('/');
-	while (pos != std::string::npos) {
-		std::string key = url.substr(0, pos);
+	while (pos && pos != std::string::npos) {
+		std::string key = url.substr(0, pos + 1);
+		if (locations.find(key) != locations.end()) {
+			return key;
+		}
+		key = url.substr(0, pos);
 		if (locations.find(key) != locations.end()) {
 			return key;
 		}

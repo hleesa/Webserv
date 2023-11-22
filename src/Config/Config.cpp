@@ -11,7 +11,6 @@ Config::Config(std::vector< std::vector< std::string> >& server_block)
 	unsigned long i = 0;
 	bool hasCgi = false;
 
-	initErrorPage();
 	for (;i < server_block.size(); i++) {
 		if (server_block[i][0] == "location") {
 			break;
@@ -36,6 +35,7 @@ Config::Config(std::vector< std::vector< std::string> >& server_block)
 	if (index.empty()) {
 		index.push_back("index.html");
 	}
+	setDefaultErrorPage();
 }
 
 void Config::setLocation(std::vector< std::vector<std::string> >& loc_block, const std::string key, bool& hasCgi) {
@@ -108,14 +108,20 @@ std::pair<std::string, CgiLocation> Config::getCgiLocation() const {
 	return this->cgi_location;
 }
 
-void Config::initErrorPage() {
+void Config::setDefaultErrorPage() {
 	int status_code;
 
 	for (status_code = 400; status_code <= 417; status_code++) {
-		error_page[status_code] = CLIENT_ERROR_PAGE;
+		error_page[status_code] = root + "/" + error_page[status_code];
+		if (error_page.find(status_code) == error_page.end()) {
+			error_page[status_code] = CLIENT_ERROR_PAGE;
+		}
 	}
 	for (status_code = 500; status_code <= 505; status_code++) {
-		error_page[status_code] = SERVER_ERROR_PAGE;
+		error_page[status_code] = root + "/" + error_page[status_code];
+		if (error_page.find(status_code) == error_page.end()) {
+			error_page[status_code] = CLIENT_ERROR_PAGE;
+		}
 	}
 }
 

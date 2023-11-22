@@ -11,8 +11,8 @@
 #include "Location.hpp"
 #include "CgiLocation.hpp"
 
-#define CLIENT_ERROR_PAGE "/default/4xx.html"
-#define SERVER_ERROR_PAGE "/default/5xx.html"
+#define CLIENT_ERROR_PAGE "./default/4xx.html"
+#define SERVER_ERROR_PAGE "./default/5xx.html"
 
 class Config {
 
@@ -29,7 +29,7 @@ class Config {
 
 		void setLocation(std::vector< std::vector<std::string> >& loc_block, const std::string key, bool& hasCgi);
 
-		void initErrorPage();
+		void setDefaultErrorPage();
 
 	public:
 		Config();

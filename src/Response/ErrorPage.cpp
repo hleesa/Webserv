@@ -12,7 +12,8 @@ HttpResponseMessage ErrorPage::makeErrorPageResponse(const int status_code, cons
 std::string ErrorPage::findErrorPageFilePath(const int status_code, const Config* config) {
 	std::map<int, std::string> error_page = config->getErrorpage();
 
-	return config->getRoot() + "/" + error_page[status_code];
+	std::string path = error_page[status_code];
+	return path;
 }
 
 std::map<std::string, std::string> ErrorPage::makeHeaderFileds(const std::string& body) {

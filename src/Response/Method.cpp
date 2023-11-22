@@ -15,12 +15,12 @@ Method::~Method() {}
 
 Method* Method::generate(const std::string method, const HttpRequestMessage* request, const Config* config) {
 	if (method == "GET") {
-        if (request->getURL().find("cgi") == std::string::npos){
-            return dynamic_cast<Method*>(new Get(request, config));
-        }
-        else {
-            return dynamic_cast<Method*>(new GetCgi(request, config));
-        }
+        return dynamic_cast<Method*>(new Get(request, config));
+        // if (request->getURL().find("cgi") == std::string::npos){
+        // }
+        // else {
+        //     return dynamic_cast<Method*>(new GetCgi(request, config));
+        // }
 	}
 	if (method == "POST") {
         return dynamic_cast<Method*>(new Post(request, config));
@@ -32,6 +32,23 @@ Method* Method::generate(const std::string method, const HttpRequestMessage* req
 		return dynamic_cast<Method*>(new Head(request, config));
 	}
 	return NULL;
+}
+
+bool Method::isCgi() const {
+	std::string extension = config->getLocations()[location_key].getCgiExt();
+	std::string url = request->getURL();
+
+	if (extension.empty()) {
+		return false;
+	}
+	if (request->getMethod() == "GET") {
+		int queryPos = url.find("?");
+		url = queryPos != std::string::npos ? url.substr(0, queryPos) : url;
+	}
+	if (url.size() < extension.size()) {
+		return false;
+	}
+	return url.substr(url.size() - extension.size()) == extension; 
 }
 
 std::string Method::findLocationKey() const {

@@ -7,7 +7,7 @@ bool isValidRangeStatusCode(const int status_code);
 
 Location::Location() {}
 
-Location::Location(std::vector<std::vector<std::string> >& location_block) : autoindex(false) {
+Location::Location(std::vector<std::vector<std::string> >& location_block) : root(""), autoindex(false) {
 	std::set<std::string> duplicated;
 	std::vector<std::vector<std::string> >::iterator itr;
 

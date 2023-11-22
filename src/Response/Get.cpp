@@ -49,35 +49,46 @@ Resource Get::makeResource() const {
 	return Resource(resource_path, false);
 }
 
-std::string Get::findResourcePath() const {
+std::string Get::findPathByRoot(const std::string url) const{
 	std::string root = findRoot();
+	
+	if (config->getLocations()[location_key].getRoot().empty()) {
+		return root + "/" + url;
+	}
+	return root + "/" + url.substr(location_key.size());
+}
+
+std::string Get::findResourcePath() const {
 	std::vector<std::string> index = config->getLocations()[location_key].getIndex();
 	std::string url = request->getURL();
 
 	if (index.empty()) {
 		index = config->getIndex();
 	}
-	// / 이 아닌 url에 대해
-	if (url != "/" && *url.rbegin() == '/') { // url 끝에 있는 / 제거
-		url.resize(url.size() - 1);
+	if (location_key != url) { 
+		std::string path = findPathByRoot(url);
+		if (!isDirectory(path)) {
+			return checkFileExistence(path) ? path : "";
+		}
+		std::vector<std::string>::iterator itr = index.begin();
+		path = findPathByRoot(url + "/" + *itr);
+		while (!checkFileExistence(path) && ++itr != index.end()) {
+			path = findPathByRoot(url + "/" + *itr);
+		}
+		return itr != index.end() ? path : "";
 	}
-	if (location_key != url) { // url 자체를 찾음 
-		std::string path = root + "/" + url;
-		return checkFileExistence(path) ? path : "";
-	}
-
 	std::vector<std::string>::iterator itr = index.begin();
-	std::string path = root + location_key + "/" + *itr;
+	std::string path = findPathByRoot(location_key + "/" + *itr);
 	while (!checkFileExistence(path) && ++itr != index.end()) {
-		path = root + location_key + "/" + *itr;
+		path = findPathByRoot(location_key + "/" + *itr);
 	}
 	return itr != index.end() ? path : "";
 }
 
 bool Get::isDirectoryList(const std::string path) const {
-	if (isDirectory(path)) {
-		throw 403;
-	}
+	// if (isDirectory(path)) {
+	// 	throw 403;
+	// }
 	if (path.size()) {
 		return false;
 	}

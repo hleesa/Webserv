@@ -14,6 +14,13 @@ Method::Method() {}
 Method::~Method() {}
 
 Method* Method::generate(const std::string method, const HttpRequestMessage* request, const Config* config) {
+	std::cout << request->getRequestLine()[0] << request->getRequestLine()[1] << request->getRequestLine()[2] << std::endl;
+	//std::map<std::string, std::vector<std::string> >::iterator ite;
+	//for (ite = request->getHeaderFields().begin(); ite != request->getHeaderFields().end(); ++ite) {
+	//	std::cout << ite->first << std::endl;
+	//}
+	std::cout << request->getMessageBody() << std::endl;
+
 	if (method == "GET") {
         if (request->getURL().find("cgi") == std::string::npos){
             return dynamic_cast<Method*>(new Get(request, config));

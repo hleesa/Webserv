@@ -19,7 +19,7 @@ class Post : public Method {
 		std::map<std::string, std::string> _header_fields;
 		std::string _message_body;
 
-		std::string location_key_post;
+		std::string location_key_post_cgi;
 		std::string abs_path;		//config->root + url rel_path
 		std::string request_url;	//요청->url
 		std::string content_type;	//요청->type

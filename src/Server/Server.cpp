@@ -33,7 +33,8 @@ std::string Server::makeResponse(std::map<int, Config>& configs) {
 		if (request.getStatusCode()) {
 			throw(request.getStatusCode());
 		}
-        Method *method = Method::generate(request.getMethod(), &request, &configs[listen_socket]);
+        
+		Method *method = Method::generate(request.getMethod(), &request, &configs[listen_socket]);
 		method->checkAllowed(request.getMethod());
         std::string response_message = method->makeHttpResponseMessage().toString();
         delete method;

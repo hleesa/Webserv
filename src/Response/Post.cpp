@@ -2,6 +2,7 @@
 #include "../../inc/MediaType.hpp"
 #include "../../inc/Location.hpp"
 #include <fcntl.h>
+#include <iostream>
 
 Post::Post(const HttpRequestMessage* request, const Config* config) {
 	this->request = request;
@@ -9,7 +10,7 @@ Post::Post(const HttpRequestMessage* request, const Config* config) {
 	if (request->getURL().find("cgi") == std::string::npos) {
 		this->location_key = findLocationKey();
 	} else {
-		this->location_key_post = find_cgi_loc_key(request->getURL());
+		this->location_key_post_cgi = find_cgi_loc_key(request->getURL());
 	}
 	_status_code = 0;
 	_message_body = "";
@@ -19,6 +20,14 @@ Post::Post(const HttpRequestMessage* request, const Config* config) {
 }
 
 HttpResponseMessage Post::makeHttpResponseMessage(){
+	std::cout << request->getRequestLine()[0] << request->getRequestLine()[2] << request->getRequestLine()[2] << std::endl;
+	std::map<std::string, std::vector<std::string> >::iterator ite;
+	for (ite = request->getHeaderFields().begin(); ite != request->getHeaderFields().end(); ite++) {
+		std::cout << ite->first << std::endl;
+	}
+	std::cout << request->getMessageBody() << std::endl;
+
+	
 	set_member();
 	return HttpResponseMessage(_status_code, _header_fields, _message_body);
 }
@@ -46,7 +55,7 @@ void Post::set_member() {
 		//헤더 필드 확인 -> body가 있는 경우이기 때문에 필수 헤더 확인
 		check_header_field(request->getHeaderFields());
 	}
-	if (location_key_post == "/cgi-bin") {
+	if (location_key_post_cgi == "/cgi-bin") {
 		//cgi post 처리
 		cgipost();
 	} else {
@@ -84,21 +93,41 @@ void Post::check_request_line(std::vector<std::string> request_line) {
 	}
 	if (rel_path.find("cgi") == std::string::npos) {
 		//location 확인 후 그곳에서의 가능 메서드 확인
-		location_key_post = find_loc_key(rel_path);
-		if (config->getLocations()[location_key_post].isNotAllowedMethod("POST") == true) {
+		location_key = find_loc_key(rel_path);
+		if (config->getLocations()[location_key].isNotAllowedMethod("POST") == true) {
 			throw 405;
 		}
-		abs_path = config->getRoot() + rel_path;
-		if (!directory_exists(abs_path)) {
-			throw 404;
+		if (config->getLocations()[location_key].getRoot() == "") {
+			if (config->getRoot() != "") {
+				abs_path = config->getRoot() + rel_path;
+			} else {
+				abs_path = config->getLocations()["/"].getRoot() + rel_path;
+			}
+			if (!directory_exists(abs_path)) {
+				throw 404;
+			}
+		} else {
+			abs_path = config->getLocations()[location_key].getRoot() + rel_path;
+			if (!directory_exists(abs_path)) {
+				throw 404;
+			}
 		}
 	} else {
 		//cgi 인 경우
-		location_key_post = find_cgi_loc_key(rel_path);
-		if (location_key_post == "/")
+		location_key_post_cgi = find_cgi_loc_key(rel_path);
+		if (location_key_post_cgi == "/")
 			throw 405;
-		abs_path = config->getCgiLocation().second.getRoot() + rel_path;
+		if (config->getCgiLocation().second.getRoot() == "") {
+			abs_path = config->getRoot() + rel_path;
+		} else {
+			abs_path = config->getCgiLocation().second.getRoot() + rel_path;
+		}
 	}
+
+	/////////////////////////////////////////////////////
+	std::cout << location_key << std::endl;
+	std::cout << location_key_post_cgi << std::endl;
+	std::cout << abs_path << std::endl;
 }
 
 std::string Post::find_loc_key(std::string rel_path) {
@@ -304,7 +333,13 @@ char** Post::postCgiEnv(std::map<std::string, std::vector<std::string> > header_
 }
 
 void Post::saveToFile(std::string message_body) {
-	std::string filename = generateFileName(config);
+	std::string filename;
+	if (abs_path.find(".") == std::string::npos) {
+		filename = generateFileName(config);
+	} else {
+		size_t pos = abs_path.rfind('/');
+		filename = abs_path.substr(pos);
+	}
 	std::string data_path = abs_path + "/" + filename;
 	std::ofstream file_write(data_path, std::ios::app);
 

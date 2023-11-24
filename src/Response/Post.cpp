@@ -2,15 +2,18 @@
 #include "../../inc/MediaType.hpp"
 #include "../../inc/Location.hpp"
 #include <fcntl.h>
+#include <iostream>
+
 
 Post::Post(const HttpRequestMessage* request, const Config* config) : Method(request, config){
-	if (request->getURL().find("cgi") == std::string::npos) {
-		this->location_key = findLocationKey();
-	} else {
-		this->location_key_post = find_cgi_loc_key(request->getURL());
-	}
+// 	if (request->getURL().find("cgi") == std::string::npos) {
+// 		this->location_key = findLocationKey();
+// 	} else {
+// 		this->location_key_post = find_cgi_loc_key(request->getURL());
+// 	}
 	_status_code = 0;
 	_message_body = "";
+	rel_path = "";
 	abs_path = "";
 	content_type = "";
 	content_length = 0;
@@ -21,30 +24,22 @@ HttpResponseMessage Post::makeHttpResponseMessage(){
 	return HttpResponseMessage(_status_code, _header_fields, _message_body);
 }
 
-void Post::checkAllowed(const std::string method) const {
-	if (request->getURL().find("cgi") == std::string::npos) {
-		if (config->getLocations()[location_key].isNotAllowedMethod(method)) {
-			throw 405;
-		}
-	}
-}
-
 void Post::set_member() {
 	if (request->getMethod() != "POST") {
 		_status_code = 300;
-		request_url = request->getRequestLine()[1];
 	} else if (request->getMessageBody() == "") {
-		//redirect to get
-		//make
 		_status_code = 300;
-		request_url = request->getRequestLine()[1];
 	} else {
 		//요청 url 형태 및 실행 가능 여부 확인
 		check_request_line(request->getRequestLine());
 		//헤더 필드 확인 -> body가 있는 경우이기 때문에 필수 헤더 확인
 		check_header_field(request->getHeaderFields());
 	}
-	if (location_key_post == "/cgi-bin") {
+
+
+
+
+	if (isCgi() == true) {
 		//cgi post 처리
 		cgipost();
 	} else {
@@ -61,73 +56,95 @@ void Post::set_member() {
 
 
 void Post::check_request_line(std::vector<std::string> request_line) {
-	std::string rel_path;
+	std::string url_path;
 	size_t pos;
 
 	if (request_line.size() != 3)
 		throw 404;
 	if (request_line[1].compare(0, 7, "http://")  == 0) {
 		pos = request_line[1].find('/', 8);
-		rel_path = request_line[1].substr(pos);
+		url_path = request_line[1].substr(pos);
 	} else if (request_line[1].compare(0, 8, "https://") == 0) {
 		pos = request_line[1].find('/', 9);
-		rel_path = request_line[1].substr(pos);
+		url_path = request_line[1].substr(pos);
 	} else if (request_line[1][0] == '/') {
-		rel_path = request_line[1];
+		url_path = request_line[1];
 	} else {
 		//상위 디렉토리 확인의  경우는  제외
-		//this->_status_code = 404;
 		throw 404;
 		return;
 	}
-	if (rel_path.find("cgi") == std::string::npos) {
-		//location 확인 후 그곳에서의 가능 메서드 확인
-		location_key_post = find_loc_key(rel_path);
-		if (config->getLocations()[location_key_post].isNotAllowedMethod("POST") == true) {
-			throw 405;
-		}
-		abs_path = config->getRoot() + rel_path;
-		if (!directory_exists(abs_path)) {
-			throw 404;
+
+	//request URL_path -> rel_path 값찾아내기
+	if (url_path.find(location_key) == 0) {
+		rel_path = url_path.substr(location_key.size());
+	}
+
+	//abs_path 를 기준에 따라서 완성
+	if (config->getLocations()[location_key].getRoot() == "") {
+		if (config->getRoot() != "") {
+			abs_path = config->getRoot() + url_path;
+		} else {
+			abs_path = config->getLocations()["/"].getRoot() + url_path;
 		}
 	} else {
-		//cgi 인 경우
-		location_key_post = find_cgi_loc_key(rel_path);
-		if (location_key_post == "/")
-			throw 405;
-//		abs_path = config->getCgiLocation().second.getRoot() + rel_path;
+		abs_path = config->getLocations()[location_key].getRoot() + url_path;
 	}
+
+
+
+
+
+	//if (url_path.find("cgi") == std::string::npos) {
+	//	//location 확인 후 그곳에서의 가능 메서드 확인
+	//	//location_key = find_loc_key(url_path);
+	//	if (config->getLocations()[location_key].isNotAllowedMethod("POST") == true) {
+	//		throw 405;
+	//	}
+	//	if (config->getLocations()[location_key].getRoot() == "") {
+	//		if (config->getRoot() != "") {
+	//			abs_path = config->getRoot() + url_path;
+	//		} else {
+	//			abs_path = config->getLocations()["/"].getRoot() + url_path;
+	//		}
+	//		if (!directory_exists(abs_path)) {
+	//			throw 404;
+	//		}
+	//	} else {
+	//		abs_path = config->getLocations()[location_key].getRoot() + url_path;
+	//		if (!directory_exists(abs_path)) {
+	//			throw 404;
+	//		}
+	//	}
+	//} else {
+	//	//cgi 인 경우
+	//	location_key_post_cgi = find_cgi_loc_key(url_path);
+	//	if (location_key_post_cgi == "/")
+	//		throw 405;
+	//	if (config->getCgiLocation().second.getRoot() == "") {
+	//		abs_path = config->getRoot() + url_path;
+	//	} else {
+	//		abs_path = config->getCgiLocation().second.getRoot() + url_path;
+	//	}
+	//}
+
+
 }
 
-std::string Post::find_loc_key(std::string rel_path) {
-	std::string path_checker = rel_path;
-	std::map<std::string, Location> locs = config->getLocations();
-	size_t pos = path_checker.length();
+//std::string Post::find_loc_key(std::string url_path) {
+//	std::string path_checker = url_path;
+//	std::map<std::string, Location> locs = config->getLocations();
+//	size_t pos = path_checker.length();
 
-	while (locs.find(path_checker) == locs.end()) {
-		pos = path_checker.rfind('/', pos - 1);
-		if (pos == 0)
-			path_checker = '/';
-		else
-			path_checker = path_checker.substr(0, pos);
-	}
-	return path_checker;
-}
-
-std::string Post::find_cgi_loc_key(std::string rel_path) {
-	std::string path_checker = rel_path;
-//	std::pair<std::string, CgiLocation> locs = config->getCgiLocation();
-	size_t pos = path_checker.length();
-    (void) pos;
-//	while (locs.first != path_checker) {
+//	while (locs.find(path_checker) == locs.end()) {
 //		pos = path_checker.rfind('/', pos - 1);
 //		if (pos == 0)
 //			path_checker = '/';
 //		else
 //			path_checker = path_checker.substr(0, pos);
 //	}
-	return path_checker;
-}
+//	return path_checker;
+//}
 
 bool Post::directory_exists(const std::string& path) {
 	struct stat info;
@@ -217,7 +234,7 @@ void Post::cgipost() {
 	else if (pid) {
 		_message_body = parent_read(pipe_ptoc, pipe_ctop, pid);
 	} else {
-//		child_write(pipe_ptoc, pipe_ctop, config->getCgiLocation().second, request->getHeaderFields());
+		child_write(pipe_ptoc, pipe_ctop, config->getLocations()[location_key], request->getHeaderFields());
 	}
 	body_length << _message_body.size();
 	_header_fields["content-length"] = body_length.str();
@@ -261,26 +278,27 @@ std::string Post::parent_read(int* pipe_ptoc, int* pipe_ctop, pid_t pid) {
 	}
 	return body;
 }
-//
-//void Post::child_write(int* pipe_ptoc, int* pipe_ctop, CgiLocation cgi_location, std::map<std::string, std::vector<std::string> > header_field) {
-//	char** cgi_environ = postCgiEnv(header_field);
-//	char* python_interpreter = strdup(cgi_location.getCgiPath().c_str());
-//	char* python_script = strdup(abs_path.c_str());
-//	char* const command[] = {python_interpreter, python_script, NULL};
-//
-//	if (close(pipe_ptoc[1]) == -1 || close(pipe_ctop[0]) == -1) {
-//		exit(EXIT_FAILURE);
-//	}
-//	if (dup2(pipe_ptoc[0], STDIN_FILENO) == -1 || dup2(pipe_ctop[1], STDOUT_FILENO) == -1) {
-//		exit(EXIT_FAILURE);
-//	}
-//	if (close(pipe_ptoc[0]) == -1 || close(pipe_ctop[1]) == -1) {
-//		exit(EXIT_FAILURE);
-//	}
-//	if (execve(python_interpreter, command, cgi_environ) == -1 ) {
-//		exit(EXIT_FAILURE);
-//	}
-//}
+
+void Post::child_write(int* pipe_ptoc, int* pipe_ctop, Location location, std::map<std::string, std::vector<std::string> > header_field) {
+	char** cgi_environ = postCgiEnv(header_field);
+	char* python_interpreter = strdup(location.getCgiPath().c_str());
+	char* python_script = strdup(abs_path.c_str());
+	char* const command[] = {python_interpreter, python_script, NULL};
+
+	if (close(pipe_ptoc[1]) == -1 || close(pipe_ctop[0]) == -1) {
+		exit(EXIT_FAILURE);
+	}
+	if (dup2(pipe_ptoc[0], STDIN_FILENO) == -1 || dup2(pipe_ctop[1], STDOUT_FILENO) == -1) {
+		exit(EXIT_FAILURE);
+	}
+	if (close(pipe_ptoc[0]) == -1 || close(pipe_ctop[1]) == -1) {
+		exit(EXIT_FAILURE);
+	}
+	if (execve(python_interpreter, command, cgi_environ) == -1 ) {
+		exit(EXIT_FAILURE);
+	}
+}
+
 
 char** Post::postCgiEnv(std::map<std::string, std::vector<std::string> > header_field) {
 	std::map<std::string, std::string> env;
@@ -302,7 +320,13 @@ char** Post::postCgiEnv(std::map<std::string, std::vector<std::string> > header_
 }
 
 void Post::saveToFile(std::string message_body) {
-	std::string filename = generateFileName(config);
+	std::string filename;
+	if (abs_path.find(".") == std::string::npos) {
+		filename = generateFileName(config);
+	} else {
+		size_t pos = abs_path.rfind('/');
+		filename = abs_path.substr(pos);
+	}
 	std::string data_path = abs_path + "/" + filename;
 	std::ofstream file_write(data_path, std::ios::app);
 
@@ -365,7 +389,7 @@ void Post::make_post_response() {
 			_header_fields["content-type"] = content_type;
 	} else if (_status_code >= 300 && _status_code < 400) {
 		// 리다이렉션
-		_header_fields["location"] = request_url;
+		_header_fields["location"] = request->getURL();
 		_header_fields["content-type"] = "text/html";
 
 		// 리다이렉트 될 경우에 html 페이지 띄워준다.

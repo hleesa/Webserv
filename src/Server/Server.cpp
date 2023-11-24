@@ -1,7 +1,7 @@
 #include "../../inc/Server.hpp"
 #include "../../inc/Method.hpp"
 #include "../../inc/Get.hpp"
-#include "../../inc/GetCgi.hpp"
+//#include "../../inc/GetCgi.hpp"
 #include "../../inc/Post.hpp"
 #include "../../inc/Delete.hpp"
 #include "../../inc/ErrorPage.hpp"
@@ -33,7 +33,8 @@ std::string Server::makeResponse(std::map<int, Config>& configs) {
 		if (request.getStatusCode()) {
 			throw (request.getStatusCode());
 		}
-        Method *method = Method::generate(request.getMethod(), &request, &configs[listen_socket]);
+        
+		Method *method = Method::generate(request.getMethod(), &request, &configs[listen_socket]);
 		method->checkAllowed(request.getMethod());
         std::string response_message = method->makeHttpResponseMessage().toString();
         delete method;

@@ -19,8 +19,9 @@ class Post : public Method {
 		std::map<std::string, std::string> _header_fields;
 		std::string _message_body;
 
-		std::string location_key_post;
-		std::string abs_path;		//config->root + url rel_path
+		//std::string location_key_post_cgi;
+		std::string rel_path;
+		std::string abs_path;		//config->root + url_path
 		std::string request_url;	//요청->url
 		std::string content_type;	//요청->type
 		std::string file_extention;	//요청->type에 따른 확장자
@@ -32,19 +33,17 @@ class Post : public Method {
 		Post(const HttpRequestMessage* request, const Config* config);
 
 		virtual HttpResponseMessage makeHttpResponseMessage();
-		virtual void checkAllowed(const std::string method) const;
 		void set_member();
 
 		void check_request_line(std::vector<std::string> request_line);
 		std::string find_loc_key(std::string rel_path);
-		std::string find_cgi_loc_key(std::string rel_path);
 		bool directory_exists(const std::string& path);
 		void check_header_field(std::map<std::string, std::vector<std::string> > header_field);
 
 //cgi response
 		void cgipost();
 		std::string parent_read(int* pipe_write, int* pipe_read, pid_t pid);
-		void child_write(int* pipe_write, int* pipe_read, CgiLocation cgi_location, std::map<std::string, std::vector<std::string> > header_field);
+		void child_write(int* pipe_write, int* pipe_read, Location location, std::map<std::string, std::vector<std::string> > header_field);
 		char** postCgiEnv(std::map<std::string, std::vector<std::string> > header_field);
 //save string and make reponse
 		void saveToFile(std::string message_body);

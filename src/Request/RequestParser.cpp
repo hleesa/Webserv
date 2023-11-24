@@ -4,6 +4,8 @@
 #include <sstream>
 #include <algorithm>
 
+#include <iostream>
+
 RequestParser::RequestParser() {}
 
 RequestParser::RequestParser(const RequestParser& other) {
@@ -29,7 +31,15 @@ HttpRequestMessage RequestParser::getHttpRequestMessage(const int ident, const l
     
 	if (data.body.content.size() > static_cast<unsigned long>(limit_body_size)) {
 		data.status_code = 413;
-	}	
+	}
+
+	//std::cout << data.request_line[0] << " " << data.request_line[1] << " " << data.request_line[2] << std::endl;
+	//std::map<std::string, std::vector<std::string> >::iterator ite;
+	//for (ite = request->getHeaderFields().begin(); ite != request->getHeaderFields().end(); ++ite) {
+	//	std::cout << ite->first << std::endl;
+	//}
+	//std::cout << data.body.content.size() << std::endl;
+	
 	return HttpRequestMessage(data.request_line, data.header_fields, data.body.content, data.status_code);
 }
 

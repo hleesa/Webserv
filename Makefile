@@ -4,8 +4,7 @@ CXX = c++
 
 INCLUDE_DIR = ./inc/
 
-# CXXFLAGS = -Wall -Wextra -Werror -std=c++98 -I $(INCLUDE_DIR)
-CXXFLAGS = -std=c++98 -I $(INCLUDE_DIR)
+CXXFLAGS = -Wall -Wextra -Werror -std=c++98 -I $(INCLUDE_DIR)
 
 SRCS_DIR = ./src/
 
@@ -29,13 +28,13 @@ RESPONSE_SRC = \
 			CodeToReason.cpp \
 			Method.cpp \
 			Get.cpp \
-			GetCgi.cpp \
 			Post.cpp \
 			Delete.cpp \
 			Head.cpp \
 			Resource.cpp\
 			ErrorPage.cpp \
 			MediaType.cpp
+#GetCgi.cpp 
 
 SERVER_SRC = \
 			Server.cpp \

@@ -11,6 +11,10 @@
 
 Method::Method() {}
 
+Method::Method(const HttpRequestMessage* request, const Config* config) : request(request), config(config),
+                                                                          location_key(findLocationKey()) {
+}
+
 Method::~Method() {}
 
 Method* Method::generate(const std::string method, const HttpRequestMessage* request, const Config* config) {
@@ -42,7 +46,7 @@ bool Method::isCgi() const {
 		return false;
 	}
 	if (request->getMethod() == "GET") {
-		int queryPos = url.find("?");
+        size_t queryPos = url.find("?");
 		url = queryPos != std::string::npos ? url.substr(0, queryPos) : url;
 	}
 	if (url.size() < extension.size()) {

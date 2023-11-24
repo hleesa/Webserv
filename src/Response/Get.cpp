@@ -4,10 +4,7 @@
 #include <unistd.h>
 #include <ctime>
 
-Get::Get(const HttpRequestMessage* request, const Config* config) {
-	this->request = request;
-	this->config = config;
-	this->location_key = findLocationKey();
+Get::Get(const HttpRequestMessage* request, const Config* config) : Method(request, config) {
 }
 
 HttpResponseMessage Get::makeHttpResponseMessage(){

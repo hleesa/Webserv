@@ -193,7 +193,7 @@ std::string readCgiResponse(int* pipe_fd, pid_t pid) {
 }
 
 std::map<std::string, std::string> GetCgi::createHeaderFields(const std::string& body) const {
-    std::map<std::string, std::string> header_fields = makeHeaderFileds();
+    std::map<std::string, std::string> header_fields = makeHeaderFields();
     header_fields["Content-Length"] = to_string(body.size());
     return header_fields;
 }

@@ -89,7 +89,7 @@ void Method::checkAllowed(const std::string method) const {
 	}
 }
 
-std::map<std::string, std::string> Method::makeHeaderFileds() const {
+std::map<std::string, std::string> Method::makeHeaderFields() const {
 	std::map<std::string, std::string> header;
 
 	header["Date"] = makeDate();

@@ -35,7 +35,7 @@ void ServerManager::setConfigByServerName(const std::vector<Config>* configs) {
 		std::vector<std::string>::iterator name = server_name.begin();
 		for (;name != server_name.end(); name++) {
 			const Config* config = &*itr;
-			server_name_to_config[*name + ":" + to_string(port)].push_back(config);
+			server_name_to_config[*name].push_back(config);
 		}
 	}
 	addListenEvent();

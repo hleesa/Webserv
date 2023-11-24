@@ -13,7 +13,7 @@ HttpResponseMessage Delete::makeHttpResponseMessage() {
 	if (remove(path.c_str()) == -1) {
 		throw 500;
 	}
-	return HttpResponseMessage(204, makeHeaderFileds(), "");
+	return HttpResponseMessage(204, makeHeaderFields(), "");
 }
 
 void Delete::handleError(const std::string path) const {

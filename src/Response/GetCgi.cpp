@@ -1,5 +1,5 @@
 
-#include "GetCgi.hpp"
+#include "../../inc/GetCgi.hpp"
 #include <map>
 #include <unistd.h>
 
@@ -7,13 +7,10 @@
 #define READ 0
 #define WRITE 1
 
-GetCgi::GetCgi(const HttpRequestMessage* request, const Config* config) {
-    this->request = request;
-    this->config = config;
+GetCgi::GetCgi(const HttpRequestMessage* request, const Config* config) : Method(request, config) {
 }
 
-// http://example.com
-// /cgi-bin/cgi_script.py?input=Hello
+// /cgi-bin/cgi_get.py?input=Hello
 std::vector<std::string> tokenizeUrl(const std::string& url) {
     std::string new_url = url.substr(1);
     for (std::string::iterator ch = new_url.begin(); ch != new_url.end(); ++ch) {
@@ -87,26 +84,26 @@ bool GetCgi::isValidCgiGetUrl() const {
     const std::vector<std::string>& request_line = request->getRequestLine();
 
     const std::vector<std::string> url_vec = parseUrl(request_line[1]);
-    if (request_line.front() != "GET" || url_vec.front().find("cgi") == std::string::npos) {
+//    if (request_line.front() != "GET" || url_vec.front().find("cgi") == std::string::npos) {
+//        return false;
+//    }
+//    std::string path = "/" + *url_vec.begin();
+//    if (config->getLocations().find(path) == config->getLocations().end()) {
+//        return false;
+//    }
+    Location cgi_location = config->getLocations()[location_key];
+    const std::string cgi_script_url = getScriptPath(request_line[1], cgi_location.getRoot());
+    if (cgi_script_url.length() < cgi_location.getCgiExt().length()) {
         return false;
     }
-    std::pair<std::string, CgiLocation> cgi_location = config->getCgiLocation();
-    if (url_vec.front() != cgi_location.first.substr(1)) {
-        return false;
-    }
-    const std::string cgi_script_url = getScriptPath(request_line[1], cgi_location.second.getRoot());
-    if (cgi_script_url.length() < cgi_location.second.getCgiExt().length()) {
-        return false;
-    }
-    else if (cgi_script_url.substr(cgi_script_url.length() - cgi_location.second.getCgiExt().length()) !=
-             cgi_location.second.getCgiExt()) {
+    else if (cgi_script_url.substr(cgi_script_url.length() - cgi_location.getCgiExt().length()) !=
+             cgi_location.getCgiExt()) {
         return false;
     }
     else if (access(cgi_script_url.c_str(), F_OK | X_OK) == ERROR) {
         return false;
     }
     return true;
-
 }
 
 std::map<std::string, std::string> setEnviron(const std::string query_string) {
@@ -137,7 +134,7 @@ std::string getQueryString(const std::string url) {
     return url.substr(idx + 1);
 }
 
-void execveCgiScript(int* pipe_fd, const std::string requestUrl, CgiLocation cgi_location) {
+void execveCgiScript(int* pipe_fd, const std::string requestUrl, Location cgi_location) {
     char** cgi_environ = createCgiEnviron(getQueryString(requestUrl));
     char* python_interpreter = strdup(cgi_location.getCgiPath().c_str());
     char* python_script = strdup(getScriptPath(requestUrl, cgi_location.getRoot()).c_str());
@@ -190,13 +187,13 @@ std::string readCgiResponse(int* pipe_fd, pid_t pid) {
 }
 
 std::map<std::string, std::string> GetCgi::createHeaderFields(const std::string& body) const {
-    std::map<std::string, std::string> header_fields = makeHeaderFileds();
+    std::map<std::string, std::string> header_fields = makeHeaderFields();
     header_fields["Content-Length"] = to_string(body.size());
     return header_fields;
 }
 
-// /cgi-bin/cgi_script.py?input=Hello
-HttpResponseMessage GetCgi::makeHttpResponseMessage(){
+// /cgi-bin/cgi_get.py?input=Hello
+HttpResponseMessage GetCgi::makeHttpResponseMessage() {
     if (!isValidCgiGetUrl()) {
         throw 400;
     }
@@ -213,7 +210,7 @@ HttpResponseMessage GetCgi::makeHttpResponseMessage(){
         body = readCgiResponse(pipe_fd, pid);
     }
     else {
-        execveCgiScript(pipe_fd, request->getURL(), config->getCgiLocation().second);
+        execveCgiScript(pipe_fd, request->getURL(), config->getLocations()[location_key]);
     }
     int status_code = 200;
     std::map<std::string, std::string> header_fields = createHeaderFields(body);

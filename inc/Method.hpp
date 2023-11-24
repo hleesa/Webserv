@@ -15,11 +15,12 @@ class Method {
 		std::string findLocationKey() const;
 		std::string findRoot() const;
 		
-		std::map<std::string, std::string> makeHeaderFileds() const;
+		std::map<std::string, std::string> makeHeaderFields() const;
 		std::string makeDate() const;
 
 	public:
 		Method();
+        Method(const HttpRequestMessage* request, const Config* config);
 		virtual ~Method();
 
 		bool isCgi() const;

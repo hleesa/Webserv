@@ -4,10 +4,7 @@
 #include <unistd.h>
 #include <ctime>
 
-Get::Get(const HttpRequestMessage* request, const Config* config) {
-	this->request = request;
-	this->config = config;
-	this->location_key = findLocationKey();
+Get::Get(const HttpRequestMessage* request, const Config* config) : Method(request, config) {
 }
 
 HttpResponseMessage Get::makeHttpResponseMessage(){
@@ -21,7 +18,7 @@ HttpResponseMessage Get::makeHttpResponseMessage(){
 	}
 	Resource resource = makeResource();
 	std::string body = resource.make();
-	return HttpResponseMessage(200, makeHeaderFileds(body, resource.getPath()), body);
+	return HttpResponseMessage(200, makeHeaderFields(body, resource.getPath()), body);
 }
 
 HttpResponseMessage Get::processReturnDirective() const {
@@ -32,14 +29,14 @@ HttpResponseMessage Get::processReturnDirective() const {
 		return makeRedirectionResponse(return_value);
 	}
 	std::string body = return_value.second;
-	return HttpResponseMessage(status_code, makeHeaderFileds(body, ".txt"), body);
+	return HttpResponseMessage(status_code, makeHeaderFields(body, ".txt"), body);
 }
 
 HttpResponseMessage Get::makeRedirectionResponse(const std::pair<int, std::string> return_value) const {
 	std::string host = request->getHeaderFields()["host"].at(0);
 	std::string location = "http://" + host + return_value.second;
 	std::string body = "Moved Permanently. Redirecting to " + location + ".";
-	std::map<std::string, std::string> header = makeHeaderFileds(body, ".txt");
+	std::map<std::string, std::string> header = makeHeaderFields(body, ".txt");
 
 	header["Location"] = location;
 	header["Content-type"] = "text/plain";
@@ -103,8 +100,8 @@ bool Get::isDirectoryList(const std::string path) const {
 	return true;
 }
 
-std::map<std::string, std::string> Get::makeHeaderFileds(const std::string& body, const std::string path) const {
-	std::map<std::string, std::string> header = Method::makeHeaderFileds();
+std::map<std::string, std::string> Get::makeHeaderFields(const std::string& body, const std::string path) const {
+	std::map<std::string, std::string> header = Method::makeHeaderFields();
 
 	header["Content-length"] = std::to_string(body.length());
 	if (!path.empty()) {

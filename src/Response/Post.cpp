@@ -4,17 +4,13 @@
 #include <fcntl.h>
 #include <iostream>
 
-Post::Post(const HttpRequestMessage* request, const Config* config) {
-	this->request = request;
-	this->config = config;
 
-
-
-	//if (request->getURL().find("cgi") == std::string::npos) {
-	//	this->location_key = findLocationKey();
-	//} else {
-	//	this->location_key_post_cgi = find_cgi_loc_key(request->getURL());
-	//}
+Post::Post(const HttpRequestMessage* request, const Config* config) : Method(request, config){
+// 	if (request->getURL().find("cgi") == std::string::npos) {
+// 		this->location_key = findLocationKey();
+// 	} else {
+// 		this->location_key_post = find_cgi_loc_key(request->getURL());
+// 	}
 	_status_code = 0;
 	_message_body = "";
 	rel_path = "";
@@ -131,6 +127,7 @@ void Post::check_request_line(std::vector<std::string> request_line) {
 	//		abs_path = config->getCgiLocation().second.getRoot() + url_path;
 	//	}
 	//}
+
 
 }
 
@@ -301,6 +298,7 @@ void Post::child_write(int* pipe_ptoc, int* pipe_ctop, Location location, std::m
 		exit(EXIT_FAILURE);
 	}
 }
+
 
 char** Post::postCgiEnv(std::map<std::string, std::vector<std::string> > header_field) {
 	std::map<std::string, std::string> env;

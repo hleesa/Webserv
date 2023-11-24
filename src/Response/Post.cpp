@@ -3,9 +3,7 @@
 #include "../../inc/Location.hpp"
 #include <fcntl.h>
 
-Post::Post(const HttpRequestMessage* request, const Config* config) {
-	this->request = request;
-	this->config = config;
+Post::Post(const HttpRequestMessage* request, const Config* config) : Method(request, config){
 	if (request->getURL().find("cgi") == std::string::npos) {
 		this->location_key = findLocationKey();
 	} else {
@@ -97,7 +95,7 @@ void Post::check_request_line(std::vector<std::string> request_line) {
 		location_key_post = find_cgi_loc_key(rel_path);
 		if (location_key_post == "/")
 			throw 405;
-		abs_path = config->getCgiLocation().second.getRoot() + rel_path;
+//		abs_path = config->getCgiLocation().second.getRoot() + rel_path;
 	}
 }
 
@@ -118,16 +116,16 @@ std::string Post::find_loc_key(std::string rel_path) {
 
 std::string Post::find_cgi_loc_key(std::string rel_path) {
 	std::string path_checker = rel_path;
-	std::pair<std::string, CgiLocation> locs = config->getCgiLocation();
+//	std::pair<std::string, CgiLocation> locs = config->getCgiLocation();
 	size_t pos = path_checker.length();
-
-	while (locs.first != path_checker) {
-		pos = path_checker.rfind('/', pos - 1);
-		if (pos == 0)
-			path_checker = '/';
-		else
-			path_checker = path_checker.substr(0, pos);
-	}
+    (void) pos;
+//	while (locs.first != path_checker) {
+//		pos = path_checker.rfind('/', pos - 1);
+//		if (pos == 0)
+//			path_checker = '/';
+//		else
+//			path_checker = path_checker.substr(0, pos);
+//	}
 	return path_checker;
 }
 
@@ -219,7 +217,7 @@ void Post::cgipost() {
 	else if (pid) {
 		_message_body = parent_read(pipe_ptoc, pipe_ctop, pid);
 	} else {
-		child_write(pipe_ptoc, pipe_ctop, config->getCgiLocation().second, request->getHeaderFields());
+//		child_write(pipe_ptoc, pipe_ctop, config->getCgiLocation().second, request->getHeaderFields());
 	}
 	body_length << _message_body.size();
 	_header_fields["content-length"] = body_length.str();
@@ -263,26 +261,26 @@ std::string Post::parent_read(int* pipe_ptoc, int* pipe_ctop, pid_t pid) {
 	}
 	return body;
 }
-
-void Post::child_write(int* pipe_ptoc, int* pipe_ctop, CgiLocation cgi_location, std::map<std::string, std::vector<std::string> > header_field) {
-	char** cgi_environ = postCgiEnv(header_field);
-	char* python_interpreter = strdup(cgi_location.getCgiPath().c_str());
-	char* python_script = strdup(abs_path.c_str());
-	char* const command[] = {python_interpreter, python_script, NULL};
-
-	if (close(pipe_ptoc[1]) == -1 || close(pipe_ctop[0]) == -1) {
-		exit(EXIT_FAILURE);
-	}
-	if (dup2(pipe_ptoc[0], STDIN_FILENO) == -1 || dup2(pipe_ctop[1], STDOUT_FILENO) == -1) {
-		exit(EXIT_FAILURE);
-	}
-	if (close(pipe_ptoc[0]) == -1 || close(pipe_ctop[1]) == -1) {
-		exit(EXIT_FAILURE);
-	}
-	if (execve(python_interpreter, command, cgi_environ) == -1 ) {
-		exit(EXIT_FAILURE);
-	}
-}
+//
+//void Post::child_write(int* pipe_ptoc, int* pipe_ctop, CgiLocation cgi_location, std::map<std::string, std::vector<std::string> > header_field) {
+//	char** cgi_environ = postCgiEnv(header_field);
+//	char* python_interpreter = strdup(cgi_location.getCgiPath().c_str());
+//	char* python_script = strdup(abs_path.c_str());
+//	char* const command[] = {python_interpreter, python_script, NULL};
+//
+//	if (close(pipe_ptoc[1]) == -1 || close(pipe_ctop[0]) == -1) {
+//		exit(EXIT_FAILURE);
+//	}
+//	if (dup2(pipe_ptoc[0], STDIN_FILENO) == -1 || dup2(pipe_ctop[1], STDOUT_FILENO) == -1) {
+//		exit(EXIT_FAILURE);
+//	}
+//	if (close(pipe_ptoc[0]) == -1 || close(pipe_ctop[1]) == -1) {
+//		exit(EXIT_FAILURE);
+//	}
+//	if (execve(python_interpreter, command, cgi_environ) == -1 ) {
+//		exit(EXIT_FAILURE);
+//	}
+//}
 
 char** Post::postCgiEnv(std::map<std::string, std::vector<std::string> > header_field) {
 	std::map<std::string, std::string> env;

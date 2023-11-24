@@ -20,6 +20,7 @@ class Method {
 
 	public:
 		Method();
+        Method(const HttpRequestMessage* request, const Config* config);
 		virtual ~Method();
 
 		bool isCgi() const;

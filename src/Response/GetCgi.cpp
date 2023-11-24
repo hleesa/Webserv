@@ -7,13 +7,7 @@
 #define READ 0
 #define WRITE 1
 
-//GetCgi::GetCgi(const HttpRequestMessage* request, const Config* config) : Method(request, config) {
-//}
-
-GetCgi::GetCgi(const HttpRequestMessage* request, const Config* config) {
-    this->request = request;
-    this->config = config;
-    this->location_key = findLocationKey();
+GetCgi::GetCgi(const HttpRequestMessage* request, const Config* config) : Method(request, config) {
 }
 
 // /cgi-bin/cgi_get.py?input=Hello

@@ -46,6 +46,7 @@ class Config {
 		std::vector<std::string> getIndex() const;
 		long getLimitBodySize() const;
 		std::map<std::string, Location> getLocations() const;
+		bool hasLocationOf(const std::string url) const;
 
 //인자 확인 함수
 		// void print_checker(void);

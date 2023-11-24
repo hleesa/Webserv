@@ -18,14 +18,15 @@ ServerManager::ServerManager(const std::vector<Config>* configs) {
 ServerManager::~ServerManager() {}
 
 void ServerManager::setConfigByServerName(const std::vector<Config>* configs) {
-	std::map<int, int> port_to_listen_socket;
 	std::vector<Config>::const_iterator itr = (*configs).begin();
 
+    default_config = &*itr;
     for (;itr != (*configs).end(); itr++) {
 		int port = itr->getPort();
 		if (port_to_listen_socket.find(port) == port_to_listen_socket.end()) {
 			int socket = openListenSocket(port);
-            listen_sock_to_configs[socket] = &*itr;
+            listen_sockets.insert(socket);
+            port_to_listen_socket[port] = socket;
 			if (fcntl(socket, F_SETFL, O_NONBLOCK, FD_CLOEXEC) == ERROR) {
 				throw (strerror(errno));
 			}
@@ -37,7 +38,7 @@ void ServerManager::setConfigByServerName(const std::vector<Config>* configs) {
 			server_name_to_config[*name + ":" + to_string(port)].push_back(config);
 		}
 	}
-	addListenEvent(port_to_listen_socket);
+	addListenEvent();
 }
 
 int ServerManager::openListenSocket(const int port) const {
@@ -59,11 +60,11 @@ int ServerManager::openListenSocket(const int port) const {
     return listen_socket;
 }
 
-void ServerManager::addListenEvent(std::map<int, int>& port_to_listen_socket) {
-    std::map<int, int>::iterator itr = port_to_listen_socket.begin();
+void ServerManager::addListenEvent() {
+    std::set<int>::iterator itr = listen_sockets.begin();
 
-    for (; itr != port_to_listen_socket.end(); itr++) {
-        change_list.push_back(makeEvent(itr->second, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, NULL));
+    for (; itr != listen_sockets.end(); itr++) {
+        change_list.push_back(makeEvent(*itr, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, NULL));
     }
 }
 
@@ -101,18 +102,16 @@ void ServerManager::processEvents(const int events) {
 			std::cout << "error\n";
             checkEventError(*event);
         }
-        else if (event->filter == EVFILT_READ && listen_sock_to_configs.find(event->ident) != listen_sock_to_configs.end()) {
+        else if (event->filter == EVFILT_READ && listen_sockets.find(event->ident) != listen_sockets.end()) {
             processListenEvent(*event);
         }
         else if (event->filter == EVFILT_READ && servers.find(event->ident) != servers.end()) {
             processReadEvent(*event);
 			if (parser.getReadingStatus(event->ident) == END) {
-                const Config *config = listen_sock_to_configs[connection_to_listen[event->ident]];
-//				int limit_body_size = configs[servers[event->ident].getListenSocket()].getLimitBodySize();
-                int limit_body_size = config->getLimitBodySize();
-
-				servers[event->ident].setRequest(parser.getHttpRequestMessage(event->ident, limit_body_size));
-				parser.clear(event->ident);
+                HttpRequestMessage request = parser.getHttpRequestMessage(event->ident);
+				const Config* config = findConfig(event->ident, request.getURL(), request.getHost());
+                servers[event->ident].setRequest(request);
+                parser.clear(event->ident);
     			change_list.push_back(makeEvent(event->ident, EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, NULL));
                 servers[event->ident].setResponse(servers[event->ident].makeResponse(config));
 			}
@@ -127,6 +126,22 @@ void ServerManager::processEvents(const int events) {
             disconnectWithClient(*event);
         }
     }
+}
+
+const Config* ServerManager::findConfig(const int ident, const std::string url, const std::string host) {
+    if (server_name_to_config.find(host) == server_name_to_config.end()) {
+        return default_config;
+    }
+    std::vector<const Config*>::iterator itr = server_name_to_config[host].begin();
+    for (;itr != server_name_to_config[host].end(); itr++) {
+        const Config* config = *itr;
+        if (port_to_listen_socket[config->getPort()] == servers[ident].getListenSocket()) {
+            if (config->hasLocationOf(url)) {
+                return config;
+            }
+        }
+    }
+    return default_config;
 }
 
 void ServerManager::checkEventError(const struct kevent& event) {
@@ -146,8 +161,7 @@ void ServerManager::processListenEvent(const struct kevent& event) {
 	if (fcntl(connection_socket, F_SETFL, O_NONBLOCK, FD_CLOEXEC) == ERROR) {
         throw (strerror(errno));
 	}
-    connection_to_listen[connection_socket] = event.ident;
-//    servers[connection_socket] = Server(connection_socket, event.ident);
+    servers[connection_socket] = Server(event.ident);
     change_list.push_back(makeEvent(connection_socket, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, NULL));
     change_list.push_back(makeEvent(connection_socket, EVFILT_TIMER, EV_ADD | EV_ONESHOT, 0, TIMEOUT_MSEC, NULL));
 }

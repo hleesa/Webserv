@@ -38,7 +38,7 @@ class RequestParser {
 		~RequestParser();
 		
 		ReadingStatus getReadingStatus(const int ident);
-		HttpRequestMessage getHttpRequestMessage(const int ident, const long limit_body_size);
+		HttpRequestMessage getHttpRequestMessage(const int ident);
 		void run(const int ident, const char* newContent);
 		void clear(const int ident);
 };

@@ -42,7 +42,10 @@ std::string HttpRequestMessage::getMessageBody() const {
 	return this->message_body;
 }
 
-int HttpRequestMessage::getStatusCode() {
+int HttpRequestMessage::getStatusCode() const {
 	return status_code;
 }
 
+std::string HttpRequestMessage::getHost() {
+    return *this->header_fields["host"].begin();
+}

@@ -1,20 +1,17 @@
 #include "../../inc/Server.hpp"
 #include "../../inc/Method.hpp"
-#include "../../inc/Get.hpp"
-//#include "../../inc/GetCgi.hpp"
-#include "../../inc/Post.hpp"
-#include "../../inc/Delete.hpp"
 #include "../../inc/ErrorPage.hpp"
+#include "../../inc/Resource.hpp"
 
 Server::Server() {}
 
-Server::Server(int connection, int listen) {
-    connection_socket = connection;
-    listen_socket = listen;
+Server::Server(const int listen_socket) {
+    this->listen_socket = listen_socket;
 }
 
+
 int Server::getListenSocket() const {
-	return this->listen_socket;
+    return listen_socket;
 }
 
 void Server::setRequest(const HttpRequestMessage& request_message) {
@@ -33,7 +30,6 @@ std::string Server::makeResponse(const Config* config) {
 		if (request.getStatusCode()) {
 			throw (request.getStatusCode());
 		}
-        
 		Method *method = Method::generate(request.getMethod(), &request, config);
 		method->checkAllowed(request.getMethod());
         std::string response_message = method->makeHttpResponseMessage().toString();

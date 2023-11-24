@@ -91,6 +91,25 @@ std::map<std::string, Location> Config::getLocations() const {
 	return this->locations;
 }
 
+bool Config::hasLocationOf(const std::string url) const {
+	if (locations.find(url) != locations.end()) {
+		return true;
+	}
+	size_t pos = url.rfind('/');
+	while (pos && pos != std::string::npos) {
+		std::string key = url.substr(0, pos + 1);
+		if (locations.find(key) != locations.end()) {
+			return true;
+		}
+		key = url.substr(0, pos);
+		if (locations.find(key) != locations.end()) {
+			return true;
+		}
+		pos = key.rfind('/');
+	}
+	return false;
+}
+
 void Config::setDefaultErrorPage() {
 	int status_code;
 

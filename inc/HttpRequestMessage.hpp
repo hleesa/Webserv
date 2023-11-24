@@ -27,7 +27,8 @@ public:
 	std::vector<std::string> getRequestLine() const;
 	std::map<std::string, std::vector<std::string> > getHeaderFields() const;
 	std::string getMessageBody() const;
-	int getStatusCode();
+	int getStatusCode() const;
+    std::string getHost(); 
 };
 
 

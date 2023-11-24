@@ -1,5 +1,5 @@
 #include "../../inc/Get.hpp"
-//#include "../../inc/GetCgi.hpp"
+#include "../../inc/GetCgi.hpp"
 #include "../../inc/MediaType.hpp"
 #include <unistd.h>
 #include <ctime>
@@ -9,8 +9,8 @@ Get::Get(const HttpRequestMessage* request, const Config* config) : Method(reque
 
 HttpResponseMessage Get::makeHttpResponseMessage(){
 	if (isCgi()) {
-		//GetCgi cgi(request, config);
-		//return cgi.makeHttpResponseMessage();
+		GetCgi cgi(request, config);
+		return cgi.makeHttpResponseMessage();
 	}
 	Location location = config->getLocations()[location_key];
 	if (location.hasReturnValue()) {

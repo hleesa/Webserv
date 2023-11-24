@@ -30,7 +30,7 @@ class Server {
         bool isSendComplete();
         void clearResponse();
 
-		std::string makeResponse(std::map<int, Config>& configs);
+		std::string makeResponse(const Config* config);
 };
 
 #endif

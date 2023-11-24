@@ -11,7 +11,7 @@ int main(int argc, char *argv[]) {
 			config_file = argv[1];
 		}
         std::vector<Config> configs =  ConfigParser::parseConfigFile(config_file);
-		ServerManager manager(configs);
+		ServerManager manager(&configs);
 		manager.run();
     } 
 	catch (std::exception &exception) {

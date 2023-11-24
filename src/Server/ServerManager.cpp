@@ -25,6 +25,7 @@ void ServerManager::setConfigByServerName(const std::vector<Config>* configs) {
 		int port = itr->getPort();
 		if (port_to_listen_socket.find(port) == port_to_listen_socket.end()) {
 			int socket = openListenSocket(port);
+            listen_sock_to_configs[socket] = &*itr;
 			if (fcntl(socket, F_SETFL, O_NONBLOCK, FD_CLOEXEC) == ERROR) {
 				throw (strerror(errno));
 			}
@@ -100,17 +101,20 @@ void ServerManager::processEvents(const int events) {
 			std::cout << "error\n";
             checkEventError(*event);
         }
-        else if (event->filter == EVFILT_READ && configs.find(event->ident) != configs.end()) {
+        else if (event->filter == EVFILT_READ && listen_sock_to_configs.find(event->ident) != listen_sock_to_configs.end()) {
             processListenEvent(*event);
         }
         else if (event->filter == EVFILT_READ && servers.find(event->ident) != servers.end()) {
             processReadEvent(*event);
 			if (parser.getReadingStatus(event->ident) == END) {
-				int limit_body_size = configs[servers[event->ident].getListenSocket()].getLimitBodySize();
+                const Config *config = listen_sock_to_configs[connection_to_listen[event->ident]];
+//				int limit_body_size = configs[servers[event->ident].getListenSocket()].getLimitBodySize();
+                int limit_body_size = config->getLimitBodySize();
+
 				servers[event->ident].setRequest(parser.getHttpRequestMessage(event->ident, limit_body_size));
 				parser.clear(event->ident);
     			change_list.push_back(makeEvent(event->ident, EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, NULL));
-                servers[event->ident].setResponse(servers[event->ident].makeResponse(configs));
+                servers[event->ident].setResponse(servers[event->ident].makeResponse(config));
 			}
         }
         else if (event->filter == EVFILT_WRITE && servers.find(event->ident) != servers.end()) {
@@ -142,7 +146,8 @@ void ServerManager::processListenEvent(const struct kevent& event) {
 	if (fcntl(connection_socket, F_SETFL, O_NONBLOCK, FD_CLOEXEC) == ERROR) {
         throw (strerror(errno));
 	}
-    servers[connection_socket] = Server(connection_socket, event.ident);
+    connection_to_listen[connection_socket] = event.ident;
+//    servers[connection_socket] = Server(connection_socket, event.ident);
     change_list.push_back(makeEvent(connection_socket, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, NULL));
     change_list.push_back(makeEvent(connection_socket, EVFILT_TIMER, EV_ADD | EV_ONESHOT, 0, TIMEOUT_MSEC, NULL));
 }

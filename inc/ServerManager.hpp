@@ -20,6 +20,9 @@ class ServerManager {
 		std::vector<struct kevent> change_list;
 		struct kevent event_list[NUMBER_OF_EVENT];
 
+        std::map<int, const Config *> listen_sock_to_configs;
+        std::map<int, int> connection_to_listen;
+
 		std::map<std::string, std::vector<const Config*> > server_name_to_config;
 
 		std::map<int, Server> servers;

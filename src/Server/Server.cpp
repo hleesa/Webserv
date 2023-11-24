@@ -28,20 +28,20 @@ void Server::setResponse(std::string http_response) {
     return;
 }
 
-std::string Server::makeResponse(std::map<int, Config>& configs) {
+std::string Server::makeResponse(const Config* config) {
     try {
 		if (request.getStatusCode()) {
 			throw (request.getStatusCode());
 		}
         
-		Method *method = Method::generate(request.getMethod(), &request, &configs[listen_socket]);
+		Method *method = Method::generate(request.getMethod(), &request, config);
 		method->checkAllowed(request.getMethod());
         std::string response_message = method->makeHttpResponseMessage().toString();
         delete method;
         return response_message;
     }
     catch (const int status_code) {
-        return ErrorPage::makeErrorPageResponse(status_code, &configs[listen_socket]).toString();
+        return ErrorPage::makeErrorPageResponse(status_code, config).toString();
     }
     return HttpResponseMessage().toString();
 }

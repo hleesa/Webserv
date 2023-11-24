@@ -22,7 +22,7 @@ HttpResponseMessage Head::makeHttpResponseMessage(){
 		std::string body = resource.make();
 		return HttpResponseMessage(status_code, ErrorPage::makeHeaderFileds(body), "");
     }
-	return HttpResponseMessage(200, makeHeaderFileds(resource.getPath()), "");
+	return HttpResponseMessage(200, makeHeaderFields(resource.getPath()), "");
 }
 
 HttpResponseMessage Head::processReturnDirective() const {
@@ -32,21 +32,21 @@ HttpResponseMessage Head::processReturnDirective() const {
 	if (status_code / 100 == 3) { 
 		return makeRedirectionResponse(return_value);
 	}
-	return HttpResponseMessage(status_code, makeHeaderFileds(".txt"), "");
+	return HttpResponseMessage(status_code, makeHeaderFields(".txt"), "");
 }
 
 HttpResponseMessage Head::makeRedirectionResponse(const std::pair<int, std::string> return_value) const {
 	std::string host = request->getHeaderFields()["host"].at(0);
 	std::string location = "http://" + host + return_value.second;
-	std::map<std::string, std::string> header = makeHeaderFileds(".txt");
+	std::map<std::string, std::string> header = makeHeaderFields(".txt");
 
 	header["Location"] = location;
 	header["Content-type"] = "text/plain";
 	return HttpResponseMessage(return_value.first, header, "");
 }
 
-std::map<std::string, std::string> Head::makeHeaderFileds(const std::string path) const {
-	std::map<std::string, std::string> header = Method::makeHeaderFileds();
+std::map<std::string, std::string> Head::makeHeaderFields(const std::string path) const {
+	std::map<std::string, std::string> header = Method::makeHeaderFields();
 
 	if (!path.empty()) {
 		header["Content-type"] = MediaType::getType(path);

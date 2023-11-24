@@ -46,7 +46,7 @@ bool Method::isCgi() const {
 		return false;
 	}
 	if (request->getMethod() == "GET") {
-        size_t queryPos = url.find("?");
+    size_t queryPos = url.find("?");
 		url = queryPos != std::string::npos ? url.substr(0, queryPos) : url;
 	}
 	if (url.size() < extension.size()) {
@@ -93,7 +93,7 @@ void Method::checkAllowed(const std::string method) const {
 	}
 }
 
-std::map<std::string, std::string> Method::makeHeaderFileds() const {
+std::map<std::string, std::string> Method::makeHeaderFields() const {
 	std::map<std::string, std::string> header;
 
 	header["Date"] = makeDate();

@@ -158,7 +158,7 @@ ReadingStatus RequestParser::processEncoding(Body& body, std::string& buffer) {
 		trimCarriageReturn(line);
 		buffer = buffer.substr(size_pos + pos + 2);
 		if (line.size() != static_cast<unsigned long>(size)) {
-			throw 400;
+			//throw 400;
 		}
 		body.content += line;
 	}

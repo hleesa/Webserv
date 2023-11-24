@@ -21,6 +21,7 @@ Post::Post(const HttpRequestMessage* request, const Config* config) : Method(req
 
 HttpResponseMessage Post::makeHttpResponseMessage(){
 	set_member();
+	std::cout << _status_code << std::endl;
 	return HttpResponseMessage(_status_code, _header_fields, _message_body);
 }
 
@@ -37,11 +38,12 @@ void Post::set_member() {
 	}
 
 
-
-
 	if (isCgi() == true) {
+		std::cout << abs_path << std::endl;
+		//std::cout << request->getMessageBody().size() << std::endl;
 		//cgi post 처리
 		cgipost();
+		std::cout << abs_path << std::endl;
 	} else {
 		//요청 헤더 파싱 후에 맞는 상황에 대하여  처리
 		if (_status_code == 0) {
@@ -77,7 +79,9 @@ void Post::check_request_line(std::vector<std::string> request_line) {
 
 	//request URL_path -> rel_path 값찾아내기
 	if (url_path.find(location_key) == 0) {
-		rel_path = url_path.substr(location_key.size());
+		rel_path = url_path.substr(location_key.size() - 1);
+	} else {
+		rel_path = url_path;
 	}
 
 	//abs_path 를 기준에 따라서 완성
@@ -88,7 +92,7 @@ void Post::check_request_line(std::vector<std::string> request_line) {
 			abs_path = config->getLocations()["/"].getRoot() + url_path;
 		}
 	} else {
-		abs_path = config->getLocations()[location_key].getRoot() + url_path;
+		abs_path = config->getLocations()[location_key].getRoot() + rel_path;
 	}
 
 
@@ -178,7 +182,7 @@ void Post::check_header_content_type(std::map<std::string, std::vector<std::stri
 	if (file_extention == DEFAULT) {
 		//_status_code = 400;
 		//return;
-		throw 415;
+		//throw 415;
 	}
 }
 
@@ -220,15 +224,17 @@ void Post::check_header_authorization(std::map<std::string, std::vector<std::str
 void Post::cgipost() {
 	std::ostringstream body_length;
 
-	if (access(abs_path.c_str(), F_OK | X_OK) == -1) {
-		throw 400;
-	}
+	//if (access(abs_path.c_str(), F_OK | X_OK) == -1) {
+	//	std::cout << "????" << std::endl;
+	//	throw 400;
+	//}
 	int pipe_ptoc[2];
 	int pipe_ctop[2];
 	if (pipe(pipe_ptoc) == -1 || pipe(pipe_ctop) == -1) {
 		throw 500;
 	}
 	pid_t pid = fork();
+	std::cout << "here1" << std::endl;
 	if (pid == -1)
 		throw 500;
 	else if (pid) {
@@ -243,16 +249,32 @@ void Post::cgipost() {
 
 std::string Post::parent_read(int* pipe_ptoc, int* pipe_ctop, pid_t pid) {
 	std::string body;
+	size_t		count_body = 0;
+	int		write_let;
 
 	if (close(pipe_ptoc[0]) == -1 || close(pipe_ctop[1]) == -1) {
 		throw 500;
 	}
-	if (write(pipe_ptoc[1], request->getMessageBody().c_str(), request->getMessageBody().length()) == -1) {
-		throw 500;
+	while (1) {
+		std::cout << request->getMessageBody().size() << std::endl;
+		write_let = write(pipe_ptoc[1], request->getMessageBody().c_str() + count_body, BUFSIZ);
+		if (write_let == -1) {
+			std::cout << "hello" << std::endl;
+			//throw 500;
+		}
+		count_body += write_let;
+		if (count_body == request->getMessageBody().size()) {
+			break;
+		}
 	}
+	//if (write(pipe_ptoc[1], request->getMessageBody().c_str(), request->getMessageBody().size()) == -1) {
+	//	throw 500;
+	//}
+	std::cout << "here4" << std::endl;
 	if (close(pipe_ptoc[1]) == -1) {
 		throw 500;
 	}
+	std::cout << "here5" << std::endl;
 	char	recv_buffer[BUFSIZ];
 	int		nByte;
 	while ((nByte = read(pipe_ctop[0], recv_buffer, sizeof(recv_buffer))) > 0) {
@@ -263,11 +285,12 @@ std::string Post::parent_read(int* pipe_ptoc, int* pipe_ctop, pid_t pid) {
 	if (close(pipe_ctop[0]) == -1) {
 		throw 500;
 	}
+	std::cout << "here6" << std::endl;
 
 	int status;
 	if (waitpid(pid, &status, 0) == -1) {
 		throw 500;
-	}
+	}	
 	if (WIFEXITED(status)) {
 		int exit_status = WEXITSTATUS(status);
 		if (exit_status == EXIT_FAILURE) {
@@ -281,7 +304,7 @@ std::string Post::parent_read(int* pipe_ptoc, int* pipe_ctop, pid_t pid) {
 
 void Post::child_write(int* pipe_ptoc, int* pipe_ctop, Location location, std::map<std::string, std::vector<std::string> > header_field) {
 	char** cgi_environ = postCgiEnv(header_field);
-	char* python_interpreter = strdup(location.getCgiPath().c_str());
+	char* python_interpreter = strdup((location.getRoot() + '/' + location.getCgiPath()).c_str());
 	char* python_script = strdup(abs_path.c_str());
 	char* const command[] = {python_interpreter, python_script, NULL};
 

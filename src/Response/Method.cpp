@@ -42,7 +42,7 @@ bool Method::isCgi() const {
 		return false;
 	}
 	if (request->getMethod() == "GET") {
-		int queryPos = url.find("?");
+		size_t queryPos = url.find("?");
 		url = queryPos != std::string::npos ? url.substr(0, queryPos) : url;
 	}
 	if (url.size() < extension.size()) {

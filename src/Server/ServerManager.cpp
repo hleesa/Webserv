@@ -1,19 +1,14 @@
 #include "../../inc/ServerManager.hpp"
+#include "../../inc/ToString.hpp"
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <fcntl.h>
 
-ServerManager::ServerManager(const std::vector<Config>& configs) {
-    for (unsigned long idx = 0; idx < configs.size(); idx++) {
-		int socket = openListenSocket(configs[idx].getPort());
-		if (fcntl(socket, F_SETFL, O_NONBLOCK, FD_CLOEXEC) == ERROR) {
-			throw (strerror(errno));
-		}
-        this->configs[socket] = configs[idx];
-	}
-    memset((void*) event_list, 0, sizeof(struct kevent) * NUMBER_OF_EVENT);
+ServerManager::ServerManager(const std::vector<Config>* configs) {
+	setConfigByServerName(configs);
+    memset((void*)event_list, 0, sizeof(struct kevent) * NUMBER_OF_EVENT);
     kq = kqueue();
     if (kq == ERROR) {
         throw (strerror(errno));
@@ -21,6 +16,28 @@ ServerManager::ServerManager(const std::vector<Config>& configs) {
 }
 
 ServerManager::~ServerManager() {}
+
+void ServerManager::setConfigByServerName(const std::vector<Config>* configs) {
+	std::map<int, int> port_to_listen_socket;
+	std::vector<Config>::const_iterator itr = (*configs).begin();
+
+    for (;itr != (*configs).end(); itr++) {
+		int port = itr->getPort();
+		if (port_to_listen_socket.find(port) == port_to_listen_socket.end()) {
+			int socket = openListenSocket(port);
+			if (fcntl(socket, F_SETFL, O_NONBLOCK, FD_CLOEXEC) == ERROR) {
+				throw (strerror(errno));
+			}
+		}
+		std::vector<std::string> server_name = itr->getName();
+		std::vector<std::string>::iterator name = server_name.begin();
+		for (;name != server_name.end(); name++) {
+			const Config* config = &*itr;
+			server_name_to_config[*name + ":" + to_string(port)].push_back(config);
+		}
+	}
+	addListenEvent(port_to_listen_socket);
+}
 
 int ServerManager::openListenSocket(const int port) const {
     int listen_socket;
@@ -41,6 +58,14 @@ int ServerManager::openListenSocket(const int port) const {
     return listen_socket;
 }
 
+void ServerManager::addListenEvent(std::map<int, int>& port_to_listen_socket) {
+    std::map<int, int>::iterator itr = port_to_listen_socket.begin();
+
+    for (; itr != port_to_listen_socket.end(); itr++) {
+        change_list.push_back(makeEvent(itr->second, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, NULL));
+    }
+}
+
 void ServerManager::handleError(const int return_value, const int listen_socket) const {
 	if (return_value == ERROR) {
 		close(listen_socket);
@@ -49,7 +74,6 @@ void ServerManager::handleError(const int return_value, const int listen_socket)
 }
 
 void ServerManager::run() {
-    addListenEvent();
     while (true) {
 		try {
 			int events = kevent(kq, &(change_list[0]), change_list.size(), event_list, NUMBER_OF_EVENT, 0);
@@ -151,14 +175,6 @@ void ServerManager::processWriteEvent(const struct kevent& event) {
             server->clearResponse();
             change_list.push_back(makeEvent(event.ident, EVFILT_WRITE, EV_DISABLE, 0, 0, NULL));
         }
-    }
-}
-
-void ServerManager::addListenEvent() {
-    std::map<int, Config>::iterator itr = configs.begin();
-
-    for (; itr != configs.end(); itr++) {
-        change_list.push_back(makeEvent(itr->first, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, NULL));
     }
 }
 

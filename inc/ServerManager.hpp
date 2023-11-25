@@ -20,7 +20,6 @@ class ServerManager {
 		std::vector<struct kevent> change_list;
 		struct kevent event_list[NUMBER_OF_EVENT];
 
-		std::map<int, int> port_to_listen_socket;
 		std::set<int> listen_sockets;
 		const Config* default_config;
 		std::map<std::string, std::vector<const Config*> > server_name_to_config;
@@ -31,7 +30,7 @@ class ServerManager {
 
 		void setConfigByServerName(const std::vector<Config>* configs);
 		int openListenSocket(const int port) const;
-		void addListenEvent();
+		void addListenEvent(void);
 		struct kevent makeEvent( 
 			uintptr_t ident,
 			int16_t filter,

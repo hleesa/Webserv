@@ -7,8 +7,9 @@
 #include <unistd.h>
 #include <fcntl.h>
 
-ServerManager::ServerManager(const std::vector<Config>* configs){
+ServerManager::ServerManager(const std::vector<Config>* configs) : default_config(&configs->front()){
 	setConfigByServerName(configs);
+    addListenEvent();
     memset((void*)event_list, 0, sizeof(struct kevent) * NUMBER_OF_EVENT);
     kq = kqueue();
     if (kq == ERROR) {
@@ -20,14 +21,14 @@ ServerManager::~ServerManager() {}
 
 void ServerManager::setConfigByServerName(const std::vector<Config>* configs) {
 	std::vector<Config>::const_iterator itr = (*configs).begin();
+    std::map<int, bool> is_used_ports;
 
-    default_config = &*itr;
     for (;itr != (*configs).end(); itr++) {
 		int port = itr->getPort();
-		if (port_to_listen_socket.find(port) == port_to_listen_socket.end()) {
+		if (!is_used_ports[port]) {
+            is_used_ports[port] = true;
 			int socket = openListenSocket(port);
             listen_sockets.insert(socket);
-            port_to_listen_socket[port] = socket;
 			if (fcntl(socket, F_SETFL, O_NONBLOCK, FD_CLOEXEC) == ERROR) {
 				throw (strerror(errno));
 			}
@@ -39,7 +40,13 @@ void ServerManager::setConfigByServerName(const std::vector<Config>* configs) {
 			server_name_to_config[*name + ":" + to_string(port)].push_back(config);
 		}
 	}
-	addListenEvent();
+}
+
+void ServerManager::handleError(const int return_value, const int listen_socket) const {
+    if (return_value == ERROR) {
+        close(listen_socket);
+        throw (strerror(errno));
+    }
 }
 
 int ServerManager::openListenSocket(const int port) const {
@@ -67,13 +74,6 @@ void ServerManager::addListenEvent() {
     for (; itr != listen_sockets.end(); itr++) {
         change_list.push_back(makeEvent(*itr, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, NULL));
     }
-}
-
-void ServerManager::handleError(const int return_value, const int listen_socket) const {
-	if (return_value == ERROR) {
-		close(listen_socket);
-        throw (strerror(errno));
-	}
 }
 
 void ServerManager::run() {

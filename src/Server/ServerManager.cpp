@@ -1,12 +1,13 @@
 #include "../../inc/ServerManager.hpp"
 #include "../../inc/ToString.hpp"
+#include "../../inc/ErrorPage.hpp"
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <fcntl.h>
 
-ServerManager::ServerManager(const std::vector<Config>* configs) {
+ServerManager::ServerManager(const std::vector<Config>* configs){
 	setConfigByServerName(configs);
     memset((void*)event_list, 0, sizeof(struct kevent) * NUMBER_OF_EVENT);
     kq = kqueue();
@@ -35,7 +36,7 @@ void ServerManager::setConfigByServerName(const std::vector<Config>* configs) {
 		std::vector<std::string>::iterator name = server_name.begin();
 		for (;name != server_name.end(); name++) {
 			const Config* config = &*itr;
-			server_name_to_config[*name].push_back(config);
+			server_name_to_config[*name + ":" + to_string(port)].push_back(config);
 		}
 	}
 	addListenEvent();
@@ -109,7 +110,11 @@ void ServerManager::processEvents(const int events) {
             processReadEvent(*event);
 			if (parser.getReadingStatus(event->ident) == END) {
                 HttpRequestMessage request = parser.getHttpRequestMessage(event->ident);
-				const Config* config = findConfig(event->ident, request.getURL(), request.getHost());
+//                if (request.getStatusCode() != 0) {
+//                    servers[event->ident].setResponse(ErrorPage::makeErrorPageResponse(request.getStatusCode(), default_config).toString());
+//                    return;
+//                }
+				const Config* config = findConfig(request.getHost(), request.getURL());
                 servers[event->ident].setRequest(request);
                 parser.clear(event->ident);
     			change_list.push_back(makeEvent(event->ident, EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, NULL));
@@ -128,17 +133,15 @@ void ServerManager::processEvents(const int events) {
     }
 }
 
-const Config* ServerManager::findConfig(const int ident, const std::string url, const std::string host) {
+const Config* ServerManager::findConfig(const std::string host, const std::string url) {
     if (server_name_to_config.find(host) == server_name_to_config.end()) {
         return default_config;
     }
     std::vector<const Config*>::iterator itr = server_name_to_config[host].begin();
     for (;itr != server_name_to_config[host].end(); itr++) {
         const Config* config = *itr;
-        if (port_to_listen_socket[config->getPort()] == servers[ident].getListenSocket()) {
-            if (config->hasLocationOf(url)) {
+        if (config->hasLocationOf(url)) {
                 return config;
-            }
         }
     }
     return default_config;

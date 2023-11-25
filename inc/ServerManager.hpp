@@ -40,7 +40,7 @@ class ServerManager {
 			intptr_t data,
 			void* udata) const;
 		void processEvents(const int events);
-		const Config* findConfig(const int ident, const std::string url, const std::string host);
+		const Config* findConfig(const std::string host, const std::string url);
 		void checkEventError(const struct kevent& event);
 		void processListenEvent(const struct kevent& event);
 		void processReadEvent(const struct kevent& event);

@@ -33,11 +33,12 @@ void ServerManager::setConfigByServerName(const std::vector<Config>* configs) {
 				throw (strerror(errno));
 			}
 		}
-		std::vector<std::string> server_name = itr->getName();
-		std::vector<std::string>::iterator name = server_name.begin();
-		for (;name != server_name.end(); name++) {
+		std::vector<std::string> server_names = itr->getName();
+		std::vector<std::string>::iterator name = server_names.begin();
+		for (; name != server_names.end(); name++) {
 			const Config* config = &*itr;
-			server_name_to_config[*name + ":" + to_string(port)].push_back(config);
+            std::string server_name = port == 80 ? *name : *name + ":" + to_string(port);
+			server_name_to_config[server_name].push_back(config);
 		}
 	}
 }

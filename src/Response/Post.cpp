@@ -4,13 +4,9 @@
 #include <fcntl.h>
 #include <iostream>
 
+#define BUFFSIZE 100000
 
 Post::Post(const HttpRequestMessage* request, const Config* config) : Method(request, config){
-// 	if (request->getURL().find("cgi") == std::string::npos) {
-// 		this->location_key = findLocationKey();
-// 	} else {
-// 		this->location_key_post = find_cgi_loc_key(request->getURL());
-// 	}
 	_status_code = 0;
 	_message_body = "";
 	rel_path = "";
@@ -20,7 +16,17 @@ Post::Post(const HttpRequestMessage* request, const Config* config) : Method(req
 }
 
 HttpResponseMessage Post::makeHttpResponseMessage(){
+	//std::map<std::string, std::vector<std::string> > header = request->getHeaderFields();
+	//std::map<std::string, std::vector<std::string> > ::iterator itr = header.begin();
+	//for (; itr != header.end(); itr++) {
+	//	std::cout << itr->first << " : " << itr->second[0] << std::endl;
+	//}
+	//std::cout << request->getMessageBody().size() << std::endl;
+
 	set_member();
+
+	std::cout << _status_code << std::endl;
+
 	return HttpResponseMessage(_status_code, _header_fields, _message_body);
 }
 
@@ -36,9 +42,6 @@ void Post::set_member() {
 		check_header_field(request->getHeaderFields());
 	}
 
-
-
-
 	if (isCgi() == true) {
 		//cgi post 처리
 		cgipost();
@@ -50,8 +53,8 @@ void Post::set_member() {
 		//else if (content_type == "multipart/form-data" && _status_code == 0) {
 		//	saveMultipartToFile(request.getMessageBody());
 		//}
-		make_post_response();
 	}
+	make_post_response();
 }
 
 
@@ -78,73 +81,21 @@ void Post::check_request_line(std::vector<std::string> request_line) {
 	//request URL_path -> rel_path 값찾아내기
 	if (url_path.find(location_key) == 0) {
 		rel_path = url_path.substr(location_key.size());
+	} else {
+		rel_path = url_path;
 	}
 
 	//abs_path 를 기준에 따라서 완성
 	if (config->getLocations()[location_key].getRoot() == "") {
 		if (config->getRoot() != "") {
-			abs_path = config->getRoot() + url_path;
+			abs_path = config->getRoot() + '/' + url_path;
 		} else {
-			abs_path = config->getLocations()["/"].getRoot() + url_path;
+			abs_path = config->getLocations()["/"].getRoot() + '/' + url_path;
 		}
 	} else {
-		abs_path = config->getLocations()[location_key].getRoot() + url_path;
+		abs_path = config->getLocations()[location_key].getRoot() + '/' + rel_path;
 	}
-
-
-
-
-
-	//if (url_path.find("cgi") == std::string::npos) {
-	//	//location 확인 후 그곳에서의 가능 메서드 확인
-	//	//location_key = find_loc_key(url_path);
-	//	if (config->getLocations()[location_key].isNotAllowedMethod("POST") == true) {
-	//		throw 405;
-	//	}
-	//	if (config->getLocations()[location_key].getRoot() == "") {
-	//		if (config->getRoot() != "") {
-	//			abs_path = config->getRoot() + url_path;
-	//		} else {
-	//			abs_path = config->getLocations()["/"].getRoot() + url_path;
-	//		}
-	//		if (!directory_exists(abs_path)) {
-	//			throw 404;
-	//		}
-	//	} else {
-	//		abs_path = config->getLocations()[location_key].getRoot() + url_path;
-	//		if (!directory_exists(abs_path)) {
-	//			throw 404;
-	//		}
-	//	}
-	//} else {
-	//	//cgi 인 경우
-	//	location_key_post_cgi = find_cgi_loc_key(url_path);
-	//	if (location_key_post_cgi == "/")
-	//		throw 405;
-	//	if (config->getCgiLocation().second.getRoot() == "") {
-	//		abs_path = config->getRoot() + url_path;
-	//	} else {
-	//		abs_path = config->getCgiLocation().second.getRoot() + url_path;
-	//	}
-	//}
-
-
 }
-
-//std::string Post::find_loc_key(std::string url_path) {
-//	std::string path_checker = url_path;
-//	std::map<std::string, Location> locs = config->getLocations();
-//	size_t pos = path_checker.length();
-
-//	while (locs.find(path_checker) == locs.end()) {
-//		pos = path_checker.rfind('/', pos - 1);
-//		if (pos == 0)
-//			path_checker = '/';
-//		else
-//			path_checker = path_checker.substr(0, pos);
-//	}
-//	return path_checker;
-//}
 
 bool Post::directory_exists(const std::string& path) {
 	struct stat info;
@@ -158,9 +109,6 @@ bool Post::directory_exists(const std::string& path) {
 void Post::check_header_field(std::map<std::string, std::vector<std::string> > header_field) {
 	check_header_content_type(header_field);
 	check_header_content_length(header_field);
-	check_header_content_desposition(header_field);
-	check_header_user_agent(header_field);
-	check_header_authorization(header_field);
 }
 
 //check request header field fn
@@ -178,7 +126,7 @@ void Post::check_header_content_type(std::map<std::string, std::vector<std::stri
 	if (file_extention == DEFAULT) {
 		//_status_code = 400;
 		//return;
-		throw 415;
+		//throw 415;
 	}
 }
 
@@ -195,34 +143,11 @@ void Post::check_header_content_length(std::map<std::string, std::vector<std::st
 	}
 }
 
-void Post::check_header_content_desposition(std::map<std::string, std::vector<std::string> > header_field){
-	if (header_field.find("content-desposition") == header_field.end()) {
-		return;
-	}
-	//처리 보류
-
-}
-void Post::check_header_user_agent(std::map<std::string, std::vector<std::string> > header_field) {
-	if (header_field.find("content-user-agent") == header_field.end()) {
-		return;
-	}
-	//처리 보류
-
-}
-void Post::check_header_authorization(std::map<std::string, std::vector<std::string> > header_field) {
-	if (header_field.find("content-authorization") == header_field.end()) {
-		return;
-	}
-	//처리 보류
-
-}
-
 void Post::cgipost() {
 	std::ostringstream body_length;
-
-	if (access(abs_path.c_str(), F_OK | X_OK) == -1) {
-		throw 400;
-	}
+	// if (access(abs_path.c_str(), F_OK | X_OK) == -1) {
+	// 	throw 400;
+	// }
 	int pipe_ptoc[2];
 	int pipe_ctop[2];
 	if (pipe(pipe_ptoc) == -1 || pipe(pipe_ctop) == -1) {
@@ -231,29 +156,45 @@ void Post::cgipost() {
 	pid_t pid = fork();
 	if (pid == -1)
 		throw 500;
-	else if (pid) {
-		_message_body = parent_read(pipe_ptoc, pipe_ctop, pid);
-	} else {
-		child_write(pipe_ptoc, pipe_ctop, config->getLocations()[location_key], request->getHeaderFields());
+	else if (!pid) {
+		child_write(pipe_ptoc, pipe_ctop, config->getLocations()[location_key]);
 	}
+	_message_body = parent_read(pipe_ptoc, pipe_ctop, pid);
+
 	body_length << _message_body.size();
 	_header_fields["content-length"] = body_length.str();
-	_header_fields["content-type"] = "text/html";
+	_header_fields["content-type"] = request->getHeaderFields()["content-type"][0];
 }
 
 std::string Post::parent_read(int* pipe_ptoc, int* pipe_ctop, pid_t pid) {
 	std::string body;
+	// size_t		count_body = 0;
+	// int		write_let;
 
 	if (close(pipe_ptoc[0]) == -1 || close(pipe_ctop[1]) == -1) {
 		throw 500;
 	}
-	if (write(pipe_ptoc[1], request->getMessageBody().c_str(), request->getMessageBody().length()) == -1) {
+	// while (1) {
+	// 	write_let = write(pipe_ptoc[1], request->getMessageBody().c_str() + count_body, BUFSIZ);
+	// 	if (write_let == -1) {
+	// 		//throw 500;
+	// 	}
+	// 	count_body += write_let;
+	// 	if (count_body == request->getMessageBody().size()) {
+	// 		break;
+	// 	}
+	// }
+
+	std::cout << "before parent write"<<std::endl;
+	if (write(pipe_ptoc[1], request->getMessageBody().c_str(), request->getMessageBody().size()) == -1) {
 		throw 500;
 	}
+
 	if (close(pipe_ptoc[1]) == -1) {
 		throw 500;
 	}
-	char	recv_buffer[BUFSIZ];
+	std::cout << "before parent read" <<std::endl;
+	char	recv_buffer[BUFFSIZE];
 	int		nByte;
 	while ((nByte = read(pipe_ctop[0], recv_buffer, sizeof(recv_buffer))) > 0) {
 		body.append(recv_buffer, nByte);
@@ -267,7 +208,7 @@ std::string Post::parent_read(int* pipe_ptoc, int* pipe_ctop, pid_t pid) {
 	int status;
 	if (waitpid(pid, &status, 0) == -1) {
 		throw 500;
-	}
+	}	
 	if (WIFEXITED(status)) {
 		int exit_status = WEXITSTATUS(status);
 		if (exit_status == EXIT_FAILURE) {
@@ -279,11 +220,14 @@ std::string Post::parent_read(int* pipe_ptoc, int* pipe_ctop, pid_t pid) {
 	return body;
 }
 
-void Post::child_write(int* pipe_ptoc, int* pipe_ctop, Location location, std::map<std::string, std::vector<std::string> > header_field) {
-	char** cgi_environ = postCgiEnv(header_field);
-	char* python_interpreter = strdup(location.getCgiPath().c_str());
-	char* python_script = strdup(abs_path.c_str());
-	char* const command[] = {python_interpreter, python_script, NULL};
+void Post::child_write(int* pipe_ptoc, int* pipe_ctop, Location location) {
+	char** cgi_environ = postCgiEnv();
+	char* path_name = strdup((location.getRoot() + '/' + location.getCgiPath()).c_str());
+	// char* python_script = strdup(abs_path.c_str());
+	char* const arguments[] = {path_name, NULL};
+	// char* const arguments[] = {path_name, python_script, NULL};
+
+	//python일 경우 분기 추가 필요
 
 	if (close(pipe_ptoc[1]) == -1 || close(pipe_ctop[0]) == -1) {
 		exit(EXIT_FAILURE);
@@ -294,18 +238,29 @@ void Post::child_write(int* pipe_ptoc, int* pipe_ctop, Location location, std::m
 	if (close(pipe_ptoc[0]) == -1 || close(pipe_ctop[1]) == -1) {
 		exit(EXIT_FAILURE);
 	}
-	if (execve(python_interpreter, command, cgi_environ) == -1 ) {
+	if (execve(path_name, arguments, cgi_environ) == -1 ) {
 		exit(EXIT_FAILURE);
 	}
 }
 
 
-char** Post::postCgiEnv(std::map<std::string, std::vector<std::string> > header_field) {
+char** Post::postCgiEnv() {
 	std::map<std::string, std::string> env;
+	std::stringstream port_string;
+	std::stringstream content_length_string;
+	port_string << config->getPort();
+	content_length_string << request->getMessageBody().size();
 	env["REQUEST_METHOD"] = "POST";
-	env["CONTENT_LENGTH"] = header_field["content-length"][0];
-	env["CONTENT_TYPE"] = header_field["content-type"][0];
-	//env["SERVER_NAME"] = ""
+	env["CONTENT_LENGTH"] = content_length_string.str();
+	env["CONTENT_TYPE"] = request->getHeaderFields()["content-type"][0];
+	env["SERVER_NAME"] = request->getHeaderFields()["host"][0];
+	env["GATEWAY_INTERFACE"] = "CGI/1.1";
+	env["PATH_INFO"] = abs_path;
+	env["PATH_TRANSLATED"] = "http://localhost:" + port_string.str() + request->getURL();
+	env["QUERY_STRING"] = "";
+	env["SERVER_PROTOCOL"] = "HTTP/1.1";
+	env["SERVER_NAME"] = "webserv";
+	env["SERVER_PORT"] = port_string.str();
 
 	char ** cgi_env = new char* [env.size() + 1];
 	int i = 0;
@@ -384,7 +339,7 @@ void Post::make_post_response() {
 	std::ostringstream body_length;
 
 	if ((_status_code >= 200 && _status_code < 300) || _status_code == 0) {
-		_message_body = "File uploaded successfully\n";
+		// _message_body = "File uploaded successfully\n";
 		if (content_type != DEFAULT)
 			_header_fields["content-type"] = content_type;
 	} else if (_status_code >= 300 && _status_code < 400) {
@@ -392,7 +347,7 @@ void Post::make_post_response() {
 		_header_fields["location"] = request->getURL();
 		_header_fields["content-type"] = "text/html";
 
-		// 리다이렉트 될 경우에 html 페이지 띄워준다.
+		// 리다이렉트 될 경우에 html 페이지
 		// _message_body = "This page will be redirected";
 		_message_body = make_response_body(redirect_path + "redirection.html");
 	} else {
@@ -421,12 +376,3 @@ std::string Post::make_response_body(const std::string& file_path) {
 	input_file.close();
 	return content;
 }
-
-//make response header field fn
-//void Post::make_header_location();
-//void Post::make_header_content_type();
-//void Post::make_header_content_length();
-//void Post::make_header_set_cookie();
-//void Post::make_header_allow();
-//void Post::make_header_chache_control();
-//void Post::make_header_access_control_allow_origin();

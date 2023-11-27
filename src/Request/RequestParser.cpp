@@ -147,7 +147,7 @@ ReadingStatus RequestParser::processEncoding(Body& body, std::string& buffer) {
 		trimCarriageReturn(line);
 		buffer = buffer.substr(size_pos + pos + 2);
 		if (line.size() != static_cast<unsigned long>(size)) {
-			throw 400;
+			//throw 400;
 		}
 		body.content += line;
 	}
@@ -168,19 +168,24 @@ ReadingStatus RequestParser::processEncoding(Body& body, std::string& buffer) {
 	return END;
 }
 
+int hexToDecimal(const std::string& hexString) {
+    std::istringstream iss(hexString);
+    int decimalValue;
+    iss >> std::hex >> decimalValue;
+    return decimalValue;
+}
 int RequestParser::getChunkedSize(std::string& buffer, int& pos) {
-	std::string line;
-	
-	pos = buffer.find("\n");
-	if (static_cast<unsigned long>(pos) == std::string::npos) {
-		return -1;
-	}
-	line = buffer.substr(0, pos);
-	trimCarriageReturn(line);
-	if (!isIntegerLiteral(line)) {
-		throw 400;
-	}
-	return std::atoi(line.c_str());
+    std::string line;
+    pos = buffer.find("\n");
+    if (static_cast<unsigned long>(pos) == std::string::npos) {
+       return -1;
+    }
+    line = buffer.substr(0, pos);
+    trimCarriageReturn(line);
+//  if (!isIntegerLiteral(line)) {
+//     throw 400;
+//  }
+    return hexToDecimal(line.c_str());
 }
 
 ReadingStatus RequestParser::processContentLength(Body& body, std::string& buffer) {

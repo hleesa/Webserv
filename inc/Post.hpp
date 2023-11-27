@@ -22,7 +22,6 @@ class Post : public Method {
 		//std::string location_key_post_cgi;
 		std::string rel_path;
 		std::string abs_path;		//config->root + url_path
-		std::string request_url;	//요청->url
 		std::string content_type;	//요청->type
 		std::string file_extention;	//요청->type에 따른 확장자
 		std::string boundary;
@@ -43,33 +42,20 @@ class Post : public Method {
 //cgi response
 		void cgipost();
 		std::string parent_read(int* pipe_write, int* pipe_read, pid_t pid);
-		void child_write(int* pipe_write, int* pipe_read, Location location, std::map<std::string, std::vector<std::string> > header_field);
-		char** postCgiEnv(std::map<std::string, std::vector<std::string> > header_field);
+		void child_write(int* pipe_write, int* pipe_read, Location location);
+		char** postCgiEnv();
+
 //save string and make reponse
 		void saveToFile(std::string message_body);
 		std::string generateFileName(const Config* config);
 		void saveMultipartToFile(std::string message_body);
-
 		void make_post_response();
 		std::string make_response_body(const std::string& file_path);
-
 
 //check request header field fn
 		void check_header_content_type(std::map<std::string, std::vector<std::string> > header_field);
 		void check_header_content_length(std::map<std::string, std::vector<std::string> > header_field);
-		void check_header_content_desposition(std::map<std::string, std::vector<std::string> > header_field);
-		void check_header_user_agent(std::map<std::string, std::vector<std::string> > header_field);
-		void check_header_authorization(std::map<std::string, std::vector<std::string> > header_field);
 
-
-//make response header field fn
-//		void make_header_location();
-//		void make_header_content_type();
-//		void make_header_content_length();
-//		void make_header_set_cookie();
-//		void make_header_allow();
-//		void make_header_chache_control();
-//		void make_header_access_control_allow_origin();
 };
 
 

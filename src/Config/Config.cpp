@@ -114,15 +114,19 @@ void Config::setDefaultErrorPage() {
 	int status_code;
 
 	for (status_code = 400; status_code <= 417; status_code++) {
-		error_page[status_code] = root + "/" + error_page[status_code];
 		if (error_page.find(status_code) == error_page.end()) {
 			error_page[status_code] = CLIENT_ERROR_PAGE;
 		}
+		else {
+			error_page[status_code] = root + "/" + error_page[status_code];
+		}
 	}
 	for (status_code = 500; status_code <= 505; status_code++) {
-		error_page[status_code] = root + "/" + error_page[status_code];
 		if (error_page.find(status_code) == error_page.end()) {
-			error_page[status_code] = CLIENT_ERROR_PAGE;
+			error_page[status_code] = SERVER_ERROR_PAGE;
+		}
+		else {
+			error_page[status_code] = root + "/" + error_page[status_code];
 		}
 	}
 }

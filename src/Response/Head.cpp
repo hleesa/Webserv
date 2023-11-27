@@ -20,7 +20,7 @@ HttpResponseMessage Head::makeHttpResponseMessage(){
     catch (const int status_code) {
 		Resource resource(ErrorPage::findErrorPageFilePath(status_code, config), false);
 		std::string body = resource.make();
-		return HttpResponseMessage(status_code, ErrorPage::makeHeaderFileds(body), "");
+		return HttpResponseMessage(status_code, ErrorPage::makeHeaderFields(body), "");
     }
 	return HttpResponseMessage(200, makeHeaderFields(resource.getPath()), "");
 }

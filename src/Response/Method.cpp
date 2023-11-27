@@ -91,7 +91,7 @@ void Method::checkAllowed(const std::string method) const {
 	}
 }
 
-std::map<std::string, std::string> Method::makeHeaderFields() const {
+std::map<std::string, std::string> Method::makeHeaderFields() {
 	std::map<std::string, std::string> header;
 
 	header["Date"] = makeDate();
@@ -100,7 +100,7 @@ std::map<std::string, std::string> Method::makeHeaderFields() const {
 	return header;
 }
 
-std::string Method::makeDate() const {
+std::string Method::makeDate() {
 	time_t timer = time(NULL);
 	struct tm* t = localtime(&timer);
 	std::string day_names[7] = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};

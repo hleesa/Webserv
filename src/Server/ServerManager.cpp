@@ -1,6 +1,7 @@
 #include "../../inc/ServerManager.hpp"
 #include "../../inc/ToString.hpp"
 #include "../../inc/ErrorPage.hpp"
+#include "../../inc/Method.hpp"
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -99,7 +100,19 @@ void ServerManager::run() {
 void ServerManager::processEvents(const int events) {
     for (int idx = 0; idx < events; idx++) {
         struct kevent* event = event_list + idx;
+		try {
+			processEvent(event);
+		}
+		catch (int status_code) {
+			std::map<std::string, std::string> header = Method::makeHeaderFields();
+			header["Connection"] = "close";
+			header["Content-length"] = "0";
+            servers[event->ident].setResponse(HttpResponseMessage(status_code, header, "").toString());
+		}
+	}
+}
 
+void ServerManager::processEvent(const struct kevent* event) {
         if (event->flags & EV_ERROR) {
 			std::cout << "error\n";
             checkEventError(*event);
@@ -131,18 +144,21 @@ void ServerManager::processEvents(const int events) {
             change_list.push_back(makeEvent(event->ident, EVFILT_READ, EV_DISABLE, 0, 0, NULL));
             disconnectWithClient(*event);
         }
-    }
 }
 
 const Config* ServerManager::findConfig(const std::string host, const std::string url) {
-    std::vector<const Config*>::iterator itr = server_name_to_config[host].begin();
+	if (server_name_to_config.find(host) == server_name_to_config.end()) {
+		return default_config;
+	}
+	std::vector<const Config*>::iterator itr = server_name_to_config[host].begin();
     for (;itr != server_name_to_config[host].end(); itr++) {
         const Config* config = *itr;
         if (config->hasLocationOf(url)) {
                 return config;
         }
     }
-    return default_config;
+    const Config* config = *server_name_to_config[host].begin();
+    return config;
 }
 
 void ServerManager::checkEventError(const struct kevent& event) {

@@ -14,9 +14,6 @@ class Method {
 		
 		std::string findLocationKey() const;
 		std::string findRoot() const;
-		
-		std::map<std::string, std::string> makeHeaderFields() const;
-		std::string makeDate() const;
 
 	public:
 		Method();
@@ -27,6 +24,9 @@ class Method {
 		static Method* generate(const std::string method, const HttpRequestMessage* request, const Config* config);
 		void checkAllowed(const std::string method) const;
 		virtual HttpResponseMessage makeHttpResponseMessage() = 0;
+
+		static std::map<std::string, std::string> makeHeaderFields();
+		static std::string makeDate();
 };
 
 #endif

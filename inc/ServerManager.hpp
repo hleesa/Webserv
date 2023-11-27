@@ -19,14 +19,18 @@ class ServerManager {
 		int kq;
 		std::vector<struct kevent> change_list;
 		struct kevent event_list[NUMBER_OF_EVENT];
-		std::map<int, Config> configs;
+
+		std::set<int> listen_sockets;
+		const Config* default_config;
+		std::map<std::string, std::vector<const Config*> > server_name_to_config;
 		std::map<int, Server> servers;
 		RequestParser parser;
 		
 		ServerManager();
 
+		void setConfigByServerName(const std::vector<Config>* configs);
 		int openListenSocket(const int port) const;
-		void addListenEvent();
+		void addListenEvent(void);
 		struct kevent makeEvent( 
 			uintptr_t ident,
 			int16_t filter,
@@ -35,6 +39,7 @@ class ServerManager {
 			intptr_t data,
 			void* udata) const;
 		void processEvents(const int events);
+		const Config* findConfig(const std::string host, const std::string url);
 		void checkEventError(const struct kevent& event);
 		void processListenEvent(const struct kevent& event);
 		void processReadEvent(const struct kevent& event);
@@ -43,7 +48,7 @@ class ServerManager {
 		void handleError(const int return_value, const int listen_socket) const;
 
 	public:
-		ServerManager(const std::vector<Config>& configs);
+		ServerManager(const std::vector<Config>* configs);
 		// ServerManager(const ServerManager& other);
 		// ServerManager operator=(const ServerManager& other);
 		~ServerManager();

@@ -2,7 +2,7 @@
 #include "../../inc/MediaType.hpp"
 #include "../../inc/ToString.hpp"
 #include "../../inc/Get.hpp"
-//#include "../../inc/GetCgi.hpp"
+#include "../../inc/GetCgi.hpp"
 #include "../../inc/Post.hpp"
 #include "../../inc/Delete.hpp"
 #include "../../inc/Head.hpp"
@@ -18,14 +18,8 @@ Method::Method(const HttpRequestMessage* request, const Config* config) : reques
 Method::~Method() {}
 
 Method* Method::generate(const std::string method, const HttpRequestMessage* request, const Config* config) {
-
 	if (method == "GET") {
         return dynamic_cast<Method*>(new Get(request, config));
-        // if (request->getURL().find("cgi") == std::string::npos){
-        // }
-        // else {
-        //     return dynamic_cast<Method*>(new GetCgi(request, config));
-        // }
 	}
 	if (method == "POST") {
         return dynamic_cast<Method*>(new Post(request, config));
@@ -47,7 +41,10 @@ bool Method::isCgi() const {
 		return false;
 	}
 	if (request->getMethod() == "GET") {
-    size_t queryPos = url.find("?");
+    	size_t queryPos = url.find("?");
+		if (queryPos == std::string::npos) {
+			return false;
+		}
 		url = queryPos != std::string::npos ? url.substr(0, queryPos) : url;
 	}
 	if (url.size() < extension.size()) {

@@ -1,13 +1,15 @@
 #include "../../inc/ServerManager.hpp"
 #include "../../inc/ToString.hpp"
+#include "../../inc/ErrorPage.hpp"
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <fcntl.h>
 
-ServerManager::ServerManager(const std::vector<Config>* configs) {
+ServerManager::ServerManager(const std::vector<Config>* configs) : default_config(&configs->front()){
 	setConfigByServerName(configs);
+    addListenEvent();
     memset((void*)event_list, 0, sizeof(struct kevent) * NUMBER_OF_EVENT);
     kq = kqueue();
     if (kq == ERROR) {
@@ -19,26 +21,33 @@ ServerManager::~ServerManager() {}
 
 void ServerManager::setConfigByServerName(const std::vector<Config>* configs) {
 	std::vector<Config>::const_iterator itr = (*configs).begin();
+    std::map<int, bool> is_used_ports;
 
-    default_config = &*itr;
     for (;itr != (*configs).end(); itr++) {
 		int port = itr->getPort();
-		if (port_to_listen_socket.find(port) == port_to_listen_socket.end()) {
+		if (!is_used_ports[port]) {
+            is_used_ports[port] = true;
 			int socket = openListenSocket(port);
             listen_sockets.insert(socket);
-            port_to_listen_socket[port] = socket;
 			if (fcntl(socket, F_SETFL, O_NONBLOCK, FD_CLOEXEC) == ERROR) {
 				throw (strerror(errno));
 			}
 		}
-		std::vector<std::string> server_name = itr->getName();
-		std::vector<std::string>::iterator name = server_name.begin();
-		for (;name != server_name.end(); name++) {
+		std::vector<std::string> server_names = itr->getName();
+		std::vector<std::string>::iterator name = server_names.begin();
+		for (; name != server_names.end(); name++) {
 			const Config* config = &*itr;
-			server_name_to_config[*name].push_back(config);
+            std::string server_name = port == 80 ? *name : *name + ":" + to_string(port);
+			server_name_to_config[server_name].push_back(config);
 		}
 	}
-	addListenEvent();
+}
+
+void ServerManager::handleError(const int return_value, const int listen_socket) const {
+    if (return_value == ERROR) {
+        close(listen_socket);
+        throw (strerror(errno));
+    }
 }
 
 int ServerManager::openListenSocket(const int port) const {
@@ -66,13 +75,6 @@ void ServerManager::addListenEvent() {
     for (; itr != listen_sockets.end(); itr++) {
         change_list.push_back(makeEvent(*itr, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, NULL));
     }
-}
-
-void ServerManager::handleError(const int return_value, const int listen_socket) const {
-	if (return_value == ERROR) {
-		close(listen_socket);
-        throw (strerror(errno));
-	}
 }
 
 void ServerManager::run() {
@@ -109,7 +111,11 @@ void ServerManager::processEvents(const int events) {
             processReadEvent(*event);
 			if (parser.getReadingStatus(event->ident) == END) {
                 HttpRequestMessage request = parser.getHttpRequestMessage(event->ident);
-				const Config* config = findConfig(event->ident, request.getURL(), request.getHost());
+//                if (request.getStatusCode() != 0) {
+//                    servers[event->ident].setResponse(ErrorPage::makeErrorPageResponse(request.getStatusCode(), default_config).toString());
+//                    return;
+//                }
+				const Config* config = findConfig(request.getHost(), request.getURL());
                 servers[event->ident].setRequest(request);
                 parser.clear(event->ident);
     			change_list.push_back(makeEvent(event->ident, EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, NULL));
@@ -128,17 +134,12 @@ void ServerManager::processEvents(const int events) {
     }
 }
 
-const Config* ServerManager::findConfig(const int ident, const std::string url, const std::string host) {
-    if (server_name_to_config.find(host) == server_name_to_config.end()) {
-        return default_config;
-    }
+const Config* ServerManager::findConfig(const std::string host, const std::string url) {
     std::vector<const Config*>::iterator itr = server_name_to_config[host].begin();
     for (;itr != server_name_to_config[host].end(); itr++) {
         const Config* config = *itr;
-        if (port_to_listen_socket[config->getPort()] == servers[ident].getListenSocket()) {
-            if (config->hasLocationOf(url)) {
+        if (config->hasLocationOf(url)) {
                 return config;
-            }
         }
     }
     return default_config;

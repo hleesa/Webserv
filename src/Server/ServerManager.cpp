@@ -188,10 +188,7 @@ void ServerManager::processReadEvent(const struct kevent& event) {
     ssize_t bytes_recv = recv(event.ident, &buff, BUFFER_SIZE, 0);
     
 	if (bytes_recv == ERROR) {
-        if (!(errno == EAGAIN || errno == EWOULDBLOCK)) {
-            disconnectWithClient(event);
-        }
-        return;
+       return;
     }
     buff[bytes_recv] = '\0';
 	parser.run(event.ident, buff);
@@ -200,12 +197,7 @@ void ServerManager::processReadEvent(const struct kevent& event) {
 void ServerManager::processWriteEvent(const struct kevent& event) {
     Server *server = &servers[event.ident];
     ssize_t bytes_sent = send(event.ident, server->getResponse().c_str(), server->getResponse().length(), 0);
-    if (bytes_sent == ERROR) {
-        if (!(errno == EAGAIN || errno == EWOULDBLOCK)) {
-            disconnectWithClient(event);
-        }
-    }
-    else {
+    if (bytes_sent != ERROR) {
         server->updateResponse(bytes_sent);
         if (server->isSendComplete()) {
             server->clearResponse();

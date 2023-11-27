@@ -43,6 +43,7 @@ class Post : public Method {
 		void cgipost();
 		std::string parent_read(int* pipe_write, int* pipe_read, pid_t pid);
 		void child_write(int* pipe_write, int* pipe_read, Location location);
+		void child_write_py(int* pipe_write, int* pipe_read, Location location);
 		char** postCgiEnv();
 
 //save string and make reponse

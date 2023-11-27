@@ -124,6 +124,7 @@ void Post::check_header_content_type(std::map<std::string, std::vector<std::stri
 	content_type = header_field["content-type"][0];
 	file_extention = MediaType::getExtention(header_field["content-type"][0]);
 	if (file_extention == DEFAULT) {
+		file_extention = config->getLocations()[location_key].getCgiExt();
 		//_status_code = 400;
 		//return;
 		//throw 415;
@@ -157,7 +158,11 @@ void Post::cgipost() {
 	if (pid == -1)
 		throw 500;
 	else if (!pid) {
-		child_write(pipe_ptoc, pipe_ctop, config->getLocations()[location_key]);
+		if (location_key == "/cgi-bin") {
+			child_write_py(pipe_ptoc, pipe_ctop, config->getLocations()[location_key]);
+		} else {
+			child_write(pipe_ptoc, pipe_ctop, config->getLocations()[location_key]);
+		}
 	}
 	_message_body = parent_read(pipe_ptoc, pipe_ctop, pid);
 
@@ -223,11 +228,7 @@ std::string Post::parent_read(int* pipe_ptoc, int* pipe_ctop, pid_t pid) {
 void Post::child_write(int* pipe_ptoc, int* pipe_ctop, Location location) {
 	char** cgi_environ = postCgiEnv();
 	char* path_name = strdup((location.getRoot() + '/' + location.getCgiPath()).c_str());
-	// char* python_script = strdup(abs_path.c_str());
 	char* const arguments[] = {path_name, NULL};
-	// char* const arguments[] = {path_name, python_script, NULL};
-
-	//python일 경우 분기 추가 필요
 
 	if (close(pipe_ptoc[1]) == -1 || close(pipe_ctop[0]) == -1) {
 		exit(EXIT_FAILURE);
@@ -243,6 +244,25 @@ void Post::child_write(int* pipe_ptoc, int* pipe_ctop, Location location) {
 	}
 }
 
+void Post::child_write_py(int* pipe_ptoc, int* pipe_ctop, Location location) {
+	char** cgi_environ = postCgiEnv();
+	char* path_name = strdup((location.getCgiPath()).c_str());
+	char* python_script = strdup(abs_path.c_str());
+	char* const arguments[] = {path_name, python_script, NULL};
+
+	if (close(pipe_ptoc[1]) == -1 || close(pipe_ctop[0]) == -1) {
+		exit(EXIT_FAILURE);
+	}
+	if (dup2(pipe_ptoc[0], STDIN_FILENO) == -1 || dup2(pipe_ctop[1], STDOUT_FILENO) == -1) {
+		exit(EXIT_FAILURE);
+	}
+	if (close(pipe_ptoc[0]) == -1 || close(pipe_ctop[1]) == -1) {
+		exit(EXIT_FAILURE);
+	}
+	if (execve(path_name, arguments, cgi_environ) == -1 ) {
+		exit(EXIT_FAILURE);
+	}
+}
 
 char** Post::postCgiEnv() {
 	std::map<std::string, std::string> env;

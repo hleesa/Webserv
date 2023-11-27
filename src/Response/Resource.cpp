@@ -42,6 +42,7 @@ std::string Resource::read() const {
 	content.resize(size);
 	file_in.seekg(0, std::ios::beg);
 	file_in.read(&content[0], size);
+	file_in.close();
 	return content;
 }
 

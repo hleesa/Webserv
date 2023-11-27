@@ -8,11 +8,11 @@
 #include "Server.hpp"
 #include "RequestParser.hpp"
 
-#define NUMBER_OF_EVENT 8
+#define NUMBER_OF_EVENT 100
 #define NUMBER_OF_BACKLOG 5
 #define ERROR -1
 #define BUFFER_SIZE 10000
-#define TIMEOUT_MSEC 500000
+#define TIMEOUT_MSEC 30000
 
 class ServerManager {
 	private:

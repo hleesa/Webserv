@@ -4,13 +4,9 @@
 #include <fcntl.h>
 #include <iostream>
 
+#define BUFFSIZE 100000
 
 Post::Post(const HttpRequestMessage* request, const Config* config) : Method(request, config){
-// 	if (request->getURL().find("cgi") == std::string::npos) {
-// 		this->location_key = findLocationKey();
-// 	} else {
-// 		this->location_key_post = find_cgi_loc_key(request->getURL());
-// 	}
 	_status_code = 0;
 	_message_body = "";
 	rel_path = "";
@@ -20,8 +16,17 @@ Post::Post(const HttpRequestMessage* request, const Config* config) : Method(req
 }
 
 HttpResponseMessage Post::makeHttpResponseMessage(){
+	//std::map<std::string, std::vector<std::string> > header = request->getHeaderFields();
+	//std::map<std::string, std::vector<std::string> > ::iterator itr = header.begin();
+	//for (; itr != header.end(); itr++) {
+	//	std::cout << itr->first << " : " << itr->second[0] << std::endl;
+	//}
+	//std::cout << request->getMessageBody().size() << std::endl;
+
 	set_member();
+
 	std::cout << _status_code << std::endl;
+
 	return HttpResponseMessage(_status_code, _header_fields, _message_body);
 }
 
@@ -83,17 +88,13 @@ void Post::check_request_line(std::vector<std::string> request_line) {
 	//abs_path 를 기준에 따라서 완성
 	if (config->getLocations()[location_key].getRoot() == "") {
 		if (config->getRoot() != "") {
-			std::cout << "1" << std::endl;
 			abs_path = config->getRoot() + '/' + url_path;
 		} else {
-			std::cout << "2" << std::endl;
 			abs_path = config->getLocations()["/"].getRoot() + '/' + url_path;
 		}
 	} else {
-			std::cout << "3" << std::endl;
 		abs_path = config->getLocations()[location_key].getRoot() + '/' + rel_path;
 	}
-std::cout << abs_path << std::endl;
 }
 
 bool Post::directory_exists(const std::string& path) {
@@ -145,7 +146,6 @@ void Post::check_header_content_length(std::map<std::string, std::vector<std::st
 void Post::cgipost() {
 	std::ostringstream body_length;
 	// if (access(abs_path.c_str(), F_OK | X_OK) == -1) {
-	// 	std::cout << "here2??" << std::endl;
 	// 	throw 400;
 	// }
 	int pipe_ptoc[2];
@@ -185,6 +185,7 @@ std::string Post::parent_read(int* pipe_ptoc, int* pipe_ctop, pid_t pid) {
 	// 	}
 	// }
 
+	std::cout << "before parent write"<<std::endl;
 	if (write(pipe_ptoc[1], request->getMessageBody().c_str(), request->getMessageBody().size()) == -1) {
 		throw 500;
 	}
@@ -192,7 +193,8 @@ std::string Post::parent_read(int* pipe_ptoc, int* pipe_ctop, pid_t pid) {
 	if (close(pipe_ptoc[1]) == -1) {
 		throw 500;
 	}
-	char	recv_buffer[BUFSIZ];
+	std::cout << "before parent read" <<std::endl;
+	char	recv_buffer[BUFFSIZE];
 	int		nByte;
 	while ((nByte = read(pipe_ctop[0], recv_buffer, sizeof(recv_buffer))) > 0) {
 		body.append(recv_buffer, nByte);
@@ -226,9 +228,6 @@ void Post::child_write(int* pipe_ptoc, int* pipe_ctop, Location location) {
 	// char* const arguments[] = {path_name, python_script, NULL};
 
 	//python일 경우 분기 추가 필요
-
-	std::cout << "path_name : " << location.getRoot() + '/' + location.getCgiPath() << std::endl;
-	std::cout << "python scr : "<<abs_path<< std::endl;
 
 	if (close(pipe_ptoc[1]) == -1 || close(pipe_ctop[0]) == -1) {
 		exit(EXIT_FAILURE);

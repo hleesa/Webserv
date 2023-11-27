@@ -37,7 +37,6 @@ void Post::set_member() {
 		check_header_field(request->getHeaderFields());
 	}
 
-	std::cout << request->getMessageBody() << std::endl;
 	if (isCgi() == true) {
 		//cgi post 처리
 		cgipost();
@@ -84,14 +83,17 @@ void Post::check_request_line(std::vector<std::string> request_line) {
 	//abs_path 를 기준에 따라서 완성
 	if (config->getLocations()[location_key].getRoot() == "") {
 		if (config->getRoot() != "") {
-			abs_path = config->getRoot() + url_path;
+			std::cout << "1" << std::endl;
+			abs_path = config->getRoot() + '/' + url_path;
 		} else {
-			abs_path = config->getLocations()["/"].getRoot() + url_path;
+			std::cout << "2" << std::endl;
+			abs_path = config->getLocations()["/"].getRoot() + '/' + url_path;
 		}
 	} else {
-		abs_path = config->getLocations()[location_key].getRoot() + rel_path;
-	
+			std::cout << "3" << std::endl;
+		abs_path = config->getLocations()[location_key].getRoot() + '/' + rel_path;
 	}
+std::cout << abs_path << std::endl;
 }
 
 bool Post::directory_exists(const std::string& path) {

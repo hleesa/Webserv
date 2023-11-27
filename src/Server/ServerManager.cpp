@@ -135,9 +135,6 @@ void ServerManager::processEvents(const int events) {
 }
 
 const Config* ServerManager::findConfig(const std::string host, const std::string url) {
-    if (server_name_to_config.find(host) == server_name_to_config.end()) {
-        return default_config;
-    }
     std::vector<const Config*>::iterator itr = server_name_to_config[host].begin();
     for (;itr != server_name_to_config[host].end(); itr++) {
         const Config* config = *itr;

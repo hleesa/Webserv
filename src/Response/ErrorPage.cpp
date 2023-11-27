@@ -6,7 +6,7 @@ HttpResponseMessage ErrorPage::makeErrorPageResponse(const int status_code, cons
 	Resource resource(findErrorPageFilePath(status_code, config), false);
 	std::string body = resource.make();
 	
-	return HttpResponseMessage(status_code, makeHeaderFileds(body), body);
+	return HttpResponseMessage(status_code, makeHeaderFields(body), body);
 }
 
 std::string ErrorPage::findErrorPageFilePath(const int status_code, const Config* config) {
@@ -16,7 +16,7 @@ std::string ErrorPage::findErrorPageFilePath(const int status_code, const Config
 	return path;
 }
 
-std::map<std::string, std::string> ErrorPage::makeHeaderFileds(const std::string& body) {
+std::map<std::string, std::string> ErrorPage::makeHeaderFields(const std::string& body) {
 	std::map<std::string, std::string> header;
 
 	header["Content-length"] = std::to_string(body.length());

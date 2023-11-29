@@ -17,6 +17,18 @@ PostCgi::PostCgi(const HttpRequestMessage* request, const Config* config) : requ
 	content_length = 0;
 }
 
+//void sigchld_handler(int signo) {
+//     SIGCHLD 시그널 핸들러
+//     자식 프로세스의 종료를 처리
+//    int status;
+//    pid_t pid = waitpid(child_pid, &status, WNOHANG);
+//    if (pid > 0) {
+//         자식 프로세스 종료 후 로직
+//         ...
+//        std::cout << "Child process terminated: " << pid << std::endl;
+//    }
+//}
+
 PostCgiPipePid* PostCgi::cgipost() {
     if (request->getMethod() != "POST") {
         _status_code = 300;
@@ -30,6 +42,7 @@ PostCgiPipePid* PostCgi::cgipost() {
     }
 
     signal(SIGPIPE, SIG_IGN);
+
 	//파일 권한 안주면 실패됨
 	// if (access(abs_path.c_str(), F_OK | X_OK) == -1) {
 	// 	throw 400;
@@ -57,6 +70,8 @@ PostCgiPipePid* PostCgi::cgipost() {
 			child_write(pipe_ptoc, pipe_ctop, config->getLocations()[location_key]);
 		}
 	}
+
+//    signal(SIGCHLD, sigchld_handler);
 
     if (close(pipe_ptoc[0]) == -1 || close(pipe_ctop[1]) == -1) {
         throw 500;

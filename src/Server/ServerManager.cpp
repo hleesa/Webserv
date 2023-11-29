@@ -136,7 +136,6 @@ void ServerManager::processEvent(const struct kevent* event) {
                 const Config* config = findConfig(request.getHost(), request.getURL());
                 servers[event->ident].setRequest(request);
                 parser.clear(event->ident);
-                change_list.push_back(makeEvent(event->ident, EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, NULL));
                 if (isCgi(config, &request)) {
                     PostCgi post_cgi(&request, config);
                     PostCgiPipePid* cgi_pipe_pid = post_cgi.cgipost();
@@ -144,10 +143,13 @@ void ServerManager::processEvent(const struct kevent* event) {
                     *conn_sock = event->ident;
                     change_list.push_back(makeEvent(cgi_pipe_pid->getWritePipeFd(), EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, reinterpret_cast<void*>(conn_sock)));
                     change_list.push_back(makeEvent(cgi_pipe_pid->getReadPipeFd(), EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, reinterpret_cast<void*>(conn_sock)));
-                    change_list.push_back(makeEvent(event->ident, EVFILT_TIMER, EV_ADD | EV_ONESHOT, 0, TIMEOUT_MSEC, reinterpret_cast<void*>(cgi_pipe_pid)));
+                    change_list.push_back(makeEvent(cgi_pipe_pid->getChildPid(), EVFILT_PROC, EV_ADD | EV_ONESHOT, NOTE_EXIT, 0, reinterpret_cast<void*>(cgi_pipe_pid)));
+                    change_list.push_back(makeEvent(event->ident, EVFILT_TIMER, EV_ADD | EV_ONESHOT, NOTE_SECONDS, TIMEOUT_SEC, reinterpret_cast<void*>(cgi_pipe_pid)));
                 }
                 else {
+                    change_list.push_back(makeEvent(event->ident, EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, NULL));
                     servers[event->ident].setResponse(servers[event->ident].makeResponse(config));
+                    change_list.push_back(makeEvent(event->ident, EVFILT_TIMER, EV_ADD | EV_ONESHOT, NOTE_SECONDS, TIMEOUT_SEC, NULL));
                 }
             }
         }
@@ -158,7 +160,7 @@ void ServerManager::processEvent(const struct kevent* event) {
     else if (event->filter == EVFILT_WRITE) {
         if (servers.find(event->ident) != servers.end() ) {
             processWriteEvent(*event);
-            change_list.push_back(makeEvent(event->ident, EVFILT_TIMER, EV_ADD | EV_ONESHOT, 0, TIMEOUT_MSEC, NULL));
+            change_list.push_back(makeEvent(event->ident, EVFILT_TIMER, EV_ADD | EV_ONESHOT, NOTE_SECONDS, TIMEOUT_SEC, NULL));
         }
         else if (event->udata != NULL) {
             processPipeWriteEvent(*event);
@@ -177,6 +179,12 @@ void ServerManager::processEvent(const struct kevent* event) {
             change_list.push_back(makeEvent(event->ident, EVFILT_READ, EV_DISABLE, 0, 0, NULL));
         }
         disconnectWithClient(*event);
+    }
+    else if (event->filter == EVFILT_PROC) {
+        PostCgiPipePid* pipe_pid = reinterpret_cast<PostCgiPipePid*>(event->udata);
+        change_list.push_back(makeEvent(pipe_pid->getWritePipeFd(), EVFILT_WRITE, EV_DISABLE, 0, 0, NULL));
+        change_list.push_back(makeEvent(pipe_pid->getReadPipeFd(), EVFILT_READ, EV_DISABLE, 0, 0, NULL));
+        delete pipe_pid;
     }
 }
 
@@ -285,7 +293,7 @@ void ServerManager::processListenEvent(const struct kevent& event) {
 	}
     servers[connection_socket] = Server(event.ident);
     change_list.push_back(makeEvent(connection_socket, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, NULL));
-    change_list.push_back(makeEvent(connection_socket, EVFILT_TIMER, EV_ADD | EV_ONESHOT, 0, TIMEOUT_MSEC, NULL));
+    change_list.push_back(makeEvent(connection_socket, EVFILT_TIMER, EV_ADD | EV_ONESHOT, NOTE_SECONDS, TIMEOUT_SEC, NULL));
 }
 
 void ServerManager::processReadEvent(const struct kevent& event) {

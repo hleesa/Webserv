@@ -15,7 +15,7 @@ private:
 
 public:
     PostCgiPipePid();
-    PostCgiPipePid(int* pipe_parent_child, int* pipe_child_parent, pid_t* child_pid);
+	PostCgiPipePid(int* pipe_parent_child, int* pipe_child_parent, pid_t* child_pid);
 
     ~PostCgiPipePid();
 

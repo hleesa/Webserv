@@ -44,10 +44,10 @@ PostCgiPipePid* PostCgi::cgipost() {
 	if (pipe(pipe_ptoc) == -1 || pipe(pipe_ctop) == -1) {
 		throw 500;
 	}
-	if (fcntl(pipe_ctop[0], F_SETFL, O_NONBLOCK, FD_CLOEXEC) == ERROR) {
+	if (fcntl(pipe_ptoc[1], F_SETFL, O_NONBLOCK, FD_CLOEXEC) == ERROR) {
 		throw (strerror(errno));
 	}
-	if (fcntl(pipe_ptoc[1], F_SETFL, O_NONBLOCK, FD_CLOEXEC) == ERROR) {
+	if (fcntl(pipe_ctop[0], F_SETFL, O_NONBLOCK, FD_CLOEXEC) == ERROR) {
 		throw (strerror(errno));
 	}
 
@@ -62,10 +62,10 @@ PostCgiPipePid* PostCgi::cgipost() {
 			child_write(pipe_ptoc, pipe_ctop, config->getLocations()[location_key]);
 		}
 	}
-
     if (close(pipe_ptoc[0]) == -1 || close(pipe_ctop[1]) == -1) {
         throw 500;
     }
+
     PostCgiPipePid* cgiPipePid = new PostCgiPipePid(pipe_ctop, pipe_ptoc, pid);
     return cgiPipePid;
 }

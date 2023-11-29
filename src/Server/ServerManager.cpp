@@ -208,6 +208,7 @@ void ServerManager::processPipeReadEvent(const struct kevent& event) {
 	else { // EOF
 		server->setResponse(PostCgi::makeResponse(server->getResponse()).toString());
 		change_list.push_back(makeEvent(*server_idx, EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, NULL));
+		
 		close(event.ident);
 	}
 }

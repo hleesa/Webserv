@@ -145,11 +145,13 @@ void ServerManager::processEvent(const struct kevent* event) {
                     *conn_sock = event->ident;
                     change_list.push_back(makeEvent(cgi_pipe_pid->getWritePipeFd(), EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, reinterpret_cast<void*>(conn_sock)));
                     change_list.push_back(makeEvent(cgi_pipe_pid->getReadPipeFd(), EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, reinterpret_cast<void*>(conn_sock)));
+                    change_list.push_back(makeEvent(cgi_pipe_pid->getChildPid(), EVFILT_PROC, EV_ADD | EV_ONESHOT, NOTE_EXIT, 0, reinterpret_cast<void*>(cgi_pipe_pid)));
                     change_list.push_back(makeEvent(event->ident, EVFILT_TIMER, EV_ADD | EV_ONESHOT, NOTE_SECONDS, TIMEOUT_SEC, reinterpret_cast<void*>(cgi_pipe_pid)));
                 }
                 else {
-                    servers[event->ident].setResponse(servers[event->ident].makeResponse(config));
                     change_list.push_back(makeEvent(event->ident, EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, NULL));
+                    servers[event->ident].setResponse(servers[event->ident].makeResponse(config));
+                    change_list.push_back(makeEvent(event->ident, EVFILT_TIMER, EV_ADD | EV_ONESHOT, NOTE_SECONDS, TIMEOUT_SEC, NULL));
                 }
             }
         }
@@ -179,6 +181,12 @@ void ServerManager::processEvent(const struct kevent* event) {
             change_list.push_back(makeEvent(event->ident, EVFILT_READ, EV_DISABLE, 0, 0, NULL));
         }
         disconnectWithClient(*event);
+    }
+    else if (event->filter == EVFILT_PROC) {
+        PostCgiPipePid* pipe_pid = reinterpret_cast<PostCgiPipePid*>(event->udata);
+        change_list.push_back(makeEvent(pipe_pid->getWritePipeFd(), EVFILT_WRITE, EV_DISABLE, 0, 0, NULL));
+        change_list.push_back(makeEvent(pipe_pid->getReadPipeFd(), EVFILT_READ, EV_DISABLE, 0, 0, NULL));
+        delete pipe_pid;
     }
 }
 
@@ -220,32 +228,6 @@ void ServerManager::processPipeWriteEvent(const struct kevent& event) {
         change_list.push_back(makeEvent(event.ident, EVFILT_WRITE, EV_DISABLE, 0, 0, NULL));
         close(event.ident);
 	}
-
-
-
-//    std::string http_message_body = request->getMessageBody();
-//    size_t body_size = http_message_body.length();
-//    ssize_t bytes_written = 0;
-//    while (body_size > 0) {
-//        ssize_t bytes_write = write(pipe_parent_to_child[WRITE], http_message_body.c_str() + bytes_written, body_size);
-//        if (bytes_write == ERROR) {
-//            throw 500;
-//        }
-//        bytes_written += bytes_written;
-//        body_size -= bytes_write;
-//    }
-
-//    ssize_t bytes_write = write(pipe_pid->getWritePipeFd(),)
-//
-//    ssize_t bytes_sent = send(event.ident, server->getResponse().c_str(), server->getResponse().length(), 0);
-//    if (bytes_sent != ERROR) {
-//        server->updateResponse(bytes_sent);
-//        if (server->isSendComplete()) {
-//            server->clearResponse();
-//            change_list.push_back(makeEvent(event.ident, EVFILT_WRITE, EV_DISABLE, 0, 0, NULL));
-//        }
-//    }
-
 }
 
 const Config* ServerManager::findConfig(const std::string host, const std::string url) {

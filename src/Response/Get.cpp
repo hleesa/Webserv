@@ -1,6 +1,7 @@
 #include "../../inc/Get.hpp"
 #include "../../inc/GetCgi.hpp"
 #include "../../inc/MediaType.hpp"
+#include "../../inc/CodeToReason.hpp"
 #include <unistd.h>
 #include <ctime>
 
@@ -35,7 +36,7 @@ HttpResponseMessage Get::processReturnDirective() const {
 HttpResponseMessage Get::makeRedirectionResponse(const std::pair<int, std::string> return_value) const {
 	std::string host = request->getHeaderFields()["host"].at(0);
 	std::string location = "http://" + host + return_value.second;
-	std::string body = "Moved Permanently. Redirecting to " + location + ".";
+	std::string body = CodeToReason().getReasonPharse(return_value.first) + ". Redirecting to " + location + ".";
 	std::map<std::string, std::string> header = makeHeaderFields(body, ".txt");
 
 	header["Location"] = location;

@@ -93,7 +93,6 @@ void PostCgi::check_header_content_length(std::map<std::string, std::vector<std:
 
 #define ERROR -1
 
-
 PostCgiPipePid* PostCgi::cgipost() {
     if (request->getMethod() != "POST") {
         _status_code = 300;
@@ -108,7 +107,7 @@ PostCgiPipePid* PostCgi::cgipost() {
 
 	std::ostringstream body_length;
 
-        signal(SIGPIPE, SIG_IGN);
+    signal(SIGPIPE, SIG_IGN);
 	//파일 권한 안주면 실패됨
 	// if (access(abs_path.c_str(), F_OK | X_OK) == -1) {
 	// 	throw 400;
@@ -140,7 +139,7 @@ PostCgiPipePid* PostCgi::cgipost() {
     if (close(pipe_ptoc[0]) == -1 || close(pipe_ctop[1]) == -1) {
         throw 500;
     }
-    PostCgiPipePid* cgiPipePid = new PostCgiPipePid(pipe_ctop + 0, pipe_ptoc + 1, pid);
+    PostCgiPipePid* cgiPipePid = new PostCgiPipePid(pipe_ctop, pipe_ptoc, pid);
     return cgiPipePid;
 
 //	_message_body = parent_read(pipe_ptoc, pipe_ctop, pid);

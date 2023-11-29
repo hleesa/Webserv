@@ -8,6 +8,7 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <csignal>
 
 ServerManager::ServerManager(const std::vector<Config>* configs) : default_config(&configs->front()){
 	setConfigByServerName(configs);
@@ -174,12 +175,10 @@ void ServerManager::processEvent(const struct kevent* event) {
                     servers[event->ident].setResponse(ErrorPage::makeErrorPageResponse(request.getStatusCode(), default_config).toString());
                     return;
                 }
-
                 const Config* config = findConfig(request.getHost(), request.getURL());
                 servers[event->ident].setRequest(request);
                 parser.clear(event->ident);
                 change_list.push_back(makeEvent(event->ident, EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, NULL));
-
                 if (isCgi(config, &request)) {
                     PostCgi post_cgi(&request, config);
                     PostCgiPipePid* cgi_pipe_pid = post_cgi.cgipost();
@@ -187,7 +186,7 @@ void ServerManager::processEvent(const struct kevent* event) {
                     *conn_sock = event->ident;
                     change_list.push_back(makeEvent(cgi_pipe_pid->getWritePipeFd(), EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, reinterpret_cast<void*>(conn_sock)));
                     change_list.push_back(makeEvent(cgi_pipe_pid->getReadPipeFd(), EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, reinterpret_cast<void*>(conn_sock)));
-                    // timeout
+                    change_list.push_back(makeEvent(event->ident, EVFILT_TIMER, EV_ADD | EV_ONESHOT, 0, TIMEOUT_MSEC, reinterpret_cast<void*>(cgi_pipe_pid)));
                 }
                 else {
                     servers[event->ident].setResponse(servers[event->ident].makeResponse(config));
@@ -211,15 +210,17 @@ void ServerManager::processEvent(const struct kevent* event) {
         if (event->udata == NULL) {
             std::cout << "time out\n";
             change_list.push_back(makeEvent(event->ident, EVFILT_READ, EV_DISABLE, 0, 0, NULL));
-            disconnectWithClient(*event);
         }
         else {
-            // 자식 죽이기 ?
+            // cgi post time out
+            PostCgiPipePid* pipe_pid = reinterpret_cast<PostCgiPipePid*>(event->udata);
+            kill(pipe_pid->getChildPid(), SIGTERM);
+            delete pipe_pid;
+            change_list.push_back(makeEvent(event->ident, EVFILT_READ, EV_DISABLE, 0, 0, NULL));
         }
-
+        disconnectWithClient(*event);
     }
 }
-
 
 void ServerManager::processPipeReadEvent(const struct kevent& event) {
     char buff[BUFFER_SIZE];

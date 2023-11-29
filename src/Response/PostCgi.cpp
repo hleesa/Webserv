@@ -18,16 +18,7 @@ PostCgi::PostCgi(const HttpRequestMessage* request, const Config* config) : Meth
 
 HttpResponseMessage PostCgi::makeHttpResponseMessage(){
 
-	if (request->getMethod() != "POST") {
-		_status_code = 300;
-	} else if (request->getMessageBody() == "") {
-		_status_code = 300;
-	} else {
-		//요청 url 형태 및 실행 가능 여부 확인
-		check_request_line(request->getRequestLine());
-		//헤더 필드 확인 -> body가 있는 경우이기 때문에 필수 헤더 확인
-		check_header_field(request->getHeaderFields());
-	}
+
 
 	if (isCgi() == true) {
 		//cgi post 처리
@@ -100,8 +91,24 @@ void PostCgi::check_header_content_length(std::map<std::string, std::vector<std:
 	}
 }
 
+#define ERROR -1
+
+
 PostCgiPipePid* PostCgi::cgipost() {
+    if (request->getMethod() != "POST") {
+        _status_code = 300;
+    } else if (request->getMessageBody() == "") {
+        _status_code = 300;
+    } else {
+        //요청 url 형태 및 실행 가능 여부 확인
+        check_request_line(request->getRequestLine());
+        //헤더 필드 확인 -> body가 있는 경우이기 때문에 필수 헤더 확인
+        check_header_field(request->getHeaderFields());
+    }
+
 	std::ostringstream body_length;
+
+        signal(SIGPIPE, SIG_IGN);
 	//파일 권한 안주면 실패됨
 	// if (access(abs_path.c_str(), F_OK | X_OK) == -1) {
 	// 	throw 400;
@@ -111,6 +118,13 @@ PostCgiPipePid* PostCgi::cgipost() {
 	if (pipe(pipe_ptoc) == -1 || pipe(pipe_ctop) == -1) {
 		throw 500;
 	}
+    if (fcntl(pipe_ctop[0], F_SETFL, O_NONBLOCK, FD_CLOEXEC) == ERROR) {
+        throw (strerror(errno));
+    }
+    if (fcntl(pipe_ptoc[1], F_SETFL, O_NONBLOCK, FD_CLOEXEC) == ERROR) {
+        throw (strerror(errno));
+    }
+
     pid_t* pid = new pid_t;
 	*pid = fork();
 	if (*pid == -1)
@@ -195,6 +209,12 @@ void PostCgi::child_write(int* pipe_ptoc, int* pipe_ctop, Location location) {
 	if (dup2(pipe_ptoc[0], STDIN_FILENO) == -1 || dup2(pipe_ctop[1], STDOUT_FILENO) == -1) {
 		exit(EXIT_FAILURE);
 	}
+    if (fcntl(pipe_ptoc[0], F_SETFL, O_NONBLOCK, FD_CLOEXEC) == ERROR) {
+        throw (strerror(errno));
+    }
+    if (fcntl(pipe_ptoc[0], F_SETFL, O_NONBLOCK, FD_CLOEXEC) == ERROR) {
+        throw (strerror(errno));
+    }
 	if (close(pipe_ptoc[0]) == -1 || close(pipe_ctop[1]) == -1) {
 		exit(EXIT_FAILURE);
 	}

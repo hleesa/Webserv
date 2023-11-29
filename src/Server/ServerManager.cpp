@@ -200,7 +200,7 @@ void ServerManager::processEvent(const struct kevent* event) {
     }
     else if (event->filter == EVFILT_WRITE) {
         if (servers.find(event->ident) != servers.end() ) {
-//                processWriteEvent(*event);
+            processWriteEvent(*event);
             change_list.push_back(makeEvent(event->ident, EVFILT_TIMER, EV_ADD | EV_ONESHOT, 0, TIMEOUT_MSEC, NULL));
         }
         else if (event->udata != NULL) {
@@ -223,15 +223,30 @@ void ServerManager::processEvent(const struct kevent* event) {
 
 void ServerManager::processPipeReadEvent(const struct kevent& event) {
     char buff[BUFFER_SIZE];
+    memset(buff, 0, BUFFER_SIZE);
     ssize_t bytes_read = read(event.ident, &buff, BUFFER_SIZE);
-    if (bytes_read == ERROR) {
-        std::cout << errno << " " <<  strerror(errno) << '\n';
-        return;
+
+    int* server_idx = reinterpret_cast<int*>(event.udata);
+    Server *server = &servers[*server_idx];
+
+    servers[*server_idx].updateResponseBody(buff, bytes_read);
+    (void)bytes_read;
+    ssize_t bytes_sent = send(*server_idx, server->getResponse().c_str(), server->getResponse().length(), 0);
+    if (bytes_sent != ERROR) {
+        server->updateResponse(bytes_sent);
+        if (server->isSendComplete()) {
+            server->clearResponse();
+            change_list.push_back(makeEvent(event.ident, EVFILT_WRITE, EV_DISABLE, 0, 0, NULL));
+        }
     }
-    else if (bytes_read != 0) {
-        int* server_idx = reinterpret_cast<int*>(event.udata);
-        servers[*server_idx].updateResponseBody(buff, bytes_read);
-    }
+
+//    if (bytes_read == ERROR) {
+//        std::cout << errno << " " <<  strerror(errno) << '\n';
+//        return;
+//    }
+//    else if (bytes_read != 0) {
+//
+//    }
 }
 
 void ServerManager::processPipeWriteEvent(const struct kevent& event) {
@@ -249,6 +264,8 @@ void ServerManager::processPipeWriteEvent(const struct kevent& event) {
         change_list.push_back(makeEvent(event.ident, EVFILT_WRITE, EV_DISABLE, 0, 0, NULL));
         close(event.ident);
     }
+
+
 
 //    std::string http_message_body = request->getMessageBody();
 //    size_t body_size = http_message_body.length();

@@ -7,8 +7,9 @@ Server::Server() {}
 
 Server::Server(const int listen_socket) {
     this->listen_socket = listen_socket;
+	bytes_response = 0;
+	bytes_sent = 0;
 }
-
 
 int Server::getListenSocket() const {
     return listen_socket;
@@ -64,8 +65,9 @@ void Server::updateResponse(ssize_t new_bytes_sent) {
     response.substr(new_bytes_sent);
 }
 
-void Server::updateResponseBody(const char* buffer, size_t size) {
-    response_body.append(buffer, size);
+void Server::appendResponse(const char* buffer, size_t size) {
+	bytes_response += size;
+	response.append(buffer, size);
 }
 
 HttpRequestMessage* Server::getRequestPtr() {

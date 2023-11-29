@@ -116,10 +116,10 @@ void ServerManager::processEvents(const int events) {
 }
 
 void ServerManager::processEvent(const struct kevent* event) {
-    if (event->flags & EV_ERROR) {
-        std::cout << "error\n";
-        checkEventError(*event);
-    }
+//    if (event->flags & EV_ERROR) {
+//        std::cout << "error\n";
+//        checkEventError(*event);
+//    }
 
     if (event->filter == EVFILT_READ) {
         if (listen_sockets.find(event->ident) != listen_sockets.end()) {
@@ -136,7 +136,8 @@ void ServerManager::processEvent(const struct kevent* event) {
                 const Config* config = findConfig(request.getHost(), request.getURL());
                 servers[event->ident].setRequest(request);
                 parser.clear(event->ident);
-                change_list.push_back(makeEvent(event->ident, EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, NULL));
+
+
                 if (isCgi(config, &request)) {
                     PostCgi post_cgi(&request, config);
                     PostCgiPipePid* cgi_pipe_pid = post_cgi.cgipost();
@@ -148,6 +149,7 @@ void ServerManager::processEvent(const struct kevent* event) {
                 }
                 else {
                     servers[event->ident].setResponse(servers[event->ident].makeResponse(config));
+                    change_list.push_back(makeEvent(event->ident, EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, NULL));
                 }
             }
         }
@@ -184,32 +186,26 @@ void ServerManager::processPipeReadEvent(const struct kevent& event) {
     char buff[BUFFER_SIZE];
     memset(buff, 0, BUFFER_SIZE);
     ssize_t bytes_read = read(event.ident, &buff, BUFFER_SIZE);
+	int* server_idx = reinterpret_cast<int*>(event.udata);
+	Server *server = &servers[*server_idx];
 
-    int* server_idx = reinterpret_cast<int*>(event.udata);
-    Server *server = &servers[*server_idx];
-
-    servers[*server_idx].updateResponseBody(buff, bytes_read);
-    (void)bytes_read;
-    ssize_t bytes_sent = send(*server_idx, server->getResponse().c_str(), server->getResponse().length(), 0);
-    if (bytes_sent != ERROR) {
-        server->updateResponse(bytes_sent);
-        if (server->isSendComplete()) {
-            server->clearResponse();
-            change_list.push_back(makeEvent(event.ident, EVFILT_WRITE, EV_DISABLE, 0, 0, NULL));
-        }
+    
+	
+    if (bytes_read == ERROR) {
+        std::cout << errno << " " <<  strerror(errno) << '\n';
+        return;
     }
-
-//    if (bytes_read == ERROR) {
-//        std::cout << errno << " " <<  strerror(errno) << '\n';
-//        return;
-//    }
-//    else if (bytes_read != 0) {
-//
-//    }
+    else if (bytes_read > 0) {
+		server->appendResponse(buff, bytes_read);
+    }
+	else { // EOF
+		//server->setResponse(PostCgi::makeResponse(server->getResponse()));
+		change_list.push_back(makeEvent(*server_idx, EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, NULL));
+		close(event.ident);
+	}
 }
 
 void ServerManager::processPipeWriteEvent(const struct kevent& event) {
-
     int* server_idx = reinterpret_cast<int*>(event.udata);
     Server *server = &servers[*server_idx];
 
@@ -219,10 +215,10 @@ void ServerManager::processPipeWriteEvent(const struct kevent& event) {
         std::cout << errno << " " <<  strerror(errno) << '\n';
         return;
     }
-    if (requestBody.length() == static_cast<size_t>(bytes_write)){
+    if (requestBody.length() == static_cast<size_t>(bytes_write)) {
         change_list.push_back(makeEvent(event.ident, EVFILT_WRITE, EV_DISABLE, 0, 0, NULL));
         close(event.ident);
-    }
+	}
 
 
 

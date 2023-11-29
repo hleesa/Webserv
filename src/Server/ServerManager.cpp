@@ -2,6 +2,7 @@
 #include "../../inc/ToString.hpp"
 #include "../../inc/ErrorPage.hpp"
 #include "../../inc/Method.hpp"
+#include "../../inc/PostCgi.hpp"
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -112,38 +113,166 @@ void ServerManager::processEvents(const int events) {
 	}
 }
 
-void ServerManager::processEvent(const struct kevent* event) {
-        if (event->flags & EV_ERROR) {
-			std::cout << "error\n";
-            checkEventError(*event);
+std::string findLocationKey(const Config* config, HttpRequestMessage* request ){
+    std::string url = request->getURL();
+    std::map<std::string, Location> locations = config->getLocations();
+
+    if (locations.find(url) != locations.end()) {
+        return url;
+    }
+    unsigned long pos = url.rfind('/');
+    while (pos && pos != std::string::npos) {
+        std::string key = url.substr(0, pos + 1);
+        if (locations.find(key) != locations.end()) {
+            return key;
         }
-        else if (event->filter == EVFILT_READ && listen_sockets.find(event->ident) != listen_sockets.end()) {
+        key = url.substr(0, pos);
+        if (locations.find(key) != locations.end()) {
+            return key;
+        }
+        url = key;
+        pos = url.rfind('/');
+    }
+    return "/";
+}
+
+bool isCgi(const Config* config, HttpRequestMessage* request) {
+    std::string extension = config->getLocations()[findLocationKey(config, request)].getCgiExt();
+    std::string url = request->getURL();
+
+    if (extension.empty()) {
+        return false;
+    }
+    if (request->getMethod() == "GET") {
+        size_t queryPos = url.find("?");
+        if (queryPos == std::string::npos) {
+            return false;
+        }
+        url = queryPos != std::string::npos ? url.substr(0, queryPos) : url;
+    }
+    if (url.size() < extension.size()) {
+        return false;
+    }
+    return url.substr(url.size() - extension.size()) == extension;
+}
+
+void ServerManager::processEvent(const struct kevent* event) {
+    if (event->flags & EV_ERROR) {
+        std::cout << "error\n";
+        checkEventError(*event);
+    }
+
+    if (event->filter == EVFILT_READ) {
+        if (listen_sockets.find(event->ident) != listen_sockets.end()) {
             processListenEvent(*event);
         }
-        else if (event->filter == EVFILT_READ && servers.find(event->ident) != servers.end()) {
+        else if (servers.find(event->ident) != servers.end()) {
             processReadEvent(*event);
-			if (parser.getReadingStatus(event->ident) == END) {
+            if (parser.getReadingStatus(event->ident) == END) {
                 HttpRequestMessage request = parser.getHttpRequestMessage(event->ident);
-//                if (request.getStatusCode() != 0) {
-//                    servers[event->ident].setResponse(ErrorPage::makeErrorPageResponse(request.getStatusCode(), default_config).toString());
-//                    return;
-//                }
-				const Config* config = findConfig(request.getHost(), request.getURL());
+                if (request.getStatusCode() != 0) {
+                    servers[event->ident].setResponse(ErrorPage::makeErrorPageResponse(request.getStatusCode(), default_config).toString());
+                    return;
+                }
+
+                const Config* config = findConfig(request.getHost(), request.getURL());
                 servers[event->ident].setRequest(request);
                 parser.clear(event->ident);
-    			change_list.push_back(makeEvent(event->ident, EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, NULL));
-                servers[event->ident].setResponse(servers[event->ident].makeResponse(config));
-			}
+                change_list.push_back(makeEvent(event->ident, EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, NULL));
+
+                if (isCgi(config, &request)) {
+                    PostCgi post_cgi(&request, config);
+                    PostCgiPipePid* cgi_pipe_pid = post_cgi.cgipost();
+                    int* conn_sock = new int;
+                    *conn_sock = event->ident;
+                    change_list.push_back(makeEvent(cgi_pipe_pid->getWritePipeFd(), EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, reinterpret_cast<void*>(conn_sock)));
+                    change_list.push_back(makeEvent(cgi_pipe_pid->getReadPipeFd(), EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, reinterpret_cast<void*>(conn_sock)));
+                    // timeout
+                }
+                else {
+                    servers[event->ident].setResponse(servers[event->ident].makeResponse(config));
+                }
+            }
         }
-        else if (event->filter == EVFILT_WRITE && servers.find(event->ident) != servers.end()) {
-            processWriteEvent(*event);
+        else if (event->udata != NULL) {
+            processPipeReadEvent(*event);
+        }
+    }
+    else if (event->filter == EVFILT_WRITE) {
+        if (servers.find(event->ident) != servers.end() ) {
+//                processWriteEvent(*event);
             change_list.push_back(makeEvent(event->ident, EVFILT_TIMER, EV_ADD | EV_ONESHOT, 0, TIMEOUT_MSEC, NULL));
         }
-        else if (event->filter == EVFILT_TIMER) {
+        else if (event->udata != NULL) {
+            processPipeWriteEvent(*event);
+        }
+    }
+    else if (event->filter == EVFILT_TIMER) {
+        if (event->udata == NULL) {
             std::cout << "time out\n";
             change_list.push_back(makeEvent(event->ident, EVFILT_READ, EV_DISABLE, 0, 0, NULL));
             disconnectWithClient(*event);
         }
+        else {
+            // 자식 죽이기 ?
+        }
+
+    }
+}
+
+
+void ServerManager::processPipeReadEvent(const struct kevent& event) {
+    char buff[BUFFER_SIZE];
+    ssize_t bytes_read = read(event.ident, &buff, BUFFER_SIZE);
+    if (bytes_read == ERROR) {
+        std::cout << errno << " " <<  strerror(errno) << '\n';
+        return;
+    }
+    else if (bytes_read != 0) {
+        int* server_idx = reinterpret_cast<int*>(event.udata);
+        servers[*server_idx].updateResponseBody(buff, bytes_read);
+    }
+}
+
+void ServerManager::processPipeWriteEvent(const struct kevent& event) {
+
+    int* server_idx = reinterpret_cast<int*>(event.udata);
+    Server *server = &servers[*server_idx];
+
+    std::string requestBody = server->getRequestPtr()->getMessageBody();
+    ssize_t bytes_write = write(event.ident, requestBody.c_str(), requestBody.length());
+    if (bytes_write == ERROR) {
+        std::cout << errno << " " <<  strerror(errno) << '\n';
+        return;
+    }
+    if (requestBody.length() == static_cast<size_t>(bytes_write)){
+        change_list.push_back(makeEvent(event.ident, EVFILT_WRITE, EV_DISABLE, 0, 0, NULL));
+        close(event.ident);
+    }
+
+//    std::string http_message_body = request->getMessageBody();
+//    size_t body_size = http_message_body.length();
+//    ssize_t bytes_written = 0;
+//    while (body_size > 0) {
+//        ssize_t bytes_write = write(pipe_parent_to_child[WRITE], http_message_body.c_str() + bytes_written, body_size);
+//        if (bytes_write == ERROR) {
+//            throw 500;
+//        }
+//        bytes_written += bytes_written;
+//        body_size -= bytes_write;
+//    }
+
+//    ssize_t bytes_write = write(pipe_pid->getWritePipeFd(),)
+//
+//    ssize_t bytes_sent = send(event.ident, server->getResponse().c_str(), server->getResponse().length(), 0);
+//    if (bytes_sent != ERROR) {
+//        server->updateResponse(bytes_sent);
+//        if (server->isSendComplete()) {
+//            server->clearResponse();
+//            change_list.push_back(makeEvent(event.ident, EVFILT_WRITE, EV_DISABLE, 0, 0, NULL));
+//        }
+//    }
+
 }
 
 const Config* ServerManager::findConfig(const std::string host, const std::string url) {

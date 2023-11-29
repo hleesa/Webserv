@@ -11,6 +11,7 @@
 #include "Config.hpp"
 #include "HttpRequestMessage.hpp"
 #include "HttpResponseMessage.hpp"
+#include "PostCgiPipePid.hpp"
 
 class PostCgi : public Method {
 	private :
@@ -36,7 +37,7 @@ class PostCgi : public Method {
 		void check_header_field(std::map<std::string, std::vector<std::string> > header_field);
 
 //cgi response
-		void cgipost();
+        PostCgiPipePid* cgipost();
 		std::string parent_read(int* pipe_write, int* pipe_read, pid_t pid);
 		void child_write(int* pipe_write, int* pipe_read, Location location);
 		void child_write_py(int* pipe_write, int* pipe_read, Location location);

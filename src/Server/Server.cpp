@@ -63,3 +63,11 @@ void Server::updateResponse(ssize_t new_bytes_sent) {
     updateByteSend(new_bytes_sent);
     response.substr(new_bytes_sent);
 }
+
+void Server::updateResponseBody(const char* buffer, size_t size) {
+    response_body.append(buffer, size);
+}
+
+HttpRequestMessage* Server::getRequestPtr() {
+    return &this->request;
+}

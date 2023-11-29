@@ -3,6 +3,7 @@
 #include "../../inc/Location.hpp"
 #include <fcntl.h>
 #include <iostream>
+#include "../../inc/PostCgiPipePid.hpp"
 
 #define BUFFSIZE 100000
 
@@ -38,7 +39,7 @@ HttpResponseMessage PostCgi::makeHttpResponseMessage(){
 
 void PostCgi::check_request_line(std::vector<std::string> request_line) {
 	std::string url_path;
-	size_t pos;
+//	size_t pos;
 
 	url_path = request_line[1];
 
@@ -99,54 +100,62 @@ void PostCgi::check_header_content_length(std::map<std::string, std::vector<std:
 	}
 }
 
-void PostCgi::cgipost() {
+PostCgiPipePid* PostCgi::cgipost() {
 	std::ostringstream body_length;
 	//파일 권한 안주면 실패됨
 	// if (access(abs_path.c_str(), F_OK | X_OK) == -1) {
 	// 	throw 400;
 	// }
-	int pipe_ptoc[2];
-	int pipe_ctop[2];
+    int* pipe_ptoc = new int[2];
+	int* pipe_ctop = new int[2];
 	if (pipe(pipe_ptoc) == -1 || pipe(pipe_ctop) == -1) {
 		throw 500;
 	}
-	pid_t pid = fork();
-	if (pid == -1)
+    pid_t* pid = new pid_t;
+	*pid = fork();
+	if (*pid == -1)
 		throw 500;
-	else if (!pid) {
+	else if (!*pid) {
 		if (location_key == "/cgi-bin") {
 			child_write_py(pipe_ptoc, pipe_ctop, config->getLocations()[location_key]);
 		} else {
 			child_write(pipe_ptoc, pipe_ctop, config->getLocations()[location_key]);
 		}
 	}
-	_message_body = parent_read(pipe_ptoc, pipe_ctop, pid);
 
-	body_length << _message_body.size();
-	_header_fields["content-length"] = body_length.str();
-	_header_fields["content-type"] = request->getHeaderFields()["content-type"][0];
+    if (close(pipe_ptoc[0]) == -1 || close(pipe_ctop[1]) == -1) {
+        throw 500;
+    }
+    PostCgiPipePid* cgiPipePid = new PostCgiPipePid(pipe_ctop + 0, pipe_ptoc + 1, pid);
+    return cgiPipePid;
+
+//	_message_body = parent_read(pipe_ptoc, pipe_ctop, pid);
+
+//	body_length << _message_body.size();
+//	_header_fields["content-length"] = body_length.str();
+//	_header_fields["content-type"] = request->getHeaderFields()["content-type"][0];
 }
 
-std::string PostCgi::parent_read(int* pipe_ptoc, int* pipe_ctop, pid_t pid) {
-	std::string body;
-
-	if (close(pipe_ptoc[0]) == -1 || close(pipe_ctop[1]) == -1) {
-		throw 500;
-	}
-
-	std::cout << "before parent write"<<std::endl;
-
-	if (write(pipe_ptoc[1], request->getMessageBody().c_str(), request->getMessageBody().size()) == -1) {
-		throw 500;
-	}
-	if (close(pipe_ptoc[1]) == -1) {
-		throw 500;
-	}
-	std::cout << "before parent read" <<std::endl;
-	char	recv_buffer[BUFFSIZE];
-	int		nByte;
-
-/////////////////////return 하는 부분
+//std::string PostCgi::parent_read(int* pipe_ptoc, int* pipe_ctop, pid_t pid) {
+//	std::string body;
+//
+//	if (close(pipe_ptoc[0]) == -1 || close(pipe_ctop[1]) == -1) {
+//		throw 500;
+//	}
+//
+//	std::cout << "before parent write"<<std::endl;
+//
+//	if (write(pipe_ptoc[1], request->getMessageBody().c_str(), request->getMessageBody().size()) == -1) {
+//		throw 500;
+//	}
+//	if (close(pipe_ptoc[1]) == -1) {
+//		throw 500;
+//	}
+//	std::cout << "before parent read" <<std::endl;
+//	char	recv_buffer[BUFFSIZE];
+//	int		nByte;
+//
+///////////////////return 하는 부분
 	//return (pipe, pipe, pid);
 
 
@@ -173,7 +182,7 @@ std::string PostCgi::parent_read(int* pipe_ptoc, int* pipe_ctop, pid_t pid) {
 	//	throw 500;
 	//}
 	//return body;
-}
+//}
 
 void PostCgi::child_write(int* pipe_ptoc, int* pipe_ctop, Location location) {
 	char** cgi_environ = postCgiEnv();

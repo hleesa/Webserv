@@ -12,7 +12,7 @@
 #define NUMBER_OF_BACKLOG 5
 #define ERROR -1
 #define BUFFER_SIZE 10000
-#define TIMEOUT_MSEC 30000
+#define TIMEOUT_MSEC 30000000
 
 class ServerManager {
 	private:
@@ -47,6 +47,9 @@ class ServerManager {
 		void processWriteEvent(const struct kevent& event);
 		void disconnectWithClient(const struct kevent& event);
 		void handleError(const int return_value, const int listen_socket) const;
+
+        void processPipeWriteEvent(const struct kevent &event);
+        void processPipeReadEvent(const struct kevent& event);
 
 	public:
 		ServerManager(const std::vector<Config>* configs);

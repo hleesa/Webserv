@@ -33,9 +33,9 @@ std::string Resource::getPath() const {
 std::string Resource::read() const {
 	std::ifstream file_in(path.c_str());
 	std::string content;
-	
+
 	if (!file_in.is_open()) {
-		throw 500;
+		throw 404;
 	}
 	file_in.seekg(0, std::ios::end);
 	int size = file_in.tellg();

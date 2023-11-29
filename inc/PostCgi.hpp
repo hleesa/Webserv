@@ -12,9 +12,16 @@
 #include "HttpRequestMessage.hpp"
 #include "HttpResponseMessage.hpp"
 #include "PostCgiPipePid.hpp"
+#include "ServerUtils.hpp"
 
-class PostCgi : public Method {
+#define ERROR -1
+
+class PostCgi {
 	private :
+		const HttpRequestMessage* request;
+		const Config* config;
+		std::string location_key;
+
 		//응답 요소 : HttpResponseMessage msg_response에 들어갈 3개의 필드
 		int _status_code;
 		std::map<std::string, std::string> _header_fields;
@@ -23,15 +30,12 @@ class PostCgi : public Method {
 		//std::string location_key_post_cgi;
 		std::string rel_path;
 		std::string abs_path;		//config->root + url_path
-		std::string content_type;	//요청->type
-		std::string file_extention;	//요청->type에 따른 확장자
+		std::string file_extension;	//요청->type에 따른 확장자
 		size_t content_length;		//요청 바디 length
 
 
 	public :
 		PostCgi(const HttpRequestMessage* request, const Config* config);
-
-		virtual HttpResponseMessage makeHttpResponseMessage();
 
 		void check_request_line(std::vector<std::string> request_line);
 		void check_header_field(std::map<std::string, std::vector<std::string> > header_field);

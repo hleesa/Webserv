@@ -23,9 +23,6 @@ class PostCgi {
 		std::string location_key;
 
 		//응답 요소 : HttpResponseMessage msg_response에 들어갈 3개의 필드
-		int _status_code;
-		std::map<std::string, std::string> _header_fields;
-		std::string _message_body;
 
 		//std::string location_key_post_cgi;
 		std::string rel_path;
@@ -50,6 +47,10 @@ class PostCgi {
 //check request header field fn
 		void check_header_content_type(std::map<std::string, std::vector<std::string> > header_field);
 		void check_header_content_length(std::map<std::string, std::vector<std::string> > header_field);
+
+		static HttpResponseMessage makeResponse(std::string cgiResponse);
+		static int findStatusCode(std::istringstream& ss);
+		static void parseHeaderLine(std::istringstream& ss, std::map<std::string, std::string>& header_fields);
 
 };
 

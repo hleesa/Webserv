@@ -4,14 +4,13 @@
 #include <fcntl.h>
 #include <iostream>
 #include "../../inc/PostCgiPipePid.hpp"
+#include "../../inc/ToString.hpp"
 
 #define ERROR -1
 #define BUFFSIZE 100000
 
 PostCgi::PostCgi(const HttpRequestMessage* request, const Config* config) : request(request), config(config) {
 	this->location_key = findLocationKey(config, request);
-	_status_code = 0;
-	_message_body = "";
 	rel_path = "";
 	abs_path = "";
 	content_length = 0;
@@ -30,36 +29,29 @@ PostCgi::PostCgi(const HttpRequestMessage* request, const Config* config) : requ
 //}
 
 PostCgiPipePid* PostCgi::cgipost() {
-    if (request->getMethod() != "POST") {
-        _status_code = 300;
-    } else if (request->getMessageBody() == "") {
-        _status_code = 300;
-    } else {
-        //요청 url 형태 및 실행 가능 여부 확인
-        check_request_line(request->getRequestLine());
-        //헤더 필드 확인 -> body가 있는 경우이기 때문에 필수 헤더 확인
-        check_header_field(request->getHeaderFields());
-    }
+	//요청 url 형태 및 실행 가능 여부 확인
+	check_request_line(request->getRequestLine());
+	//헤더 필드 확인 -> body가 있는 경우이기 때문에 필수 헤더 확인
+	check_header_field(request->getHeaderFields());
 
     signal(SIGPIPE, SIG_IGN);
-
 	//파일 권한 안주면 실패됨
 	// if (access(abs_path.c_str(), F_OK | X_OK) == -1) {
 	// 	throw 400;
 	// }
-    int* pipe_ptoc = new int[2];
+	int* pipe_ptoc = new int[2];
 	int* pipe_ctop = new int[2];
 	if (pipe(pipe_ptoc) == -1 || pipe(pipe_ctop) == -1) {
 		throw 500;
 	}
-    if (fcntl(pipe_ctop[0], F_SETFL, O_NONBLOCK, FD_CLOEXEC) == ERROR) {
-        throw (strerror(errno));
-    }
-    if (fcntl(pipe_ptoc[1], F_SETFL, O_NONBLOCK, FD_CLOEXEC) == ERROR) {
-        throw (strerror(errno));
-    }
+	if (fcntl(pipe_ctop[0], F_SETFL, O_NONBLOCK, FD_CLOEXEC) == ERROR) {
+		throw (strerror(errno));
+	}
+	if (fcntl(pipe_ptoc[1], F_SETFL, O_NONBLOCK, FD_CLOEXEC) == ERROR) {
+		throw (strerror(errno));
+	}
 
-    pid_t* pid = new pid_t;
+	pid_t* pid = new pid_t;
 	*pid = fork();
 	if (*pid == -1)
 		throw 500;
@@ -71,8 +63,6 @@ PostCgiPipePid* PostCgi::cgipost() {
 		}
 	}
 
-//    signal(SIGCHLD, sigchld_handler);
-
     if (close(pipe_ptoc[0]) == -1 || close(pipe_ctop[1]) == -1) {
         throw 500;
     }
@@ -82,7 +72,7 @@ PostCgiPipePid* PostCgi::cgipost() {
 
 void PostCgi::check_request_line(std::vector<std::string> request_line) {
 	std::string url_path;
-//	size_t pos;
+	//	size_t pos;
 
 	url_path = request_line[1];
 
@@ -147,12 +137,12 @@ void PostCgi::child_write(int* pipe_ptoc, int* pipe_ctop, Location location) {
 	if (dup2(pipe_ptoc[0], STDIN_FILENO) == -1 || dup2(pipe_ctop[1], STDOUT_FILENO) == -1) {
 		exit(EXIT_FAILURE);
 	}
-    if (fcntl(pipe_ptoc[0], F_SETFL, O_NONBLOCK, FD_CLOEXEC) == ERROR) {
-        throw (strerror(errno));
-    }
-    if (fcntl(pipe_ptoc[0], F_SETFL, O_NONBLOCK, FD_CLOEXEC) == ERROR) {
-        throw (strerror(errno));
-    }
+	if (fcntl(pipe_ptoc[0], F_SETFL, O_NONBLOCK, FD_CLOEXEC) == ERROR) {
+		throw (strerror(errno));
+	}
+	if (fcntl(pipe_ptoc[0], F_SETFL, O_NONBLOCK, FD_CLOEXEC) == ERROR) {
+		throw (strerror(errno));
+	}
 	if (close(pipe_ptoc[0]) == -1 || close(pipe_ctop[1]) == -1) {
 		exit(EXIT_FAILURE);
 	}
@@ -210,3 +200,45 @@ char** PostCgi::postCgiEnv() {
 	cgi_env[i] = NULL;
 	return cgi_env;
 }
+
+HttpResponseMessage PostCgi::makeResponse(const std::string cgi_response) {
+	std::istringstream ss(cgi_response);
+	std::map<std::string, std::string> header_fields;
+	
+	//if (cgiResponse == "") {
+	//	throw 400;
+	//}
+	int status_code = findStatusCode(ss);
+	parseHeaderLine(ss, header_fields);
+	std::string body;
+	ss >> body;
+	header_fields["Content-length"] = to_string(body.length());
+
+	return HttpResponseMessage(status_code, header_fields, body);
+}
+
+int PostCgi::findStatusCode(std::istringstream& ss) {
+	std::string line;
+	std::getline(ss, line);
+
+	return std::atoi(line.substr(8, 3).c_str());
+}
+
+void PostCgi::parseHeaderLine(std::istringstream& ss, std::map<std::string, std::string>& header_fields) {
+	std::string line;
+	std::string key;
+	std::string contents;
+	size_t pos;
+
+	while (std::getline(ss, line) && line != "\r") {
+		pos = line.find(':');
+		key = line.substr(0, pos);
+		contents = line.substr(pos + 1);
+		if (!contents.empty() && *contents.rbegin() == '\r') {
+            contents = contents.substr(0, contents.size() - 1);
+        }
+		header_fields.insert(std::make_pair(key, contents));
+	}
+}
+
+//"Status: 200 OK\r\nContent-Type: text/html; charset=utf-8\r\n\r\nINPUT=HELLO"...

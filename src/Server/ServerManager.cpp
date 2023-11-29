@@ -198,7 +198,6 @@ void ServerManager::processPipeReadEvent(const struct kevent& event) {
 	Server *server = &servers[*server_idx];
 
 
-
     if (bytes_read == ERROR) {
         std::cout << errno << " " <<  strerror(errno) << '\n';
         return;
@@ -207,7 +206,7 @@ void ServerManager::processPipeReadEvent(const struct kevent& event) {
 		server->appendResponse(buff, bytes_read);
     }
 	else { // EOF
-		//server->setResponse(PostCgi::makeResponse(server->getResponse()));
+		server->setResponse(PostCgi::makeResponse(server->getResponse()).toString());
 		change_list.push_back(makeEvent(*server_idx, EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, NULL));
 		close(event.ident);
 	}

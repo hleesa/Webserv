@@ -27,15 +27,15 @@ std::string MediaType::getType(const std::string resource_path) {
 	if (pos == std::string::npos) {
 		return DEFAULT;
 	}
-	std::string filename_extenstion = resource_path.substr(pos);
+	std::string filename_extension = resource_path.substr(pos);
 	init(mime_table);
-	if (mime_table.find(filename_extenstion) == mime_table.end()) {
+	if (mime_table.find(filename_extension) == mime_table.end()) {
 		return DEFAULT;
 	}
-	return mime_table[filename_extenstion];
+	return mime_table[filename_extension];
 }
 
-std::string MediaType::getExtention(const std::string content_type) {
+std::string MediaType::getExtension(const std::string content_type) {
 	static std::map<std::string, std::string> mime_table;
 	std::map<std::string, std::string>::const_iterator ite;
 

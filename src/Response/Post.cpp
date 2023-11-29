@@ -122,9 +122,9 @@ void Post::check_header_content_type(std::map<std::string, std::vector<std::stri
 		throw 400;
 	}
 	content_type = header_field["content-type"][0];
-	file_extention = MediaType::getExtention(header_field["content-type"][0]);
-	if (file_extention == DEFAULT) {
-		file_extention = config->getLocations()[location_key].getCgiExt();
+	file_extension = MediaType::getExtension(header_field["content-type"][0]);
+	if (file_extension == DEFAULT) {
+		file_extension = config->getLocations()[location_key].getCgiExt();
 		//_status_code = 400;
 		//return;
 		//throw 415;
@@ -322,7 +322,7 @@ std::string Post::generateFileName(const Config* config) {
 	static size_t fileIndex = 0;
 
 	std::stringstream filenameStream;
-	filenameStream << config->getPort() << "_" << config->getName()[0] << "_No_" << fileIndex++ << file_extention;
+	filenameStream << config->getPort() << "_" << config->getName()[0] << "_No_" << fileIndex++ << file_extension;
 	return filenameStream.str();
 }
 

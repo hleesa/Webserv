@@ -23,7 +23,7 @@ class Post : public Method {
 		std::string rel_path;
 		std::string abs_path;		//config->root + url_path
 		std::string content_type;	//요청->type
-		std::string file_extention;	//요청->type에 따른 확장자
+		std::string file_extension;	//요청->type에 따른 확장자
 		std::string boundary;
 		size_t content_length;		//요청 바디 length
 

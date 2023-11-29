@@ -4,7 +4,7 @@
 #include <map>
 #include <string>
 
-#define DEFAULT "multipart/related"
+#define DEFAULT "application/octet-stream"
 
 class MediaType {
 	private:
@@ -12,7 +12,7 @@ class MediaType {
 
 	public:
 		static std::string getType(const std::string resource_path);
-		static std::string getExtention(const std::string content_type);
+		static std::string getExtension(const std::string content_type);
 };
 
 #endif

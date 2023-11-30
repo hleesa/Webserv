@@ -115,79 +115,114 @@ void ServerManager::processEvents(const int events) {
 	}
 }
 
+EventType ServerManager::getEventType(const struct kevent* event){
+    if (event->flags & EV_ERROR) {
+        return ERROR;
+    }
+    EventType event_type = NONE;
+    switch (event->filter) {
+        case EVFILT_READ:
+            if (listen_sockets.find(event->ident) != listen_sockets.end()) {
+                event_type = LISTEN;
+            }
+            else if (servers.find(event->ident) != servers.end()) {
+                event_type = PARSE_REQUEST;
+            }
+            else if (event->udata != NULL) {
+                event_type = READ_PIPE;
+            }
+            break;
+        case EVFILT_WRITE:
+            if (servers.find(event->ident) != servers.end()) {
+                event_type = SEND_RESPONSE;
+            }
+            else if (event->udata != NULL) {
+                event_type = WRITE_PIPE;
+            }
+            break;
+        case EVFILT_TIMER:
+            if (event->udata == NULL) {
+                event_type = TIMEOUT;
+            }
+            else {
+                event_type = TIMEOUT_CGI;
+            }
+            break;
+        case EVFILT_PROC:
+            event_type = CGI_END;
+            break;
+    }
+    return event_type;
+}
+
 void ServerManager::processEvent(const struct kevent* event) {
-//    if (event->flags & EV_ERROR) {
-//        std::cout << "error\n";
+    EventType event_type = getEventType(event);
+
+    if (event_type == ERROR) {
+        std::cout << "error\n";
 //        checkEventError(*event);
-//    }
+    }
+    else if (event_type == LISTEN) {
+        processListenEvent(*event);
+    }
+    else if (event_type == PARSE_REQUEST) {
+        processReadEvent(*event);
+        if (parser.getReadingStatus(event->ident) == END) {
+            HttpRequestMessage request = parser.getHttpRequestMessage(event->ident);
+            if (request.getStatusCode() != 0) {
+                servers[event->ident].setResponse(ErrorPage::makeErrorPageResponse(request.getStatusCode(), default_config).toString());
+                return;
+            }
+            servers[event->ident].setRequest(request);
+            parser.clear(event->ident);
 
-    if (event->filter == EVFILT_READ) {
-        if (listen_sockets.find(event->ident) != listen_sockets.end()) {
-            processListenEvent(*event);
-        }
-        else if (servers.find(event->ident) != servers.end()) {
-            processReadEvent(*event);
-            if (parser.getReadingStatus(event->ident) == END) {
-                HttpRequestMessage request = parser.getHttpRequestMessage(event->ident);
-                if (request.getStatusCode() != 0) {
-                    servers[event->ident].setResponse(ErrorPage::makeErrorPageResponse(request.getStatusCode(), default_config).toString());
-                    return;
-                }
-                const Config* config = findConfig(request.getHost(), request.getURL());
-                servers[event->ident].setRequest(request);
-                parser.clear(event->ident);
-
-
-                if (isCgi(config, &request)) {
-                    PostCgi post_cgi(&request, config);
-                    PostCgiPipePid* cgi_pipe_pid = post_cgi.cgipost();
-                    int* conn_sock = new int;
-                    *conn_sock = event->ident;
-                    change_list.push_back(makeEvent(cgi_pipe_pid->getWritePipeFd(), EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, reinterpret_cast<void*>(conn_sock)));
-                    change_list.push_back(makeEvent(cgi_pipe_pid->getReadPipeFd(), EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, reinterpret_cast<void*>(conn_sock)));
-                    change_list.push_back(makeEvent(cgi_pipe_pid->getChildPid(), EVFILT_PROC, EV_ADD | EV_ONESHOT, NOTE_EXIT, 0, reinterpret_cast<void*>(cgi_pipe_pid)));
-                    change_list.push_back(makeEvent(event->ident, EVFILT_TIMER, EV_ADD | EV_ONESHOT, NOTE_SECONDS, TIMEOUT_SEC, reinterpret_cast<void*>(cgi_pipe_pid)));
-                }
-                else {
-                    change_list.push_back(makeEvent(event->ident, EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, NULL));
-                    servers[event->ident].setResponse(servers[event->ident].makeResponse(config));
-                    change_list.push_back(makeEvent(event->ident, EVFILT_TIMER, EV_ADD | EV_ONESHOT, NOTE_SECONDS, TIMEOUT_SEC, NULL));
-                }
+            const Config* config = findConfig(request.getHost(), request.getURL());
+            if (isCgi(config, &request)) {
+                PostCgi post_cgi(&request, config);
+                PostCgiPipePid* cgi_pipe_pid = post_cgi.cgipost();
+                int* conn_sock = new int;
+                *conn_sock = event->ident;
+                change_list.push_back(makeEvent(cgi_pipe_pid->getWritePipeFd(), EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, reinterpret_cast<void*>(conn_sock)));
+                change_list.push_back(makeEvent(cgi_pipe_pid->getReadPipeFd(), EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, reinterpret_cast<void*>(conn_sock)));
+                change_list.push_back(makeEvent(cgi_pipe_pid->getChildPid(), EVFILT_PROC, EV_ADD | EV_ONESHOT, NOTE_EXIT, 0, reinterpret_cast<void*>(cgi_pipe_pid)));
+                change_list.push_back(makeEvent(event->ident, EVFILT_TIMER, EV_ADD | EV_ONESHOT, NOTE_SECONDS, TIMEOUT_SEC, reinterpret_cast<void*>(cgi_pipe_pid)));
+            }
+            else {
+                change_list.push_back(makeEvent(event->ident, EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, NULL));
+                servers[event->ident].setResponse(servers[event->ident].makeResponse(config));
+                change_list.push_back(makeEvent(event->ident, EVFILT_TIMER, EV_ADD | EV_ONESHOT, NOTE_SECONDS, TIMEOUT_SEC, NULL));
             }
         }
-        else if (event->udata != NULL) {
-            processPipeReadEvent(*event);
-        }
     }
-    else if (event->filter == EVFILT_WRITE) {
-        if (servers.find(event->ident) != servers.end() ) {
-            processWriteEvent(*event);
-            change_list.push_back(makeEvent(event->ident, EVFILT_TIMER, EV_ADD | EV_ONESHOT, NOTE_SECONDS, TIMEOUT_SEC, NULL));
-        }
-        else if (event->udata != NULL) {
-            processPipeWriteEvent(*event);
-        }
+    else if (event_type == READ_PIPE) {
+        processPipeReadEvent(*event);
     }
-    else if (event->filter == EVFILT_TIMER) {
-        if (event->udata == NULL) {
-            std::cout << "time out\n";
-            change_list.push_back(makeEvent(event->ident, EVFILT_READ, EV_DISABLE, 0, 0, NULL));
-        }
-        else {
-            // cgi post time out
-            PostCgiPipePid* pipe_pid = reinterpret_cast<PostCgiPipePid*>(event->udata);
-            kill(pipe_pid->getChildPid(), SIGTERM);
-            delete pipe_pid;
-            change_list.push_back(makeEvent(event->ident, EVFILT_READ, EV_DISABLE, 0, 0, NULL));
-        }
+    else if (event_type == SEND_RESPONSE) {
+        processWriteEvent(*event);
+        change_list.push_back(makeEvent(event->ident, EVFILT_TIMER, EV_ADD | EV_ONESHOT, NOTE_SECONDS, TIMEOUT_SEC, NULL));
+    }
+    else if (event_type == WRITE_PIPE) {
+        processPipeWriteEvent(*event);
+    }
+    else if (event_type == TIMEOUT) {
+        std::cout << "time out\n";
+        change_list.push_back(makeEvent(event->ident, EVFILT_READ, EV_DISABLE, 0, 0, NULL));
         disconnectWithClient(*event);
     }
-    else if (event->filter == EVFILT_PROC) {
+    else if (event_type == TIMEOUT_CGI) {
+        PostCgiPipePid* pipe_pid = reinterpret_cast<PostCgiPipePid*>(event->udata);
+        kill(pipe_pid->getChildPid(), SIGTERM);
+        delete pipe_pid;
+        change_list.push_back(makeEvent(event->ident, EVFILT_READ, EV_DISABLE, 0, 0, NULL));
+        disconnectWithClient(*event);
+    }
+    else if (CGI_END) {
         PostCgiPipePid* pipe_pid = reinterpret_cast<PostCgiPipePid*>(event->udata);
         change_list.push_back(makeEvent(pipe_pid->getWritePipeFd(), EVFILT_WRITE, EV_DISABLE, 0, 0, NULL));
         change_list.push_back(makeEvent(pipe_pid->getReadPipeFd(), EVFILT_READ, EV_DISABLE, 0, 0, NULL));
         delete pipe_pid;
     }
+    return;
 }
 
 void ServerManager::processPipeReadEvent(const struct kevent& event) {
@@ -196,7 +231,6 @@ void ServerManager::processPipeReadEvent(const struct kevent& event) {
     ssize_t bytes_read = read(event.ident, &buff, BUFFER_SIZE);
 	int* server_idx = reinterpret_cast<int*>(event.udata);
 	Server *server = &servers[*server_idx];
-
 
     if (bytes_read == ERROR) {
         std::cout << errno << " " <<  strerror(errno) << '\n';

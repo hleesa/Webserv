@@ -7,12 +7,12 @@
 #include "Config.hpp"
 #include "Server.hpp"
 #include "RequestParser.hpp"
+#include "EventType.hpp"
 
 #define NUMBER_OF_EVENT 100
 #define NUMBER_OF_BACKLOG 5
-#define ERROR -1
 #define BUFFER_SIZE 10000
-#define TIMEOUT_SEC 10
+#define TIMEOUT_SEC 30
 
 class ServerManager {
 	private:
@@ -50,6 +50,8 @@ class ServerManager {
 
         void processPipeWriteEvent(const struct kevent &event);
         void processPipeReadEvent(const struct kevent& event);
+
+        EventType getEventType(const struct kevent* event);
 
 	public:
 		ServerManager(const std::vector<Config>* configs);

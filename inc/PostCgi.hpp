@@ -14,8 +14,6 @@
 #include "PostCgiPipePid.hpp"
 #include "ServerUtils.hpp"
 
-#define ERROR -1
-
 class PostCgi {
 	private :
 		const HttpRequestMessage* request;

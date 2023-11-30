@@ -3,7 +3,7 @@
 #include "../../inc/Location.hpp"
 #include <fcntl.h>
 #include <iostream>
-#include "../../inc/PostCgiPipePid.hpp"
+#include "../../inc/CgiData.hpp"
 #include "../../inc/ToString.hpp"
 
 #define ERROR -1
@@ -28,13 +28,12 @@ PostCgi::PostCgi(const HttpRequestMessage* request, const Config* config) : requ
 //    }
 //}
 
-PostCgiPipePid* PostCgi::cgipost() {
+CgiData* PostCgi::cgipost() {
 	//요청 url 형태 및 실행 가능 여부 확인
 	check_request_line(request->getRequestLine());
 	//헤더 필드 확인 -> body가 있는 경우이기 때문에 필수 헤더 확인
 	check_header_field(request->getHeaderFields());
 
-    signal(SIGPIPE, SIG_IGN);
 	//파일 권한 안주면 실패됨
 	// if (access(abs_path.c_str(), F_OK | X_OK) == -1) {
 	// 	throw 400;
@@ -51,11 +50,10 @@ PostCgiPipePid* PostCgi::cgipost() {
 		throw (strerror(errno));
 	}
 
-	pid_t* pid = new pid_t;
-	*pid = fork();
-	if (*pid == -1)
+    pid_t pid = fork();
+	if (pid == -1)
 		throw 500;
-	else if (!*pid) {
+	else if (!pid) {
 		if (location_key == "/cgi-bin") {
 			child_write_py(pipe_ptoc, pipe_ctop, config->getLocations()[location_key]);
 		} else {
@@ -66,7 +64,7 @@ PostCgiPipePid* PostCgi::cgipost() {
         throw 500;
     }
 
-    PostCgiPipePid* cgiPipePid = new PostCgiPipePid(pipe_ctop, pipe_ptoc, pid);
+    CgiData* cgiPipePid = new CgiData(pipe_ctop, pipe_ptoc, pid, -1);
     return cgiPipePid;
 }
 

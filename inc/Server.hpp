@@ -35,6 +35,6 @@ public:
     HttpRequestMessage* getRequestPtr();
     size_t bytes_write;
 
-};;
+};
 
 #endif

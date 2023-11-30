@@ -165,6 +165,26 @@ void ServerManager::assignParsedRequest(const struct kevent* event) {
     parser.clear(event->ident);
 }
 
+void ServerManager::processCgiOrMakeResponse(const struct kevent* event) {
+    HttpRequestMessage* request = servers[event->ident].getRequestPtr();
+    const Config* config = findConfig(request->getHost(), request->getURL());
+    if (isCgi(config, request)) {
+        PostCgi post_cgi(request, config);
+        PostCgiPipePid* cgi_pipe_pid = post_cgi.cgipost();
+        int* conn_sock = new int;
+        *conn_sock = event->ident;
+        change_list.push_back(makeEvent(cgi_pipe_pid->getWritePipeFd(), EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, reinterpret_cast<void*>(conn_sock)));
+        change_list.push_back(makeEvent(cgi_pipe_pid->getReadPipeFd(), EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, reinterpret_cast<void*>(conn_sock)));
+        change_list.push_back(makeEvent(cgi_pipe_pid->getChildPid(), EVFILT_PROC, EV_ADD | EV_ONESHOT, NOTE_EXIT, 0, reinterpret_cast<void*>(cgi_pipe_pid)));
+        change_list.push_back(makeEvent(event->ident, EVFILT_TIMER, EV_ADD | EV_ONESHOT, NOTE_SECONDS, TIMEOUT_SEC, reinterpret_cast<void*>(cgi_pipe_pid)));
+    }
+    else {
+        change_list.push_back(makeEvent(event->ident, EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, NULL));
+        servers[event->ident].setResponse(servers[event->ident].makeResponse(config));
+        change_list.push_back(makeEvent(event->ident, EVFILT_TIMER, EV_ADD | EV_ONESHOT, NOTE_SECONDS, TIMEOUT_SEC, NULL));
+    }
+}
+
 void ServerManager::processEvent(const struct kevent* event) {
     EventType event_type = getEventType(event);
 
@@ -179,23 +199,7 @@ void ServerManager::processEvent(const struct kevent* event) {
         processReadEvent(*event);
         if (parser.getReadingStatus(event->ident) == END) {
             assignParsedRequest(event);
-            HttpRequestMessage* request = servers[event->ident].getRequestPtr();
-            const Config* config = findConfig(request->getHost(), request->getURL());
-            if (isCgi(config, request)) {
-                PostCgi post_cgi(request, config);
-                PostCgiPipePid* cgi_pipe_pid = post_cgi.cgipost();
-                int* conn_sock = new int;
-                *conn_sock = event->ident;
-                change_list.push_back(makeEvent(cgi_pipe_pid->getWritePipeFd(), EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, reinterpret_cast<void*>(conn_sock)));
-                change_list.push_back(makeEvent(cgi_pipe_pid->getReadPipeFd(), EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, reinterpret_cast<void*>(conn_sock)));
-                change_list.push_back(makeEvent(cgi_pipe_pid->getChildPid(), EVFILT_PROC, EV_ADD | EV_ONESHOT, NOTE_EXIT, 0, reinterpret_cast<void*>(cgi_pipe_pid)));
-                change_list.push_back(makeEvent(event->ident, EVFILT_TIMER, EV_ADD | EV_ONESHOT, NOTE_SECONDS, TIMEOUT_SEC, reinterpret_cast<void*>(cgi_pipe_pid)));
-            }
-            else {
-                change_list.push_back(makeEvent(event->ident, EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, NULL));
-                servers[event->ident].setResponse(servers[event->ident].makeResponse(config));
-                change_list.push_back(makeEvent(event->ident, EVFILT_TIMER, EV_ADD | EV_ONESHOT, NOTE_SECONDS, TIMEOUT_SEC, NULL));
-            }
+            processCgiOrMakeResponse(event);
         }
     }
     else if (event_type == READ_PIPE) {

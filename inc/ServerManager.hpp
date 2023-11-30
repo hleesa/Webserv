@@ -53,6 +53,7 @@ class ServerManager {
 
         EventType getEventType(const struct kevent* event);
         void assignParsedRequest(const struct kevent* event);
+        void processCgiOrMakeResponse(const struct kevent* event);
 
 	public:
 		ServerManager(const std::vector<Config>* configs);

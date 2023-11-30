@@ -206,7 +206,7 @@ void ServerManager::processEvent(const struct kevent* event) {
         processPipeReadEvent(*event);
     }
     else if (event_type == SEND_RESPONSE) {
-        processWriteEvent(*event);
+        processSendEvent(*event);
         change_list.push_back(makeEvent(event->ident, EVFILT_TIMER, EV_ADD | EV_ONESHOT, NOTE_SECONDS, TIMEOUT_SEC, NULL));
     }
     else if (event_type == WRITE_PIPE) {
@@ -321,7 +321,7 @@ void ServerManager::processReadEvent(const struct kevent& event) {
 	parser.run(event.ident, buff);
 }
 
-void ServerManager::processWriteEvent(const struct kevent& event) {
+void ServerManager::processSendEvent(const struct kevent& event) {
     Server *server = &servers[event.ident];
     ssize_t bytes_sent = send(event.ident, server->getResponse().c_str(), server->getResponse().length(), 0);
     if (bytes_sent != ERROR) {

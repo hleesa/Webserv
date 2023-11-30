@@ -44,7 +44,7 @@ class ServerManager {
 		void checkEventError(const struct kevent& event);
 		void processListenEvent(const struct kevent& event);
 		void processReadEvent(const struct kevent& event);
-		void processWriteEvent(const struct kevent& event);
+		void processSendEvent(const struct kevent& event);
 		void disconnectWithClient(const struct kevent& event);
 		void handleError(const int return_value, const int listen_socket) const;
 

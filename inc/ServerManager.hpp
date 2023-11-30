@@ -43,7 +43,7 @@ class ServerManager {
 		const Config* findConfig(const std::string host, const std::string url);
 		void checkEventError(const struct kevent& event);
 		void processListenEvent(const struct kevent& event);
-		void processReadEvent(const struct kevent& event);
+		void processReceiveEvent(const struct kevent& event);
 		void processSendEvent(const struct kevent& event);
 		void disconnectWithClient(const struct kevent& event);
 		void handleError(const int return_value, const int listen_socket) const;

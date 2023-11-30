@@ -196,7 +196,7 @@ void ServerManager::processEvent(const struct kevent* event) {
         processListenEvent(*event);
     }
     else if (event_type == PARSE_REQUEST) {
-        processReadEvent(*event);
+        processReceiveEvent(*event);
         if (parser.getReadingStatus(event->ident) == END) {
             assignParsedRequest(event);
             processCgiOrMakeResponse(event);
@@ -310,7 +310,7 @@ void ServerManager::processListenEvent(const struct kevent& event) {
     change_list.push_back(makeEvent(connection_socket, EVFILT_TIMER, EV_ADD | EV_ONESHOT, NOTE_SECONDS, TIMEOUT_SEC, NULL));
 }
 
-void ServerManager::processReadEvent(const struct kevent& event) {
+void ServerManager::processReceiveEvent(const struct kevent& event) {
     char buff[BUFFER_SIZE + 1];
     ssize_t bytes_recv = recv(event.ident, &buff, BUFFER_SIZE, 0);
     

@@ -155,6 +155,16 @@ EventType ServerManager::getEventType(const struct kevent* event){
     return event_type;
 }
 
+void ServerManager::assignParsedRequest(const struct kevent* event) {
+    HttpRequestMessage request = parser.getHttpRequestMessage(event->ident);
+    if (request.getStatusCode() != 0) {
+        servers[event->ident].setResponse(ErrorPage::makeErrorPageResponse(request.getStatusCode(), default_config).toString());
+        return;
+    }
+    servers[event->ident].setRequest(request);
+    parser.clear(event->ident);
+}
+
 void ServerManager::processEvent(const struct kevent* event) {
     EventType event_type = getEventType(event);
 
@@ -168,17 +178,11 @@ void ServerManager::processEvent(const struct kevent* event) {
     else if (event_type == PARSE_REQUEST) {
         processReadEvent(*event);
         if (parser.getReadingStatus(event->ident) == END) {
-            HttpRequestMessage request = parser.getHttpRequestMessage(event->ident);
-            if (request.getStatusCode() != 0) {
-                servers[event->ident].setResponse(ErrorPage::makeErrorPageResponse(request.getStatusCode(), default_config).toString());
-                return;
-            }
-            servers[event->ident].setRequest(request);
-            parser.clear(event->ident);
-
-            const Config* config = findConfig(request.getHost(), request.getURL());
-            if (isCgi(config, &request)) {
-                PostCgi post_cgi(&request, config);
+            assignParsedRequest(event);
+            HttpRequestMessage* request = servers[event->ident].getRequestPtr();
+            const Config* config = findConfig(request->getHost(), request->getURL());
+            if (isCgi(config, request)) {
+                PostCgi post_cgi(request, config);
                 PostCgiPipePid* cgi_pipe_pid = post_cgi.cgipost();
                 int* conn_sock = new int;
                 *conn_sock = event->ident;
@@ -203,6 +207,7 @@ void ServerManager::processEvent(const struct kevent* event) {
     }
     else if (event_type == WRITE_PIPE) {
         processPipeWriteEvent(*event);
+//        change_list.push_back(makeEvent(event->ident, EVFILT_TIMER, EV_ADD | EV_ONESHOT, NOTE_SECONDS, TIMEOUT_SEC, NULL));
     }
     else if (event_type == TIMEOUT) {
         std::cout << "time out\n";

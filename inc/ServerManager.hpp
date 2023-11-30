@@ -52,6 +52,7 @@ class ServerManager {
         void processPipeReadEvent(const struct kevent& event);
 
         EventType getEventType(const struct kevent* event);
+        void assignParsedRequest(const struct kevent* event);
 
 	public:
 		ServerManager(const std::vector<Config>* configs);

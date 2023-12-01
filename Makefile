@@ -31,7 +31,7 @@ RESPONSE_SRC = \
 			GetCgi.cpp \
 			Post.cpp \
 			PostCgi.cpp\
-			PostCgiPipePid.cpp\
+			CgiData.cpp\
 			Delete.cpp \
 			Head.cpp \
 			Resource.cpp\

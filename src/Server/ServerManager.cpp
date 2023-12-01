@@ -189,7 +189,7 @@ void ServerManager::processEvent(const struct kevent* event) {
     EventType event_type = getEventType(event);
 
     if (event_type == ERROR) {
-        std::cout << "error\n";
+        std::cout << "error " << strerror(event->data) << '\n';
 //        checkEventError(*event);
     }
     else if (event_type == LISTEN) {
@@ -275,6 +275,7 @@ void ServerManager::processPipeWriteEvent(const struct kevent& event) {
 //        std::cout << errno << " " <<  strerror(errno) << '\n';
         return;
     }
+    change_list.push_back(makeEvent(cgi_data->getConnSocket(), EVFILT_TIMER, EV_ADD | EV_ONESHOT, NOTE_SECONDS, TIMEOUT_SEC, reinterpret_cast<void*>(cgi_data)));
 }
 
 const Config* ServerManager::findConfig(const std::string host, const std::string url) {
@@ -353,11 +354,11 @@ struct kevent ServerManager::makeEvent(
 }
 
 void ServerManager::disconnectWithClient(const struct kevent& event) {
-	// struct linger linger;
+//	 struct linger linger;
 	
-	// linger.l_onoff = 1;
-	// linger.l_linger = 0;
-	// setsockopt(event.ident, SOL_SOCKET, SO_LINGER, &linger, sizeof(linger)); // Linger option
+//	 linger.l_onoff = 1;
+//	 linger.l_linger = 0;
+//	 setsockopt(event.ident, SOL_SOCKET, SO_LINGER, &linger, sizeof(linger)); // Linger option
     close(event.ident);
     servers.erase(event.ident);
 }

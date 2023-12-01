@@ -9,10 +9,10 @@
 #include "RequestParser.hpp"
 #include "EventType.hpp"
 
-#define NUMBER_OF_EVENT 100
-#define NUMBER_OF_BACKLOG 5
+#define NUMBER_OF_EVENT 200
+#define NUMBER_OF_BACKLOG 2000
 #define BUFFER_SIZE 25000
-#define TIMEOUT_SEC 3000
+#define TIMEOUT_SEC 30
 
 class ServerManager {
 	private:

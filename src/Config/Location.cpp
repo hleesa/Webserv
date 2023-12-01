@@ -1,5 +1,6 @@
 
 #include "../../inc/Location.hpp"
+#include <iostream>
 
 bool isHttpMethod(const std::string& method);
 bool isNumber(const std::string& string);
@@ -8,7 +9,7 @@ bool isValidRangeStatusCode(const int status_code);
 Location::Location() {}
 
 Location::Location(std::vector<std::vector<std::string> >& location_block)
-: root(""), autoindex(false), cgi_path(""), cgi_ext("") {
+: root(""), autoindex(false), limit_body_size(100000000), cgi_path(""), cgi_ext("") {
 	std::set<std::string> duplicated;
 	std::vector<std::vector<std::string> >::iterator itr;
 
@@ -34,6 +35,7 @@ Location &Location::operator=(const Location &other) {
 		this->root = other.root;
 		this->index = other.index;
 		this->autoindex = other.autoindex;
+		this->limit_body_size = other.limit_body_size;
 		this->cgi_ext = other.cgi_ext;
 		this->cgi_path = other.cgi_path;
 	}
@@ -102,6 +104,10 @@ void Location::parse(std::vector<std::string>& line, std::set<std::string>& dupl
 	}
 	if (directive == "autoindex") {
 		parseAutoindex(line, duplicated);
+		return ;
+	}
+	if (directive == "client_max_body_size") {
+		parseLimitBodySize(line, duplicated);
 		return ;
 	}
 	if (directive == "cgi_path") {
@@ -205,6 +211,20 @@ void Location::checkAutoindexFormat(const std::string& value) const {
 		throw (std::invalid_argument("Error: Invalid value '" + value + "' in 'autoindex' directive"));
 }
 
+void Location::parseLimitBodySize(std::vector<std::string>& line, std::set<std::string>& duplicated) {
+	std::string directive("client_max_body_size");
+
+	checkDuplicated(duplicated, directive);
+	checkInvalidNumber(line.size() == 2, directive);
+	std::string size(line[1]);
+	if (!isNumber(size)) {
+		throw (std::invalid_argument("Error: Invalid client max hody size '" + size + "'"));
+	}	
+	std::stringstream ss(size);
+	ss >> limit_body_size;
+	duplicated.insert(directive);
+}
+
 void Location::parseCgiPath(std::vector<std::string>& line, std::set<std::string>& duplicated) {
 	std::string directive("cgi_path");
 
@@ -234,6 +254,7 @@ std::ostream& operator<<(std::ostream& out, Location& l) {
 	for (std::vector<std::string>::iterator itr = l.index.begin(); itr != l.index.end(); itr++)
 		out << *itr << " ";
 	out << "\n-----autoindex-----\n" << std::boolalpha << l.autoindex << std::endl;
+	out << "\n-----autoindex-----\n" << l.limit_body_size << std::endl;
 	out << "\n-----cgi_ext-----\n" << l.cgi_ext << std::endl;
 	out << "\n-----cgi_path-----\n" << l.cgi_path << std::endl;
 	return out;

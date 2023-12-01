@@ -9,12 +9,13 @@
 #include <stdexcept>
 
 class Location {
-protected:
+private:
 	std::set<std::string> http_methods;
     std::pair<int, std::string> return_value;
     std::string root;
     std::vector<std::string> index;
     bool autoindex;
+	long limit_body_size;
     std::string cgi_path;
     std::string cgi_ext;
 	
@@ -24,6 +25,7 @@ protected:
 	void parseRoot(std::vector<std::string>& line, std::set<std::string>& duplicated);
 	void parseIndex(std::vector<std::string>& line, std::set<std::string>& duplicated);
 	void parseAutoindex(std::vector<std::string>& line, std::set<std::string>& duplicated);
+	void parseLimitBodySize(std::vector<std::string>& line, std::set<std::string>& duplicated);
 	void parseCgiPath(std::vector<std::string>& line, std::set<std::string>& duplicated);
 	void parseCgiExt(std::vector<std::string>& line, std::set<std::string>& duplicated);
 

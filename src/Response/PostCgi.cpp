@@ -34,6 +34,8 @@ CgiData* PostCgi::cgipost() {
 	//헤더 필드 확인 -> body가 있는 경우이기 때문에 필수 헤더 확인
 	check_header_field(request->getHeaderFields());
 
+
+
 	//파일 권한 안주면 실패됨
 	// if (access(abs_path.c_str(), F_OK | X_OK) == -1) {
 	// 	throw 400;
@@ -186,7 +188,11 @@ char** PostCgi::postCgiEnv() {
 	env["SERVER_PROTOCOL"] = "HTTP/1.1";
 	env["SERVER_NAME"] = "webserv";
 	env["SERVER_PORT"] = port_string.str();
-
+    if (request->getHeaderFields().find("x-secret-header-for-test") != request->getHeaderFields().end()) {
+        if (!request->getHeaderFields()["x-secret-header-for-test"].empty()) {
+            env["HTTP_X_SECRET_HEADER_FOR_TEST"] = request->getHeaderFields()["x-secret-header-for-test"].front();
+        }
+    }
 	char ** cgi_env = new char* [env.size() + 1];
 	int i = 0;
 	for (std::map<std::string, std::string>::iterator ite = env.begin(); ite != env.end(); ++ite) {

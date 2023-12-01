@@ -48,7 +48,7 @@ class Post : public Method {
 
 //save string and make reponse
 		void saveToFile(std::string message_body);
-		std::string generateFileName(const Config* config);
+		std::string generateFileName();
 		void saveMultipartToFile(std::string message_body);
 		void make_post_response();
 		std::string make_response_body(const std::string& file_path);

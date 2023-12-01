@@ -195,15 +195,12 @@ std::string Post::parent_read(int* pipe_ptoc, int* pipe_ctop, pid_t pid) {
 	// 	}
 	// }
 
-	std::cout << "before parent write"<<std::endl;
 	if (write(pipe_ptoc[1], request->getMessageBody().c_str(), request->getMessageBody().size()) == -1) {
 		throw 500;
 	}
-
 	if (close(pipe_ptoc[1]) == -1) {
 		throw 500;
 	}
-	std::cout << "before parent read" <<std::endl;
 	char	recv_buffer[BUFFSIZE];
 	int		nByte;
 	while ((nByte = read(pipe_ctop[0], recv_buffer, sizeof(recv_buffer))) > 0) {
@@ -302,7 +299,7 @@ char** Post::postCgiEnv() {
 void Post::saveToFile(std::string message_body) {
 	std::string filename;
 	if (abs_path.find(".") == std::string::npos) {
-		filename = generateFileName(config);
+		filename = generateFileName();
 	} else {
 		size_t pos = abs_path.rfind('/');
 		filename = abs_path.substr(pos);
@@ -323,16 +320,20 @@ void Post::saveToFile(std::string message_body) {
 	}
 }
 
-std::string Post::generateFileName(const Config* config) {
+std::string Post::generateFileName() {
 	static size_t fileIndex = 0;
 
 	std::stringstream filenameStream;
-	filenameStream << config->getPort() << "_" << config->getName()[0] << "_No_" << fileIndex++ << file_extension;
+	if (file_extension != DEFAULT) {
+		filenameStream << "File_No_" << fileIndex++ << file_extension;
+	} else {
+		filenameStream << "File_No_" << fileIndex++;
+	}
 	return filenameStream.str();
 }
 
 void Post::saveMultipartToFile(std::string message_body) {
-	std::string filename = generateFileName(config);
+	std::string filename = generateFileName();
 	std::string data_path = abs_path + "/" + filename;
 	std::ofstream file_write(data_path, std::ios::app);
 	std::string in_boundary;

@@ -12,7 +12,7 @@
 #define NUMBER_OF_EVENT 100
 #define NUMBER_OF_BACKLOG 5
 #define BUFFER_SIZE 10000
-#define TIMEOUT_SEC 30
+#define TIMEOUT_SEC 3000
 
 class ServerManager {
 	private:

@@ -222,6 +222,8 @@ void ServerManager::processEvent(const struct kevent* event) {
     }
     else if (CGI_END) {
         CgiData* cgi_data = reinterpret_cast<CgiData*>(event->udata);
+        Server *server = &servers[cgi_data->getConnSocket()];
+        server->setResponse(PostCgi::makeResponse(server->getResponse()).toString());
         close(cgi_data->getReadPipeFd());
         close(cgi_data->getWritePipeFd());
         delete cgi_data;
@@ -242,10 +244,6 @@ void ServerManager::processPipeReadEvent(const struct kevent& event) {
     else if (bytes_read > 0) {
 		server->appendResponse(buff, bytes_read);
     }
-	else { // EOF
-		server->setResponse(PostCgi::makeResponse(server->getResponse()).toString());
-		change_list.push_back(makeEvent(cgi_data->getConnSocket(), EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, NULL));
-	}
 }
 
 void ServerManager::processPipeWriteEvent(const struct kevent& event) {
@@ -258,9 +256,6 @@ void ServerManager::processPipeWriteEvent(const struct kevent& event) {
 //        std::cout << errno << " " <<  strerror(errno) << '\n';
         return;
     }
-    if (requestBody.length() == static_cast<size_t>(server->getResponse().length())) {
-        change_list.push_back(makeEvent(event.ident, EVFILT_WRITE, EV_DISABLE, 0, 0, NULL));
-	}
 }
 
 const Config* ServerManager::findConfig(const std::string host, const std::string url) {

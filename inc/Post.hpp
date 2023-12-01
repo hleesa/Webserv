@@ -32,7 +32,6 @@ class Post : public Method {
 		Post(const HttpRequestMessage* request, const Config* config);
 
 		virtual HttpResponseMessage makeHttpResponseMessage();
-		void set_member();
 
 		void check_request_line(std::vector<std::string> request_line);
 		std::string find_loc_key(std::string rel_path);

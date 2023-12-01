@@ -270,6 +270,8 @@ void ServerManager::processPipeWriteEvent(const struct kevent& event) {
     Server *server = &servers[cgi_data->getConnSocket()];
 
     std::string requestBody = server->getRequestPtr()->getMessageBody();
+	// 아래 주석 부분 실행하면 무한으로 찍히는 현상?
+	//std::cout << requestBody << std::endl;
     ssize_t bytes_write = write(event.ident, requestBody.c_str(), requestBody.length());
     if (bytes_write == ERROR) {
 //        std::cout << errno << " " <<  strerror(errno) << '\n';

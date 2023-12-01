@@ -45,5 +45,5 @@ std::string MediaType::getExtension(const std::string content_type) {
 			return ite->first;
 		}
 	}
-	return DEFAULT;
+	return "";
 }

@@ -29,10 +29,17 @@ HttpResponseMessage Post::makeHttpResponseMessage(){
 }
 
 void Post::set_member() {
+	ssize_t limit_body_size = config->getLimitBodySize();
+
+	if (config->getLocations()[location_key].getLimitBodySize() != -1) {
+		limit_body_size = config->getLocations()[location_key].getLimitBodySize();
+	}
 	if (request->getMethod() != "POST") {
 		_status_code = 300;
-	} else if (request->getMessageBody() == "") {
+	} else if (request->getMessageBody().empty()) {
 		_status_code = 300;
+	} else if (limit_body_size > 0 && request->getMessageBody().size() > static_cast<size_t>(limit_body_size)) {
+		throw 413;
 	} else {
 		//요청 url 형태 및 실행 가능 여부 확인
 		check_request_line(request->getRequestLine());

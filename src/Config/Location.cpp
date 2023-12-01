@@ -9,7 +9,7 @@ bool isValidRangeStatusCode(const int status_code);
 Location::Location() {}
 
 Location::Location(std::vector<std::vector<std::string> >& location_block)
-: root(""), autoindex(false), limit_body_size(100000000), cgi_path(""), cgi_ext("") {
+: root(""), autoindex(false), limit_body_size(-1), cgi_path(""), cgi_ext("") {
 	std::set<std::string> duplicated;
 	std::vector<std::vector<std::string> >::iterator itr;
 
@@ -72,7 +72,7 @@ bool Location::getAutoindex() const {
 	return this->autoindex;
 }
 
-size_t Location::getLimitBodySize() const {
+ssize_t Location::getLimitBodySize() const {
 	return this->limit_body_size;
 }
 

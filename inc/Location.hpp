@@ -15,11 +15,11 @@ private:
     std::string root;
     std::vector<std::string> index;
     bool autoindex;
-	size_t limit_body_size;
+	ssize_t limit_body_size;
     std::string cgi_path;
     std::string cgi_ext;
 	
-	virtual void parse(std::vector<std::string>& line, std::set<std::string>& duplicated);
+	void parse(std::vector<std::string>& line, std::set<std::string>& duplicated);
 	void parseHttpMethod(std::vector<std::string>& line, std::set<std::string>& duplicated);
 	void parseReturnValue(std::vector<std::string>& line);
 	void parseRoot(std::vector<std::string>& line, std::set<std::string>& duplicated);
@@ -41,14 +41,14 @@ public:
     Location(std::vector<std::vector<std::string> >& location_block);
     Location(const Location& other);
 	Location& operator=(const Location& other);
-    virtual ~Location();
+    ~Location();
 
 	std::set<std::string> getHttpMethods() const;
     std::pair<int, std::string> getReturnValue() const;
     std::string getRoot() const;
     std::vector<std::string> getIndex() const;
     bool getAutoindex() const;
-	size_t getLimitBodySize() const;
+	ssize_t getLimitBodySize() const;
 	std::string getCgiPath() const;
     std::string getCgiExt() const;
 	

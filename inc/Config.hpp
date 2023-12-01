@@ -22,7 +22,7 @@ class Config {
 		std::map<int, std::string> error_page;
 		std::string root;
 		std::vector<std::string> index;
-		long limit_body_size;
+		ssize_t limit_body_size;
 		std::map<std::string, Location> locations;
 
 		// void setLocation(std::vector< std::vector<std::string> >& loc_block, const std::string key, bool& hasCgi);
@@ -44,7 +44,7 @@ class Config {
 		std::map<int, std::string> getErrorpage() const;
 		std::string getRoot() const;
 		std::vector<std::string> getIndex() const;
-		size_t getLimitBodySize() const;
+		ssize_t getLimitBodySize() const;
 		std::map<std::string, Location> getLocations() const;
 		bool hasLocationOf(const std::string url) const;
 

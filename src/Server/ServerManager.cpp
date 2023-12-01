@@ -167,6 +167,7 @@ void ServerManager::assignParsedRequest(const struct kevent* event) {
 
 void ServerManager::processCgiOrMakeResponse(const struct kevent* event) {
     HttpRequestMessage* request = servers[event->ident].getRequestPtr();
+    servers[event->ident].clearResponse();
     const Config* config = findConfig(request->getHost(), request->getURL());
     if (isCgi(config, request)) {
         PostCgi post_cgi(request, config);
@@ -222,8 +223,15 @@ void ServerManager::processEvent(const struct kevent* event) {
     }
     else if (CGI_END) {
         CgiData* cgi_data = reinterpret_cast<CgiData*>(event->udata);
-        cgi_data->setCgiDie(true);
-        change_list.push_back(makeEvent(cgi_data->getReadPipeFd(), EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, reinterpret_cast<void*>(cgi_data)));
+        if (cgi_data->cgiDied()) {
+            close(cgi_data->getReadPipeFd());
+            close(cgi_data->getWritePipeFd());
+            delete cgi_data;
+        }
+        else {
+            cgi_data->setCgiDie(true);
+            change_list.push_back(makeEvent(cgi_data->getReadPipeFd(), EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, reinterpret_cast<void*>(cgi_data)));
+        }
     }
 }
 
@@ -243,11 +251,16 @@ void ServerManager::processPipeReadEvent(const struct kevent& event) {
     }
     else { // EOF
         server->setResponse(PostCgi::makeResponse(server->getResponse()).toString());
+        change_list.push_back(makeEvent(cgi_data->getReadPipeFd(), EVFILT_READ, EV_DISABLE, 0, 0, NULL));
         change_list.push_back(makeEvent(cgi_data->getConnSocket(), EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, NULL));
         if (cgi_data->cgiDied()) {
             close(cgi_data->getReadPipeFd());
             close(cgi_data->getWritePipeFd());
             delete cgi_data;
+        }
+        else {
+            cgi_data->setCgiDie(true);
+            change_list.push_back(makeEvent(cgi_data->getChildPid(), EVFILT_PROC, EV_ADD | EV_ONESHOT, NOTE_EXIT, 0, reinterpret_cast<void*>(cgi_data)));
         }
     }
 }

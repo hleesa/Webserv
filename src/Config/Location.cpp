@@ -72,6 +72,10 @@ bool Location::getAutoindex() const {
 	return this->autoindex;
 }
 
+size_t Location::getLimitBodySize() const {
+	return this->limit_body_size;
+}
+
 std::string Location::getCgiPath() const {
 	return this->cgi_path;
 }

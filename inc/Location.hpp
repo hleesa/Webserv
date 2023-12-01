@@ -15,7 +15,7 @@ private:
     std::string root;
     std::vector<std::string> index;
     bool autoindex;
-	long limit_body_size;
+	size_t limit_body_size;
     std::string cgi_path;
     std::string cgi_ext;
 	
@@ -48,6 +48,7 @@ public:
     std::string getRoot() const;
     std::vector<std::string> getIndex() const;
     bool getAutoindex() const;
+	size_t getLimitBodySize() const;
 	std::string getCgiPath() const;
     std::string getCgiExt() const;
 	

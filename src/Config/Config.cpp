@@ -83,7 +83,7 @@ std::vector<std::string> Config::getIndex() const {
 	return this->index;
 }
 
-long Config::getLimitBodySize() const {
+size_t Config::getLimitBodySize() const {
 	return this->limit_body_size;
 }
 

@@ -44,7 +44,7 @@ class Config {
 		std::map<int, std::string> getErrorpage() const;
 		std::string getRoot() const;
 		std::vector<std::string> getIndex() const;
-		long getLimitBodySize() const;
+		size_t getLimitBodySize() const;
 		std::map<std::string, Location> getLocations() const;
 		bool hasLocationOf(const std::string url) const;
 

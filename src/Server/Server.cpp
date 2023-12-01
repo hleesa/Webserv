@@ -63,7 +63,7 @@ std::string Server::getResponse() {
 
 void Server::updateResponse(ssize_t new_bytes_sent) {
     updateByteSend(new_bytes_sent);
-    response.substr(new_bytes_sent);
+    response = response.substr(new_bytes_sent);
 }
 
 void Server::appendResponse(const char* buffer, size_t size) {

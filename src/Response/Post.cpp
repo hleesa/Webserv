@@ -25,8 +25,6 @@ HttpResponseMessage Post::makeHttpResponseMessage(){
 
 	set_member();
 
-	std::cout << _status_code << std::endl;
-
 	return HttpResponseMessage(_status_code, _header_fields, _message_body);
 }
 

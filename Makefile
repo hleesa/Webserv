@@ -30,6 +30,8 @@ RESPONSE_SRC = \
 			Get.cpp \
 			GetCgi.cpp \
 			Post.cpp \
+			PostCgi.cpp\
+			CgiData.cpp\
 			Delete.cpp \
 			Head.cpp \
 			Resource.cpp\
@@ -39,7 +41,8 @@ RESPONSE_SRC = \
 SERVER_SRC = \
 			Server.cpp \
 			ServerManager.cpp \
-			isVisibleString.cpp
+			isVisibleString.cpp \
+			serverUtils.cpp
 
 FILES = main.cpp \
 

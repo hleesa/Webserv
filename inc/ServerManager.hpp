@@ -7,12 +7,12 @@
 #include "Config.hpp"
 #include "Server.hpp"
 #include "RequestParser.hpp"
+#include "EventType.hpp"
 
 #define NUMBER_OF_EVENT 100
 #define NUMBER_OF_BACKLOG 5
-#define ERROR -1
-#define BUFFER_SIZE 10000
-#define TIMEOUT_MSEC 30000
+#define BUFFER_SIZE 25000
+#define TIMEOUT_SEC 3000
 
 class ServerManager {
 	private:
@@ -43,10 +43,17 @@ class ServerManager {
 		const Config* findConfig(const std::string host, const std::string url);
 		void checkEventError(const struct kevent& event);
 		void processListenEvent(const struct kevent& event);
-		void processReadEvent(const struct kevent& event);
-		void processWriteEvent(const struct kevent& event);
+		void processReceiveEvent(const struct kevent& event);
+		void processSendEvent(const struct kevent& event);
 		void disconnectWithClient(const struct kevent& event);
 		void handleError(const int return_value, const int listen_socket) const;
+
+        void processPipeWriteEvent(const struct kevent &event);
+        void processPipeReadEvent(const struct kevent& event);
+
+        EventType getEventType(const struct kevent* event);
+        void assignParsedRequest(const struct kevent* event);
+        void processCgiOrMakeResponse(const struct kevent* event);
 
 	public:
 		ServerManager(const std::vector<Config>* configs);

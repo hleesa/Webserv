@@ -7,8 +7,9 @@ Server::Server() {}
 
 Server::Server(const int listen_socket) {
     this->listen_socket = listen_socket;
+	bytes_response = 0;
+	bytes_sent = 0;
 }
-
 
 int Server::getListenSocket() const {
     return listen_socket;
@@ -43,6 +44,7 @@ std::string Server::makeResponse(const Config* config) {
 }
 
 void Server::clearResponse() {
+    response.clear();
     bytes_sent = 0;
     bytes_response = 0;
 }
@@ -61,5 +63,14 @@ std::string Server::getResponse() {
 
 void Server::updateResponse(ssize_t new_bytes_sent) {
     updateByteSend(new_bytes_sent);
-    response.substr(new_bytes_sent);
+    response = response.substr(new_bytes_sent);
+}
+
+void Server::appendResponse(const char* buffer, size_t size) {
+	bytes_response += size;
+	response.append(buffer, size);
+}
+
+HttpRequestMessage* Server::getRequestPtr() {
+    return &this->request;
 }

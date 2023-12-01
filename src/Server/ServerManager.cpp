@@ -2,11 +2,14 @@
 #include "../../inc/ToString.hpp"
 #include "../../inc/ErrorPage.hpp"
 #include "../../inc/Method.hpp"
+#include "../../inc/PostCgi.hpp"
+#include "../../inc/ServerUtils.hpp"
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <csignal>
 
 ServerManager::ServerManager(const std::vector<Config>* configs) : default_config(&configs->front()){
 	setConfigByServerName(configs);
@@ -112,38 +115,153 @@ void ServerManager::processEvents(const int events) {
 	}
 }
 
+EventType ServerManager::getEventType(const struct kevent* event){
+    if (event->flags & EV_ERROR) {
+        return ERROR;
+    }
+    EventType event_type = NONE;
+    switch (event->filter) {
+        case EVFILT_READ:
+            if (listen_sockets.find(event->ident) != listen_sockets.end()) {
+                event_type = LISTEN;
+            }
+            else if (servers.find(event->ident) != servers.end()) {
+                event_type = PARSE_REQUEST;
+            }
+            else if (event->udata != NULL) {
+                event_type = READ_PIPE;
+            }
+            break;
+        case EVFILT_WRITE:
+            if (servers.find(event->ident) != servers.end()) {
+                event_type = SEND_RESPONSE;
+            }
+            else if (event->udata != NULL) {
+                event_type = WRITE_PIPE;
+            }
+            break;
+        case EVFILT_TIMER:
+            if (event->udata == NULL) {
+                event_type = TIMEOUT;
+            }
+            else {
+                event_type = TIMEOUT_CGI;
+            }
+            break;
+        case EVFILT_PROC:
+            event_type = CGI_END;
+            break;
+    }
+    return event_type;
+}
+
+void ServerManager::assignParsedRequest(const struct kevent* event) {
+    HttpRequestMessage request = parser.getHttpRequestMessage(event->ident);
+    if (request.getStatusCode() != 0) {
+        servers[event->ident].setResponse(ErrorPage::makeErrorPageResponse(request.getStatusCode(), default_config).toString());
+        return;
+    }
+    servers[event->ident].setRequest(request);
+    parser.clear(event->ident);
+}
+
+void ServerManager::processCgiOrMakeResponse(const struct kevent* event) {
+    HttpRequestMessage* request = servers[event->ident].getRequestPtr();
+    const Config* config = findConfig(request->getHost(), request->getURL());
+    if (isCgi(config, request)) {
+        PostCgi post_cgi(request, config);
+        CgiData* cgi_data = post_cgi.cgipost();
+        cgi_data->setConnSocket(event->ident);
+        change_list.push_back(makeEvent(cgi_data->getWritePipeFd(), EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, reinterpret_cast<void*>(cgi_data)));
+        change_list.push_back(makeEvent(cgi_data->getReadPipeFd(), EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, reinterpret_cast<void*>(cgi_data)));
+        change_list.push_back(makeEvent(cgi_data->getChildPid(), EVFILT_PROC, EV_ADD | EV_ONESHOT, NOTE_EXIT, 0, reinterpret_cast<void*>(cgi_data)));
+        change_list.push_back(makeEvent(event->ident, EVFILT_TIMER, EV_ADD | EV_ONESHOT, NOTE_SECONDS, TIMEOUT_SEC, reinterpret_cast<void*>(cgi_data)));
+    }
+    else {
+        change_list.push_back(makeEvent(event->ident, EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, NULL));
+        servers[event->ident].setResponse(servers[event->ident].makeResponse(config));
+        change_list.push_back(makeEvent(event->ident, EVFILT_TIMER, EV_ADD | EV_ONESHOT, NOTE_SECONDS, TIMEOUT_SEC, NULL));
+    }
+}
+
 void ServerManager::processEvent(const struct kevent* event) {
-        if (event->flags & EV_ERROR) {
-			std::cout << "error\n";
-            checkEventError(*event);
+    EventType event_type = getEventType(event);
+
+    if (event_type == ERROR) {
+        std::cout << "error\n";
+//        checkEventError(*event);
+    }
+    else if (event_type == LISTEN) {
+        processListenEvent(*event);
+    }
+    else if (event_type == PARSE_REQUEST) {
+        processReceiveEvent(*event);
+        if (parser.getReadingStatus(event->ident) == END) {
+            assignParsedRequest(event);
+            processCgiOrMakeResponse(event);
         }
-        else if (event->filter == EVFILT_READ && listen_sockets.find(event->ident) != listen_sockets.end()) {
-            processListenEvent(*event);
-        }
-        else if (event->filter == EVFILT_READ && servers.find(event->ident) != servers.end()) {
-            processReadEvent(*event);
-			if (parser.getReadingStatus(event->ident) == END) {
-                HttpRequestMessage request = parser.getHttpRequestMessage(event->ident);
-//                if (request.getStatusCode() != 0) {
-//                    servers[event->ident].setResponse(ErrorPage::makeErrorPageResponse(request.getStatusCode(), default_config).toString());
-//                    return;
-//                }
-				const Config* config = findConfig(request.getHost(), request.getURL());
-                servers[event->ident].setRequest(request);
-                parser.clear(event->ident);
-    			change_list.push_back(makeEvent(event->ident, EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, NULL));
-                servers[event->ident].setResponse(servers[event->ident].makeResponse(config));
-			}
-        }
-        else if (event->filter == EVFILT_WRITE && servers.find(event->ident) != servers.end()) {
-            processWriteEvent(*event);
-            change_list.push_back(makeEvent(event->ident, EVFILT_TIMER, EV_ADD | EV_ONESHOT, 0, TIMEOUT_MSEC, NULL));
-        }
-        else if (event->filter == EVFILT_TIMER) {
-            std::cout << "time out\n";
-            change_list.push_back(makeEvent(event->ident, EVFILT_READ, EV_DISABLE, 0, 0, NULL));
-            disconnectWithClient(*event);
-        }
+    }
+    else if (event_type == READ_PIPE) {
+        processPipeReadEvent(*event);
+    }
+    else if (event_type == SEND_RESPONSE) {
+        processSendEvent(*event);
+    }
+    else if (event_type == WRITE_PIPE) {
+        processPipeWriteEvent(*event);
+    }
+    else if (event_type == TIMEOUT) {
+        std::cout << "time out\n";
+        disconnectWithClient(*event);
+    }
+    else if (event_type == TIMEOUT_CGI) {
+        CgiData* cgi_data = reinterpret_cast<CgiData*>(event->udata);
+        kill(cgi_data->getChildPid(), SIGTERM);
+        delete cgi_data;
+        disconnectWithClient(*event);
+    }
+    else if (CGI_END) {
+//        CgiData* cgi_data = reinterpret_cast<CgiData*>(event->udata);
+//        close(cgi_data->getReadPipeFd());
+//        close(cgi_data->getWritePipeFd());
+//        change_list.push_back(makeEvent(cgi_data->getConnSocket(), EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, NULL));
+//        delete cgi_data;
+    }
+}
+
+void ServerManager::processPipeReadEvent(const struct kevent& event) {
+    char buff[BUFFER_SIZE];
+    memset(buff, 0, BUFFER_SIZE);
+    ssize_t bytes_read = read(event.ident, &buff, BUFFER_SIZE);
+    CgiData* cgi_data = reinterpret_cast<CgiData*>(event.udata);
+	Server *server = &servers[cgi_data->getConnSocket()];
+
+    if (bytes_read == ERROR) {
+//        std::cout << errno << " " <<  strerror(errno) << '\n';
+        return;
+    }
+    else if (bytes_read > 0) {
+		server->appendResponse(buff, bytes_read);
+    }
+    else { // EOF
+        close(cgi_data->getReadPipeFd());
+        close(cgi_data->getWritePipeFd());
+        server->setResponse(PostCgi::makeResponse(server->getResponse()).toString());
+        change_list.push_back(makeEvent(cgi_data->getConnSocket(), EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, NULL));
+        delete cgi_data;
+    }
+}
+
+void ServerManager::processPipeWriteEvent(const struct kevent& event) {
+    CgiData* cgi_data = reinterpret_cast<CgiData*>(event.udata);
+    Server *server = &servers[cgi_data->getConnSocket()];
+
+    std::string requestBody = server->getRequestPtr()->getMessageBody();
+    ssize_t bytes_write = write(event.ident, requestBody.c_str(), requestBody.length());
+    if (bytes_write == ERROR) {
+//        std::cout << errno << " " <<  strerror(errno) << '\n';
+        return;
+    }
 }
 
 const Config* ServerManager::findConfig(const std::string host, const std::string url) {
@@ -154,7 +272,7 @@ const Config* ServerManager::findConfig(const std::string host, const std::strin
     for (;itr != server_name_to_config[host].end(); itr++) {
         const Config* config = *itr;
         if (config->hasLocationOf(url)) {
-                return config;
+            return config;
         }
     }
     const Config* config = *server_name_to_config[host].begin();
@@ -180,10 +298,10 @@ void ServerManager::processListenEvent(const struct kevent& event) {
 	}
     servers[connection_socket] = Server(event.ident);
     change_list.push_back(makeEvent(connection_socket, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, NULL));
-    change_list.push_back(makeEvent(connection_socket, EVFILT_TIMER, EV_ADD | EV_ONESHOT, 0, TIMEOUT_MSEC, NULL));
+    change_list.push_back(makeEvent(connection_socket, EVFILT_TIMER, EV_ADD | EV_ONESHOT, NOTE_SECONDS, TIMEOUT_SEC, NULL));
 }
 
-void ServerManager::processReadEvent(const struct kevent& event) {
+void ServerManager::processReceiveEvent(const struct kevent& event) {
     char buff[BUFFER_SIZE + 1];
     ssize_t bytes_recv = recv(event.ident, &buff, BUFFER_SIZE, 0);
     
@@ -194,16 +312,18 @@ void ServerManager::processReadEvent(const struct kevent& event) {
 	parser.run(event.ident, buff);
 }
 
-void ServerManager::processWriteEvent(const struct kevent& event) {
+void ServerManager::processSendEvent(const struct kevent& event) {
     Server *server = &servers[event.ident];
     ssize_t bytes_sent = send(event.ident, server->getResponse().c_str(), server->getResponse().length(), 0);
-    if (bytes_sent != ERROR) {
-        server->updateResponse(bytes_sent);
-        if (server->isSendComplete()) {
-            server->clearResponse();
-            change_list.push_back(makeEvent(event.ident, EVFILT_WRITE, EV_DISABLE, 0, 0, NULL));
-        }
+    if (bytes_sent == ERROR) {
+        return;
     }
+    server->updateResponse(bytes_sent);
+    if (server->isSendComplete()) {
+        server->clearResponse();
+        change_list.push_back(makeEvent(event.ident, EVFILT_WRITE, EV_DISABLE, 0, 0, NULL));
+    }
+    change_list.push_back(makeEvent(event.ident, EVFILT_TIMER, EV_ADD | EV_ONESHOT, NOTE_SECONDS, TIMEOUT_SEC, NULL));
 }
 
 struct kevent ServerManager::makeEvent(

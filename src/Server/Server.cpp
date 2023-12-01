@@ -7,6 +7,7 @@ Server::Server() {}
 
 Server::Server(const int listen_socket) {
     this->listen_socket = listen_socket;
+    response.clear();
 	bytes_response = 0;
 	bytes_sent = 0;
 }

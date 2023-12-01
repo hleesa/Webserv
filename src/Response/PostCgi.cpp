@@ -66,7 +66,7 @@ CgiData* PostCgi::cgipost() {
         throw 500;
     }
 
-    CgiData* cgiPipePid = new CgiData(pipe_ctop, pipe_ptoc, pid, -1);
+    CgiData* cgiPipePid = new CgiData(pipe_ctop, pipe_ptoc, pid);
     return cgiPipePid;
 }
 

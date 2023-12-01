@@ -44,6 +44,7 @@ std::string Server::makeResponse(const Config* config) {
 }
 
 void Server::clearResponse() {
+    response.clear();
     bytes_sent = 0;
     bytes_response = 0;
 }

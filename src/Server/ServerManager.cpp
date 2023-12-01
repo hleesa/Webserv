@@ -221,12 +221,11 @@ void ServerManager::processEvent(const struct kevent* event) {
         disconnectWithClient(*event);
     }
     else if (CGI_END) {
-        CgiData* cgi_data = reinterpret_cast<CgiData*>(event->udata);
-        Server *server = &servers[cgi_data->getConnSocket()];
-        server->setResponse(PostCgi::makeResponse(server->getResponse()).toString());
-        close(cgi_data->getReadPipeFd());
-        close(cgi_data->getWritePipeFd());
-        delete cgi_data;
+//        CgiData* cgi_data = reinterpret_cast<CgiData*>(event->udata);
+//        close(cgi_data->getReadPipeFd());
+//        close(cgi_data->getWritePipeFd());
+//        change_list.push_back(makeEvent(cgi_data->getConnSocket(), EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, NULL));
+//        delete cgi_data;
     }
 }
 
@@ -243,6 +242,13 @@ void ServerManager::processPipeReadEvent(const struct kevent& event) {
     }
     else if (bytes_read > 0) {
 		server->appendResponse(buff, bytes_read);
+    }
+    else { // EOF
+        close(cgi_data->getReadPipeFd());
+        close(cgi_data->getWritePipeFd());
+        server->setResponse(PostCgi::makeResponse(server->getResponse()).toString());
+        change_list.push_back(makeEvent(cgi_data->getConnSocket(), EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, NULL));
+        delete cgi_data;
     }
 }
 

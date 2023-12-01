@@ -1,11 +1,12 @@
 
 #include "../../inc/CgiData.hpp"
 
-CgiData::CgiData() : pipe_child_parent(NULL), pipe_parent_child(NULL), child_pid(-1), conn_socket(-1) {
+CgiData::CgiData() : pipe_child_parent(NULL), pipe_parent_child(NULL), child_pid(-1), conn_socket(-1), cgi_died(false) {
 }
 
-CgiData::CgiData(int* pipe_child_parent, int* pipe_parent_child, pid_t child_pid, int conn_socket) :
-        pipe_child_parent(pipe_child_parent), pipe_parent_child(pipe_parent_child), child_pid(child_pid), conn_socket(conn_socket) {
+CgiData::CgiData(int* pipe_child_parent, int* pipe_parent_child, pid_t child_pid) :
+        pipe_child_parent(pipe_child_parent), pipe_parent_child(pipe_parent_child), child_pid(child_pid),
+        conn_socket(-1), cgi_died(false) {
 }
 
 int CgiData::getReadPipeFd() const {
@@ -26,6 +27,14 @@ int CgiData::getConnSocket() const {
 
 void CgiData::setConnSocket(int socket) {
     this->conn_socket = socket;
+}
+
+void CgiData::setCgiDie(bool cgi_die) {
+    this->cgi_died = cgi_die;
+}
+
+bool CgiData::cgiDied() const {
+    return cgi_died;
 }
 
 CgiData::~CgiData() {

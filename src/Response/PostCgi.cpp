@@ -218,6 +218,8 @@ HttpResponseMessage PostCgi::makeResponse(const std::string cgi_response) {
 	ss >> body;
 	header_fields["Content-length"] = to_string(body.length());
 
+	std::cout << "status code : " << status_code << std::endl;
+	std::cout << "body size : " << body.size() << std::endl;
 	return HttpResponseMessage(status_code, header_fields, body);
 }
 

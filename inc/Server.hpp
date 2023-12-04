@@ -18,9 +18,8 @@ private:
 
     size_t bytes_to_write;
     size_t bytes_written;
-    std::string request_body;
-    void updateBytesWritten(ssize_t new_bytes_written);
-
+    char* message_body_ptr;
+    void updateBytesToWrite(ssize_t new_bytes_written);
 
 public:
     Server();
@@ -43,6 +42,11 @@ public:
     void updateRequestBody(ssize_t bytes_written);
     bool writeComplete();
     void clearRequestBody();
+
+    char* getMessageBodyPtr() const;
+    size_t getBytesToWrite();
+
+
 };
 
 #endif

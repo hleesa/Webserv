@@ -303,8 +303,8 @@ void ServerManager::processPipeWriteEvent(const struct kevent& event) {
     CgiData* cgi_data = reinterpret_cast<CgiData*>(event.udata);
     Server *server = &servers[cgi_data->getConnSocket()];
 
-    std::string requestBody = server->getRequestPtr()->getMessageBody();
-    ssize_t bytes_written = write(event.ident, requestBody.c_str(), requestBody.length());
+    ssize_t bytes_written = write(event.ident, server->getMessageBodyPtr(), server->getBytesToWrite());
+    printf("Address: %p\n", static_cast<void*>(server->getMessageBodyPtr()));
     if (bytes_written == ERROR) {
         return;
     }

@@ -107,7 +107,7 @@ void PostCgi::check_header_content_type(std::map<std::string, std::vector<std::s
 
 void PostCgi::check_header_content_length(std::map<std::string, std::vector<std::string> > header_field) {
 	if (header_field.find("transfer-encoding") != header_field.end() && header_field["transfer-encoding"].front() == "chunked") {
-		content_length = request->getMessageBody().size();
+		content_length = request->getBodySize();
 	} else if ((header_field.find("content-length") != header_field.end()) && (header_field["content-length"].size() == 1)) {
 		std::stringstream ss(header_field["content-length"][0]);
 		if (!(ss >> content_length)) {
@@ -168,7 +168,7 @@ char** PostCgi::postCgiEnv() {
 	std::stringstream port_string;
 	std::stringstream content_length_string;
 	port_string << config->getPort();
-	content_length_string << request->getMessageBody().size();
+	content_length_string << request->getBodySize();
 	env["REQUEST_METHOD"] = "POST";
 	env["CONTENT_LENGTH"] = content_length_string.str();
 	env["CONTENT_TYPE"] = request->getHeaderFields()["content-type"][0];

@@ -22,9 +22,9 @@ HttpResponseMessage Post::makeHttpResponseMessage(){
 	}
 	if (request->getMethod() != "POST") {
 		_status_code = 300;
-	} else if (request->getMessageBody().empty()) {
+	} else if (request->getBodySize() == 0) {
 		_status_code = 300;
-	} else if (limit_body_size > 0 && request->getMessageBody().size() > static_cast<size_t>(limit_body_size)) {
+	} else if (limit_body_size > 0 && request->getBodySize() > static_cast<size_t>(limit_body_size)) {
 		throw 413;
 	} else {
 		//요청 url 형태 및 실행 가능 여부 확인
@@ -34,7 +34,7 @@ HttpResponseMessage Post::makeHttpResponseMessage(){
 	}
 
 	if (_status_code == 0) {
-		saveToFile(request->getMessageBody());
+		saveToFile(request->getMessageBodyPtr());
 	}
 
 	make_post_response();
@@ -103,7 +103,7 @@ void Post::check_header_content_type(std::map<std::string, std::vector<std::stri
 
 void Post::check_header_content_length(std::map<std::string, std::vector<std::string> > header_field) {
 	if (header_field.find("transfer-encoding") != header_field.end() && header_field["transfer-encoding"].front() == "chunked") {
-		content_length=request->getMessageBody().size();
+        content_length = request->getBodySize();
 	} else if ((header_field.find("content-length") != header_field.end()) && (header_field["content-length"].size() == 1)) {
 		std::stringstream ss(header_field["content-length"][0]);
 		if (!(ss >> content_length)) {

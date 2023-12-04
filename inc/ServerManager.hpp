@@ -13,6 +13,7 @@
 #define NUMBER_OF_BACKLOG 2000
 #define BUFFER_SIZE 25000
 #define TIMEOUT_SEC 30
+#define ERROR -1
 
 class ServerManager {
 	private:

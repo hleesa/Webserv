@@ -2,7 +2,7 @@
 #include "../inc/ConfigParser.hpp"
 #include "../inc/ServerManager.hpp"
 
-#define DEFAULT_CONF "ConfigFile/test.conf"
+#define DEFAULT_CONF "ConfigFile/default.conf"
 
 int main(int argc, char *argv[]) {
     signal(SIGPIPE, SIG_IGN);

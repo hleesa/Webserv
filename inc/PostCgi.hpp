@@ -14,7 +14,6 @@
 #include "CgiData.hpp"
 #include "ServerUtils.hpp"
 
-#define ERROR -1
 #define BUFFSIZE 100000
 
 class PostCgi {

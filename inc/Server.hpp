@@ -19,7 +19,7 @@ private:
     size_t bytes_to_write;
     size_t bytes_written;
     char* message_body_ptr;
-    void updateBytesWritten(ssize_t new_bytes_written);
+    void updateBytesToWrite(ssize_t new_bytes_written);
 
 public:
     Server();

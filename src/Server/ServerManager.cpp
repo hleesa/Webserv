@@ -304,7 +304,7 @@ void ServerManager::processPipeWriteEvent(const struct kevent& event) {
     Server *server = &servers[cgi_data->getConnSocket()];
 
     ssize_t bytes_written = write(event.ident, server->getMessageBodyPtr(), server->getBytesToWrite());
-    printf("Address: %p\n", static_cast<void*>(server->getMessageBodyPtr()));
+//    printf("Address: %p\n", static_cast<void*>(server->getMessageBodyPtr()));
     if (bytes_written == ERROR) {
         return;
     }

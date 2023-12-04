@@ -6,9 +6,6 @@
 #include "../../inc/CgiData.hpp"
 #include "../../inc/ToString.hpp"
 
-#define ERROR -1
-#define BUFFSIZE 100000
-
 PostCgi::PostCgi(const HttpRequestMessage* request, const Config* config) : request(request), config(config) {
 	this->location_key = findLocationKey(config, request);
 	rel_path = "";
@@ -34,8 +31,6 @@ CgiData* PostCgi::cgipost() {
 	//헤더 필드 확인 -> body가 있는 경우이기 때문에 필수 헤더 확인
 	check_header_field(request->getHeaderFields());
 
-
-
 	//파일 권한 안주면 실패됨
 	// if (access(abs_path.c_str(), F_OK | X_OK) == -1) {
 	// 	throw 400;
@@ -52,7 +47,7 @@ CgiData* PostCgi::cgipost() {
 		throw (strerror(errno));
 	}
 
-    pid_t pid = fork();
+	pid_t pid = fork();
 	if (pid == -1)
 		throw 500;
 	else if (!pid) {
@@ -62,19 +57,16 @@ CgiData* PostCgi::cgipost() {
 			child_write(pipe_ptoc, pipe_ctop, config->getLocations()[location_key]);
 		}
 	}
-    if (close(pipe_ptoc[0]) == -1 || close(pipe_ctop[1]) == -1) {
-        throw 500;
-    }
+	if (close(pipe_ptoc[0]) == -1 || close(pipe_ctop[1]) == -1) {
+		throw 500;
+	}
 
-    CgiData* cgiPipePid = new CgiData(pipe_ctop, pipe_ptoc, pid);
-    return cgiPipePid;
+	CgiData* cgiPipePid = new CgiData(pipe_ctop, pipe_ptoc, pid);
+	return cgiPipePid;
 }
 
 void PostCgi::check_request_line(std::vector<std::string> request_line) {
-	std::string url_path;
-	//	size_t pos;
-
-	url_path = request_line[1];
+	std::string url_path = request_line[1];
 
 	//request URL_path -> rel_path 값찾아내기
 	if (url_path.find(location_key) == 0) {
@@ -115,7 +107,7 @@ void PostCgi::check_header_content_type(std::map<std::string, std::vector<std::s
 
 void PostCgi::check_header_content_length(std::map<std::string, std::vector<std::string> > header_field) {
 	if (header_field.find("transfer-encoding") != header_field.end() && header_field["transfer-encoding"].front() == "chunked") {
-		content_length=request->getMessageBody().size();
+		content_length = request->getMessageBody().size();
 	} else if ((header_field.find("content-length") != header_field.end()) && (header_field["content-length"].size() == 1)) {
 		std::stringstream ss(header_field["content-length"][0]);
 		if (!(ss >> content_length)) {

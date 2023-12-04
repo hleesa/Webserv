@@ -81,15 +81,6 @@ void Post::check_request_line(std::vector<std::string> request_line) {
 	}
 }
 
-bool Post::directory_exists(const std::string& path) {
-	struct stat info;
-
-	if (stat(path.c_str(), &info) != 0) {
-		return false;
-	} 
-	return (info.st_mode & S_IFDIR) != 0;
-}
-
 void Post::check_header_field(std::map<std::string, std::vector<std::string> > header_field) {
 	check_header_content_type(header_field);
 	check_header_content_length(header_field);

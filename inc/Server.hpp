@@ -16,8 +16,10 @@ private:
 
     void updateByteSend(ssize_t new_bytes_sent);
 
-//    size_t bytes_to_write;
-//    size_t bytes_written;
+    size_t bytes_to_write;
+    size_t bytes_written;
+    std::string request_body;
+    void updateBytesWritten(ssize_t new_bytes_written);
 
 
 public:
@@ -37,8 +39,10 @@ public:
 
     void appendResponse(const char* buffer, size_t size);
     HttpRequestMessage* getRequestPtr();
-    size_t bytes_write;
 
+    void updateRequestBody(ssize_t bytes_written);
+    bool writeComplete();
+    void clearRequestBody();
 };
 
 #endif

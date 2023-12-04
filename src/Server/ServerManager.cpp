@@ -366,12 +366,12 @@ void ServerManager::processReceiveEvent(const struct kevent& event) {
 
 void ServerManager::processSendEvent(const struct kevent& event) {
     Server *server = &servers[event.ident];
-    ssize_t bytes_sent = send(event.ident, server->getResponse().c_str(), server->getResponse().length(), 0);
+    ssize_t bytes_sent = send(event.ident, server->getResponsePtr(), server->getBytesToSend(), 0);
     if (bytes_sent == ERROR) {
         return;
     }
     server->updateResponse(bytes_sent);
-    if (server->isSendComplete()) {
+    if (server->sendComplete()) {
         server->clearResponse();
         change_list.push_back(makeEvent(event.ident, EVFILT_WRITE, EV_DISABLE, 0, 0, NULL));
     }

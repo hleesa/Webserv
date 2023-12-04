@@ -11,10 +11,11 @@ private:
     int listen_socket;
     HttpRequestMessage request;
     std::string response;
+    char* response_ptr;
     size_t bytes_to_send;
     size_t bytes_sent;
 
-    void updateByteSend(ssize_t new_bytes_sent);
+    void updateByteToSend(ssize_t new_bytes_sent);
 
     size_t bytes_to_write;
     size_t bytes_written;
@@ -31,7 +32,7 @@ public:
 
     std::string getResponse();
     void updateResponse(ssize_t bytes_sent);
-    bool isSendComplete();
+    bool sendComplete();
     void clearResponse();
 
     std::string makeResponse(const Config* config);
@@ -46,6 +47,8 @@ public:
     char* getMessageBodyPtr() const;
     size_t getBytesToWrite();
 
+    char* getResponsePtr();
+    size_t getBytesToSend();
 
 };
 

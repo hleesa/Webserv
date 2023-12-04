@@ -28,7 +28,11 @@ void Server::setRequest(const HttpRequestMessage& request_message) {
 void Server::setResponse(std::string http_response) {
     response = http_response;
     bytes_sent = 0;
-    bytes_to_send = http_response.length();
+    if (!http_response.empty())
+        bytes_to_send = http_response.length();
+    response_ptr = new char[bytes_to_send + 1];
+    std::strcpy(response_ptr, http_response.c_str());
+    response_ptr[bytes_to_send] = '\0';
     return;
 }
 
@@ -55,12 +59,12 @@ void Server::clearResponse() {
     bytes_to_send = 0;
 }
 
-bool Server::isSendComplete() {
-    return bytes_sent == bytes_to_send;
+bool Server::sendComplete() {
+    return bytes_to_send == 0;
 }
 
-void Server::updateByteSend(ssize_t new_bytes_sent) {
-    this->bytes_sent += static_cast<size_t>(new_bytes_sent);
+void Server::updateByteToSend(ssize_t new_bytes_sent) {
+    bytes_to_send -= static_cast<size_t>(new_bytes_sent);
 }
 
 std::string Server::getResponse() {
@@ -68,8 +72,9 @@ std::string Server::getResponse() {
 }
 
 void Server::updateResponse(ssize_t new_bytes_sent) {
-    updateByteSend(new_bytes_sent);
-    response = response.substr(new_bytes_sent);
+    updateByteToSend(new_bytes_sent);
+    response_ptr += new_bytes_sent;
+//    response = response.substr(new_bytes_sent);
 }
 
 void Server::appendResponse(const char* buffer, size_t size) {
@@ -108,4 +113,12 @@ char* Server::getMessageBodyPtr() const {
 
 size_t Server::getBytesToWrite() {
     return bytes_to_write;
+}
+
+char* Server::getResponsePtr() {
+    return response_ptr;
+}
+
+size_t Server::getBytesToSend() {
+    return bytes_to_send;
 }

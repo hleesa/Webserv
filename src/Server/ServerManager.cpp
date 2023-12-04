@@ -157,17 +157,19 @@ EventType ServerManager::getEventType(const struct kevent* event){
 
 void ServerManager::assignParsedRequest(const struct kevent* event) {
     HttpRequestMessage request = parser.getHttpRequestMessage(event->ident);
-    if (request.getStatusCode() != 0) {
-        servers[event->ident].setResponse(ErrorPage::makeErrorPageResponse(request.getStatusCode(), default_config).toString());
-        return;
-    }
     servers[event->ident].setRequest(request);
     parser.clear(event->ident);
 }
 
 void ServerManager::processCgiOrMakeResponse(const struct kevent* event) {
     HttpRequestMessage* request = servers[event->ident].getRequestPtr();
-    const Config* config = findConfig(request->getHost(), request->getURL());
+    if (request->getStatusCode() != 0) {
+        change_list.push_back(makeEvent(event->ident, EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, NULL));
+        servers[event->ident].setResponse(ErrorPage::makeErrorPageResponse(request->getStatusCode(), default_config).toString());
+        change_list.push_back(makeEvent(event->ident, EVFILT_TIMER, EV_ADD | EV_ONESHOT, NOTE_SECONDS, TIMEOUT_SEC, NULL));
+        return;
+    } 
+	const Config* config = findConfig(request->getHost(), request->getURL());
     if (isCgi(config, request)) {
         PostCgi post_cgi(request, config);
         CgiData* cgi_data = post_cgi.cgipost();

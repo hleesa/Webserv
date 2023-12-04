@@ -3,7 +3,7 @@
 #define WEBSERV_EVENTTYPE_HPP
 
 typedef enum EventType {
-    ERROR = -1,
+    EVENT_ERROR = -1,
     NONE,
     LISTEN,
     PARSE_REQUEST,

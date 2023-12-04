@@ -117,7 +117,7 @@ void ServerManager::processEvents(const int events) {
 
 EventType ServerManager::getEventType(const struct kevent* event){
     if (event->flags & EV_ERROR) {
-        return ERROR;
+        return EVENT_ERROR;
     }
     EventType event_type = NONE;
     switch (event->filter) {

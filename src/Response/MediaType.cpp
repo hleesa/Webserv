@@ -19,6 +19,7 @@ void MediaType::init(std::map<std::string, std::string>& mime_table) {
 	mime_table[".txt"] = "text/plain";
 	mime_table[".xhtml"] = "application/xhtml+xml";
 	mime_table[".xml"] = "application/xml";
+	mime_table[".test"] = "test/file";
 }
 
 std::string MediaType::getType(const std::string resource_path) {

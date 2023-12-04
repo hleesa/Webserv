@@ -13,18 +13,6 @@ PostCgi::PostCgi(const HttpRequestMessage* request, const Config* config) : requ
 	content_length = 0;
 }
 
-//void sigchld_handler(int signo) {
-//     SIGCHLD 시그널 핸들러
-//     자식 프로세스의 종료를 처리
-//    int status;
-//    pid_t pid = waitpid(child_pid, &status, WNOHANG);
-//    if (pid > 0) {
-//         자식 프로세스 종료 후 로직
-//         ...
-//        std::cout << "Child process terminated: " << pid << std::endl;
-//    }
-//}
-
 CgiData* PostCgi::cgipost() {
 	//요청 url 형태 및 실행 가능 여부 확인
 	check_request_line(request->getRequestLine());
@@ -95,14 +83,11 @@ void PostCgi::check_header_field(std::map<std::string, std::vector<std::string> 
 //check request header field fn
 void PostCgi::check_header_content_type(std::map<std::string, std::vector<std::string> > header_field) {
 	if (header_field.find("content-type") == header_field.end()) {
-		//_status_code = 400;
-		//return ;
 		throw 400;
 	}
 	if (header_field["content-type"].size() == 0) {
 		throw 400;
 	}
-	file_extension = config->getLocations()[location_key].getCgiExt();
 }
 
 void PostCgi::check_header_content_length(std::map<std::string, std::vector<std::string> > header_field) {
@@ -231,8 +216,8 @@ void PostCgi::parseHeaderLine(std::istringstream& ss, std::map<std::string, std:
 		key = line.substr(0, pos);
 		contents = line.substr(pos + 1);
 		if (!contents.empty() && *contents.rbegin() == '\r') {
-            contents = contents.substr(0, contents.size() - 1);
-        }
+			contents = contents.substr(0, contents.size() - 1);
+		}
 		header_fields.insert(std::make_pair(key, contents));
 	}
 }

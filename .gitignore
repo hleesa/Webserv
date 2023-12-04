@@ -6,4 +6,5 @@ a.out
 .DS_STORE
 *.gch
 *.o
+*.test
 YoupiBanane

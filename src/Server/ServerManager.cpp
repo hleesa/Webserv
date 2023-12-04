@@ -217,6 +217,8 @@ void ServerManager::processEvent(const struct kevent* event) {
     }
     else if (event_type == TIMEOUT_CGI) {
         CgiData* cgi_data = reinterpret_cast<CgiData*>(event->udata);
+        close(cgi_data->getReadPipeFd());
+        close(cgi_data->getWritePipeFd());
         kill(cgi_data->getChildPid(), SIGTERM);
         delete cgi_data;
         disconnectWithClient(*event);
@@ -226,7 +228,24 @@ void ServerManager::processEvent(const struct kevent* event) {
         if (cgi_data->cgiDied()) {
             close(cgi_data->getReadPipeFd());
             close(cgi_data->getWritePipeFd());
-            delete cgi_data;
+            int status;
+            if (waitpid(cgi_data->getChildPid(), &status, 0) == ERROR) {
+                delete cgi_data;
+                throw 500;
+            }
+            if (WIFEXITED(status)) { // 자식 종료
+                int exit_status = WEXITSTATUS(status);
+                if (exit_status == EXIT_FAILURE) { // 비정상 종료
+                    delete cgi_data;
+                    throw 500;
+                }
+            }
+            else {
+                kill(cgi_data->getChildPid(), SIGTERM);
+                delete cgi_data;
+                throw 500;
+            }
+            delete cgi_data;;
         }
         else {
             cgi_data->setCgiDie(true);
@@ -256,6 +275,23 @@ void ServerManager::processPipeReadEvent(const struct kevent& event) {
         if (cgi_data->cgiDied()) {
             close(cgi_data->getReadPipeFd());
             close(cgi_data->getWritePipeFd());
+            int status;
+            if (waitpid(cgi_data->getChildPid(), &status, 0) == ERROR) {
+                delete cgi_data;
+                throw 500;
+            }
+            if (WIFEXITED(status)) { // 자식 종료
+                int exit_status = WEXITSTATUS(status);
+                if (exit_status == EXIT_FAILURE) { // 비정상 종료
+                    delete cgi_data;
+                    throw 500;
+                }
+            }
+            else {
+                kill(cgi_data->getChildPid(), SIGTERM);
+                delete cgi_data;
+                throw 500;
+            }
             delete cgi_data;
         }
         else {
@@ -270,8 +306,6 @@ void ServerManager::processPipeWriteEvent(const struct kevent& event) {
     Server *server = &servers[cgi_data->getConnSocket()];
 
     std::string requestBody = server->getRequestPtr()->getMessageBody();
-	// 아래 주석 부분 실행하면 무한으로 찍히는 현상?
-	//std::cout << requestBody << std::endl;
     ssize_t bytes_write = write(event.ident, requestBody.c_str(), requestBody.length());
     if (bytes_write == ERROR) {
 //        std::cout << errno << " " <<  strerror(errno) << '\n';

@@ -8,7 +8,7 @@ Server::Server() {}
 Server::Server(const int listen_socket) {
     this->listen_socket = listen_socket;
     response.clear();
-	bytes_response = 0;
+    bytes_to_send = 0;
 	bytes_sent = 0;
 }
 
@@ -23,7 +23,7 @@ void Server::setRequest(const HttpRequestMessage& request_message) {
 void Server::setResponse(std::string http_response) {
     response = http_response;
     bytes_sent = 0;
-    bytes_response = http_response.length();
+    bytes_to_send = http_response.length();
     return;
 }
 
@@ -47,11 +47,11 @@ std::string Server::makeResponse(const Config* config) {
 void Server::clearResponse() {
     response.clear();
     bytes_sent = 0;
-    bytes_response = 0;
+    bytes_to_send = 0;
 }
 
 bool Server::isSendComplete() {
-    return bytes_sent == bytes_response;
+    return bytes_sent == bytes_to_send;
 }
 
 void Server::updateByteSend(ssize_t new_bytes_sent) {
@@ -68,7 +68,7 @@ void Server::updateResponse(ssize_t new_bytes_sent) {
 }
 
 void Server::appendResponse(const char* buffer, size_t size) {
-	bytes_response += size;
+    bytes_to_send += size;
 	response.append(buffer, size);
 }
 

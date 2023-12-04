@@ -11,10 +11,14 @@ private:
     int listen_socket;
     HttpRequestMessage request;
     std::string response;
-    size_t bytes_response;
+    size_t bytes_to_send;
     size_t bytes_sent;
 
     void updateByteSend(ssize_t new_bytes_sent);
+
+//    size_t bytes_to_write;
+//    size_t bytes_written;
+
 
 public:
     Server();

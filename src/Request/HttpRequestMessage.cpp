@@ -1,17 +1,18 @@
 
 #include "../../inc/HttpRequestMessage.hpp"
 
-HttpRequestMessage::HttpRequestMessage() : message_body(NULL) {
+HttpRequestMessage::HttpRequestMessage() : message_body(NULL), body_size(0) {
 }
 
 
 HttpRequestMessage::HttpRequestMessage(std::vector<std::string> request_line,
                                        std::map<std::string, std::vector<std::string> > header_fields,
-                                       std::string message_body, int status_code){
+                                       std::string message_body, int status_code) : body_size(0){
     this->request_line = request_line;
     this->header_fields = header_fields;
     this->status_code = status_code;
-    this->body_size = message_body.length();
+    if (!message_body.empty())
+        this->body_size = message_body.length();
     this->message_body = new char[this->body_size + 1];
     std::strcpy(this->message_body, message_body.c_str());
 }
@@ -26,6 +27,7 @@ HttpRequestMessage &HttpRequestMessage::operator=(const HttpRequestMessage &othe
         request_line = other.request_line;
         header_fields = other.header_fields;
         status_code = other.status_code;
+        body_size = other.body_size;
         if (other.message_body) {
             message_body = new char[other.getBodySize()];
             std::strcpy(message_body, other.getMessageBodyPtr());

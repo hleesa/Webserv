@@ -119,7 +119,7 @@ EventType ServerManager::getEventType(const struct kevent* event){
     if (event->flags & EV_ERROR) {
         return EVENT_ERROR;
     }
-    EventType event_type = NONE;
+    EventType event_type = EVENT_ERROR;
     switch (event->filter) {
         case EVFILT_READ:
             if (listen_sockets.find(event->ident) != listen_sockets.end()) {

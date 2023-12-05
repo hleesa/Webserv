@@ -79,17 +79,19 @@ void Server::setResponse(std::string http_response) {
 }
 
 std::string Server::makeResponse(const Config* config) {
+    Method *method = Method::generate(request.getMethod(), &request, config);
     try {
 		if (request.getStatusCode()) {
+            delete method;
 			throw (request.getStatusCode());
 		}
-		Method *method = Method::generate(request.getMethod(), &request, config);
 		method->checkAllowed(request.getMethod());
         std::string response_message = method->makeHttpResponseMessage().toString();
         delete method;
         return response_message;
     }
     catch (const int status_code) {
+        delete method;
         return ErrorPage::makeErrorPageResponse(status_code, config).toString();
     }
     return HttpResponseMessage().toString();

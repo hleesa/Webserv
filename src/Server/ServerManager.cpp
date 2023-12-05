@@ -217,21 +217,29 @@ void ServerManager::processEvent(const struct kevent* event) {
         disconnectWithClient(*event);
     }
     else if (event_type == TIMEOUT_CGI) {
-        CgiData* cgi_data = reinterpret_cast<CgiData*>(event->udata);
-        close(cgi_data->getReadPipeFd());
-        close(cgi_data->getWritePipeFd());
-        processCgiTermination(cgi_data);
-        disconnectWithClient(*event);
+        processTimeoutEvent(event);
     }
     else if (CGI_END) {
-        CgiData* cgi_data = reinterpret_cast<CgiData*>(event->udata);
-        if (cgi_data->cgiDied()) {
-            processCgiTermination(cgi_data);
-        }
-        else {
-            cgi_data->setCgiDie(true);
-            change_list.push_back(makeEvent(cgi_data->getReadPipeFd(), EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, reinterpret_cast<void*>(cgi_data)));
-        }
+        processCgiEnd(event);
+    }
+}
+
+void ServerManager::processTimeoutEvent(const struct kevent* event) {
+    CgiData* cgi_data = reinterpret_cast<CgiData*>(event->udata);
+    close(cgi_data->getReadPipeFd());
+    close(cgi_data->getWritePipeFd());
+    processCgiTermination(cgi_data);
+    disconnectWithClient(*event);
+}
+
+void ServerManager::processCgiEnd(const struct kevent* event) {
+    CgiData* cgi_data = reinterpret_cast<CgiData*>(event->udata);
+    if (cgi_data->cgiDied()) {
+        processCgiTermination(cgi_data);
+    }
+    else {
+        cgi_data->setCgiDie(true);
+        change_list.push_back(makeEvent(cgi_data->getReadPipeFd(), EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, reinterpret_cast<void*>(cgi_data)));
     }
 }
 

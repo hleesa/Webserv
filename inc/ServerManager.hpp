@@ -58,6 +58,8 @@ class ServerManager {
         void processCgiOrMakeResponse(const struct kevent* event);
 
         void processCgiTermination(CgiData* cgi_data);
+        void processTimeoutEvent(const struct kevent* event);
+        void processCgiEnd(const struct kevent* event);
 
 	public:
 		ServerManager(const std::vector<Config>* configs);

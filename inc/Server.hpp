@@ -11,20 +11,23 @@ private:
     int listen_socket;
     HttpRequestMessage request;
     std::string response;
+
     char* response_ptr;
     size_t bytes_to_send;
     size_t bytes_sent;
 
     void updateByteToSend(ssize_t new_bytes_sent);
 
+    char* message_body_ptr;
     size_t bytes_to_write;
     size_t bytes_written;
-    char* message_body_ptr;
     void updateBytesToWrite(ssize_t new_bytes_written);
 
 public:
     Server();
     Server(const int listen_socket);
+    Server& operator=(const Server& other);
+    ~Server();
 
     int getListenSocket() const;
     void setRequest(const HttpRequestMessage& msg);

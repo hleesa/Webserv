@@ -304,7 +304,6 @@ void ServerManager::processPipeWriteEvent(const struct kevent& event) {
     Server *server = &servers[cgi_data->getConnSocket()];
 
     ssize_t bytes_written = write(event.ident, server->getMessageBodyPtr(), server->getBytesToWrite());
-//    printf("Address: %p\n", static_cast<void*>(server->getMessageBodyPtr()));
     if (bytes_written == ERROR) {
         return;
     }
@@ -314,43 +313,6 @@ void ServerManager::processPipeWriteEvent(const struct kevent& event) {
         close(cgi_data->getWritePipeFd());
     }
     change_list.push_back(makeEvent(cgi_data->getConnSocket(), EVFILT_TIMER, EV_ADD | EV_ONESHOT, NOTE_SECONDS, TIMEOUT_SEC, reinterpret_cast<void*>(cgi_data)));
-}
-
-const Config* ServerManager::findConfig(const std::string host, const std::string url) {
-	if (server_name_to_config.find(host) == server_name_to_config.end()) {
-		return default_config;
-	}
-	std::vector<const Config*>::iterator itr = server_name_to_config[host].begin();
-    for (;itr != server_name_to_config[host].end(); itr++) {
-        const Config* config = *itr;
-        if (config->hasLocationOf(url)) {
-            return config;
-        }
-    }
-    const Config* config = *server_name_to_config[host].begin();
-    return config;
-}
-
-void ServerManager::checkEventError(const struct kevent& event) {
-    // if (configs.find(event.ident) != configs.end())
-    if (servers.find(event.ident) != servers.end())
-        disconnectWithClient(event);
-}
-
-void ServerManager::processListenEvent(const struct kevent& event) {
-    struct sockaddr_in client_address;
-    socklen_t client_address_len = sizeof(client_address);
-    int connection_socket = accept(event.ident, (struct sockaddr*) &client_address, &client_address_len);
-
-    if (connection_socket == ERROR) {
-        throw (strerror(errno));
-	}
-	if (fcntl(connection_socket, F_SETFL, O_NONBLOCK, FD_CLOEXEC) == ERROR) {
-        throw (strerror(errno));
-	}
-    servers[connection_socket] = Server(event.ident);
-    change_list.push_back(makeEvent(connection_socket, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, NULL));
-    change_list.push_back(makeEvent(connection_socket, EVFILT_TIMER, EV_ADD | EV_ONESHOT, NOTE_SECONDS, TIMEOUT_SEC, NULL));
 }
 
 void ServerManager::processReceiveEvent(const struct kevent& event) {
@@ -376,6 +338,43 @@ void ServerManager::processSendEvent(const struct kevent& event) {
         change_list.push_back(makeEvent(event.ident, EVFILT_WRITE, EV_DISABLE, 0, 0, NULL));
     }
     change_list.push_back(makeEvent(event.ident, EVFILT_TIMER, EV_ADD | EV_ONESHOT, NOTE_SECONDS, TIMEOUT_SEC, NULL));
+}
+
+void ServerManager::processListenEvent(const struct kevent& event) {
+    struct sockaddr_in client_address;
+    socklen_t client_address_len = sizeof(client_address);
+    int connection_socket = accept(event.ident, (struct sockaddr*) &client_address, &client_address_len);
+
+    if (connection_socket == ERROR) {
+        throw (strerror(errno));
+    }
+    if (fcntl(connection_socket, F_SETFL, O_NONBLOCK, FD_CLOEXEC) == ERROR) {
+        throw (strerror(errno));
+    }
+    servers[connection_socket] = Server(event.ident);
+    change_list.push_back(makeEvent(connection_socket, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, NULL));
+    change_list.push_back(makeEvent(connection_socket, EVFILT_TIMER, EV_ADD | EV_ONESHOT, NOTE_SECONDS, TIMEOUT_SEC, NULL));
+}
+
+const Config* ServerManager::findConfig(const std::string host, const std::string url) {
+    if (server_name_to_config.find(host) == server_name_to_config.end()) {
+        return default_config;
+    }
+    std::vector<const Config*>::iterator itr = server_name_to_config[host].begin();
+    for (;itr != server_name_to_config[host].end(); itr++) {
+        const Config* config = *itr;
+        if (config->hasLocationOf(url)) {
+            return config;
+        }
+    }
+    const Config* config = *server_name_to_config[host].begin();
+    return config;
+}
+
+void ServerManager::checkEventError(const struct kevent& event) {
+    // if (configs.find(event.ident) != configs.end())
+    if (servers.find(event.ident) != servers.end())
+        disconnectWithClient(event);
 }
 
 struct kevent ServerManager::makeEvent(

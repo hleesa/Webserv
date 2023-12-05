@@ -28,7 +28,11 @@ HttpRequestMessage &HttpRequestMessage::operator=(const HttpRequestMessage &othe
         header_fields = other.header_fields;
         status_code = other.status_code;
         body_size = other.body_size;
-        if (other.message_body) {
+        if (message_body != NULL) {
+            delete[] message_body;
+            message_body = NULL;
+        }
+        if (other.message_body != NULL) {
             message_body = new char[other.getBodySize()];
             std::strcpy(message_body, other.getMessageBodyPtr());
         }

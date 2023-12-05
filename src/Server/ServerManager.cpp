@@ -195,27 +195,27 @@ void ServerManager::processEvent(const struct kevent* event) {
 //            checkEventError(*event);
             break;
         case LISTEN:
-            processListenEvent(*event);
+            processListenEvent(event);
             break;
         case PARSE_REQUEST:
-            processReceiveEvent(*event);
+            processReceiveEvent(event);
             if (parser.getReadingStatus(event->ident) == END) {
                 assignParsedRequest(event);
                 processCgiOrMakeResponse(event);
             }
             break;
         case SEND_RESPONSE:
-            processSendEvent(*event);
+            processSendEvent(event);
             break;
         case READ_PIPE:
-            processReadPipeEvent(*event);
+            processReadPipeEvent(event);
             break;
         case WRITE_PIPE:
-            processWritePipeEvent(*event);
+            processWritePipeEvent(event);
             break;
         case TIMEOUT:
             std::cout << "time out\n";
-            disconnectWithClient(*event);
+            disconnectWithClient(event);
             break;
         case TIMEOUT_CGI:
             processTimeoutCgiEvent(event);
@@ -231,7 +231,7 @@ void ServerManager::processTimeoutCgiEvent(const struct kevent* event) {
     close(cgi_data->getReadPipeFd());
     close(cgi_data->getWritePipeFd());
     processCgiTermination(cgi_data);
-    disconnectWithClient(*event);
+    disconnectWithClient(event);
 }
 
 void ServerManager::processCgiEnd(const struct kevent* event) {
@@ -266,11 +266,11 @@ void ServerManager::processCgiTermination(CgiData* cgi_data) {
     delete cgi_data;
 }
 
-void ServerManager::processReadPipeEvent(const struct kevent& event) {
+void ServerManager::processReadPipeEvent(const struct kevent* event) {
     char buff[BUFFER_SIZE];
     memset(buff, 0, BUFFER_SIZE);
-    ssize_t bytes_read = read(event.ident, &buff, BUFFER_SIZE);
-    CgiData* cgi_data = reinterpret_cast<CgiData*>(event.udata);
+    ssize_t bytes_read = read(event->ident, &buff, BUFFER_SIZE);
+    CgiData* cgi_data = reinterpret_cast<CgiData*>(event->udata);
 	Server *server = &servers[cgi_data->getConnSocket()];
 
     if (bytes_read == ERROR) {
@@ -294,11 +294,11 @@ void ServerManager::processReadPipeEvent(const struct kevent& event) {
     }
 }
 
-void ServerManager::processWritePipeEvent(const struct kevent& event) {
-    CgiData* cgi_data = reinterpret_cast<CgiData*>(event.udata);
+void ServerManager::processWritePipeEvent(const struct kevent* event) {
+    CgiData* cgi_data = reinterpret_cast<CgiData*>(event->udata);
     Server *server = &servers[cgi_data->getConnSocket()];
 
-    ssize_t bytes_written = write(event.ident, server->getMessageBodyPtr(), server->getBytesToWrite());
+    ssize_t bytes_written = write(event->ident, server->getMessageBodyPtr(), server->getBytesToWrite());
     if (bytes_written == ERROR) {
         return;
     }
@@ -310,35 +310,35 @@ void ServerManager::processWritePipeEvent(const struct kevent& event) {
     change_list.push_back(makeEvent(cgi_data->getConnSocket(), EVFILT_TIMER, EV_ADD | EV_ONESHOT, NOTE_SECONDS, TIMEOUT_SEC, reinterpret_cast<void*>(cgi_data)));
 }
 
-void ServerManager::processReceiveEvent(const struct kevent& event) {
+void ServerManager::processReceiveEvent(const struct kevent* event) {
     char buff[BUFFER_SIZE + 1];
-    ssize_t bytes_recv = recv(event.ident, &buff, BUFFER_SIZE, 0);
+    ssize_t bytes_recv = recv(event->ident, &buff, BUFFER_SIZE, 0);
     
 	if (bytes_recv == ERROR) {
        return;
     }
     buff[bytes_recv] = '\0';
-	parser.run(event.ident, buff);
+	parser.run(event->ident, buff);
 }
 
-void ServerManager::processSendEvent(const struct kevent& event) {
-    Server *server = &servers[event.ident];
-    ssize_t bytes_sent = send(event.ident, server->getResponsePtr(), server->getBytesToSend(), 0);
+void ServerManager::processSendEvent(const struct kevent* event) {
+    Server *server = &servers[event->ident];
+    ssize_t bytes_sent = send(event->ident, server->getResponsePtr(), server->getBytesToSend(), 0);
     if (bytes_sent == ERROR) {
         return;
     }
     server->updateBytesSent(bytes_sent);
     if (server->sendComplete()) {
         server->clearResponse();
-        change_list.push_back(makeEvent(event.ident, EVFILT_WRITE, EV_DISABLE, 0, 0, NULL));
+        change_list.push_back(makeEvent(event->ident, EVFILT_WRITE, EV_DISABLE, 0, 0, NULL));
     }
-    change_list.push_back(makeEvent(event.ident, EVFILT_TIMER, EV_ADD | EV_ONESHOT, NOTE_SECONDS, TIMEOUT_SEC, NULL));
+    change_list.push_back(makeEvent(event->ident, EVFILT_TIMER, EV_ADD | EV_ONESHOT, NOTE_SECONDS, TIMEOUT_SEC, NULL));
 }
 
-void ServerManager::processListenEvent(const struct kevent& event) {
+void ServerManager::processListenEvent(const struct kevent* event) {
     struct sockaddr_in client_address;
     socklen_t client_address_len = sizeof(client_address);
-    int connection_socket = accept(event.ident, (struct sockaddr*) &client_address, &client_address_len);
+    int connection_socket = accept(event->ident, (struct sockaddr*) &client_address, &client_address_len);
 
     if (connection_socket == ERROR) {
         throw (strerror(errno));
@@ -346,7 +346,7 @@ void ServerManager::processListenEvent(const struct kevent& event) {
     if (fcntl(connection_socket, F_SETFL, O_NONBLOCK, FD_CLOEXEC) == ERROR) {
         throw (strerror(errno));
     }
-    servers[connection_socket] = Server(event.ident);
+    servers[connection_socket] = Server(event->ident);
     change_list.push_back(makeEvent(connection_socket, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, NULL));
     change_list.push_back(makeEvent(connection_socket, EVFILT_TIMER, EV_ADD | EV_ONESHOT, NOTE_SECONDS, TIMEOUT_SEC, NULL));
 }
@@ -366,9 +366,9 @@ const Config* ServerManager::findConfig(const std::string host, const std::strin
     return config;
 }
 
-void ServerManager::checkEventError(const struct kevent& event) {
+void ServerManager::checkEventError(const struct kevent* event) {
     // if (configs.find(event.ident) != configs.end())
-    if (servers.find(event.ident) != servers.end())
+    if (servers.find(event->ident) != servers.end())
         disconnectWithClient(event);
 }
 
@@ -385,12 +385,12 @@ struct kevent ServerManager::makeEvent(
     return event;
 }
 
-void ServerManager::disconnectWithClient(const struct kevent& event) {
+void ServerManager::disconnectWithClient(const struct kevent* event) {
 //	 struct linger linger;
 	
 //	 linger.l_onoff = 1;
 //	 linger.l_linger = 0;
 //	 setsockopt(event.ident, SOL_SOCKET, SO_LINGER, &linger, sizeof(linger)); // Linger option
-    close(event.ident);
-    servers.erase(event.ident);
+    close(event->ident);
+    servers.erase(event->ident);
 }

@@ -40,26 +40,25 @@ class ServerManager {
 			uint32_t fflags,
 			intptr_t data,
 			void* udata) const;
-		void processEvents(const int events);
-		void processEvent(const struct kevent* event);
+
 		const Config* findConfig(const std::string host, const std::string url);
-		void checkEventError(const struct kevent& event);
-		void processListenEvent(const struct kevent& event);
-		void processReceiveEvent(const struct kevent& event);
-		void processSendEvent(const struct kevent& event);
-		void disconnectWithClient(const struct kevent& event);
-		void handleError(const int return_value, const int listen_socket) const;
+        void handleError(const int return_value, const int listen_socket) const;
 
-        void processWritePipeEvent(const struct kevent &event);
-        void processReadPipeEvent(const struct kevent& event);
-
+        void processEvents(const int events);
+        void processEvent(const struct kevent* event);
         EventType getEventType(const struct kevent* event);
+		void checkEventError(const struct kevent* event);
+		void processListenEvent(const struct kevent* event);
+		void processReceiveEvent(const struct kevent* event);
         void assignParsedRequest(const struct kevent* event);
         void processCgiOrMakeResponse(const struct kevent* event);
-
-        void processCgiTermination(CgiData* cgi_data);
+		void processSendEvent(const struct kevent* event);
+        void processReadPipeEvent(const struct kevent* event);
+        void processWritePipeEvent(const struct kevent* event);
+		void disconnectWithClient(const struct kevent* event);
         void processTimeoutCgiEvent(const struct kevent* event);
         void processCgiEnd(const struct kevent* event);
+        void processCgiTermination(CgiData* cgi_data);
 
 	public:
 		ServerManager(const std::vector<Config>* configs);

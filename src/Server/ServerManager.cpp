@@ -294,6 +294,7 @@ void ServerManager::processReadPipeEvent(const k_event* event) {
             change_list.push_back(makeEvent(cgi_data->getChildPid(), EVFILT_PROC, EV_ADD | EV_ONESHOT, NOTE_EXIT, 0, reinterpret_cast<void*>(cgi_data)));
         }
     }
+    change_list.push_back(makeEvent(event->ident, EVFILT_TIMER, EV_ADD | EV_ONESHOT, NOTE_SECONDS, TIMEOUT_SEC, reinterpret_cast<void*>(cgi_data)));
 }
 
 void ServerManager::processWritePipeEvent(const k_event* event) {
@@ -321,6 +322,7 @@ void ServerManager::processReceiveEvent(const k_event* event) {
     }
     buff[bytes_recv] = '\0';
 	parser.run(event->ident, buff);
+    change_list.push_back(makeEvent(event->ident, EVFILT_TIMER, EV_ADD | EV_ONESHOT, NOTE_SECONDS, TIMEOUT_SEC, NULL));
 }
 
 void ServerManager::processSendEvent(const k_event* event) {

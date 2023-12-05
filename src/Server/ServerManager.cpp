@@ -220,37 +220,40 @@ void ServerManager::processEvent(const struct kevent* event) {
         CgiData* cgi_data = reinterpret_cast<CgiData*>(event->udata);
         close(cgi_data->getReadPipeFd());
         close(cgi_data->getWritePipeFd());
-        kill(cgi_data->getChildPid(), SIGTERM);
-        delete cgi_data;
+        processCgiTermination(cgi_data);
         disconnectWithClient(*event);
     }
     else if (CGI_END) {
         CgiData* cgi_data = reinterpret_cast<CgiData*>(event->udata);
         if (cgi_data->cgiDied()) {
-            int status;
-            if (waitpid(cgi_data->getChildPid(), &status, 0) == ERROR) {
-                delete cgi_data;
-                throw 500;
-            }
-            if (WIFEXITED(status)) { // 자식 종료
-                int exit_status = WEXITSTATUS(status);
-                if (exit_status == EXIT_FAILURE) { // 비정상 종료
-                    delete cgi_data;
-                    throw 500;
-                }
-            }
-            else {
-                kill(cgi_data->getChildPid(), SIGTERM);
-                delete cgi_data;
-                throw 500;
-            }
-            delete cgi_data;;
+            processCgiTermination(cgi_data);
         }
         else {
             cgi_data->setCgiDie(true);
             change_list.push_back(makeEvent(cgi_data->getReadPipeFd(), EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, reinterpret_cast<void*>(cgi_data)));
         }
     }
+}
+
+void ServerManager::processCgiTermination(CgiData* cgi_data) {
+    int status;
+    if (waitpid(cgi_data->getChildPid(), &status, 0) == ERROR) {
+        delete cgi_data;
+        throw 500;
+    }
+    if (WIFEXITED(status)) { // 자식 종료
+        int exit_status = WEXITSTATUS(status);
+        if (exit_status == EXIT_FAILURE) { // 비정상 종료
+            delete cgi_data;
+            throw 500;
+        }
+    }
+    else {
+        kill(cgi_data->getChildPid(), SIGTERM);
+        delete cgi_data;
+        throw 500;
+    }
+    delete cgi_data;
 }
 
 void ServerManager::processPipeReadEvent(const struct kevent& event) {
@@ -270,27 +273,9 @@ void ServerManager::processPipeReadEvent(const struct kevent& event) {
     else { // EOF
         server->setResponse(PostCgi::makeResponse(server->getResponse()).toString());
         close(cgi_data->getReadPipeFd());
-//        change_list.push_back(makeEvent(cgi_data->getReadPipeFd(), EVFILT_READ, EV_DISABLE, 0, 0, NULL));
         change_list.push_back(makeEvent(cgi_data->getConnSocket(), EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, NULL));
         if (cgi_data->cgiDied()) {
-            int status;
-            if (waitpid(cgi_data->getChildPid(), &status, 0) == ERROR) {
-                delete cgi_data;
-                throw 500;
-            }
-            if (WIFEXITED(status)) { // 자식 종료
-                int exit_status = WEXITSTATUS(status);
-                if (exit_status == EXIT_FAILURE) { // 비정상 종료
-                    delete cgi_data;
-                    throw 500;
-                }
-            }
-            else {
-                kill(cgi_data->getChildPid(), SIGTERM);
-                delete cgi_data;
-                throw 500;
-            }
-            delete cgi_data;
+            processCgiTermination(cgi_data);
         }
         else {
             cgi_data->setCgiDie(true);

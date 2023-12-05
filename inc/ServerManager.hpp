@@ -8,6 +8,7 @@
 #include "Server.hpp"
 #include "RequestParser.hpp"
 #include "EventType.hpp"
+#include "CgiData.hpp"
 
 #define NUMBER_OF_EVENT 200
 #define NUMBER_OF_BACKLOG 2000
@@ -55,6 +56,8 @@ class ServerManager {
         EventType getEventType(const struct kevent* event);
         void assignParsedRequest(const struct kevent* event);
         void processCgiOrMakeResponse(const struct kevent* event);
+
+        void processCgiTermination(CgiData* cgi_data);
 
 	public:
 		ServerManager(const std::vector<Config>* configs);

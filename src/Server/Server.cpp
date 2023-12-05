@@ -60,9 +60,6 @@ int Server::getListenSocket() const {
     return listen_socket;
 }
 void Server::setRequest(const HttpRequestMessage& request_message) {
-    if (message_body_ptr != NULL) { //1
-        delete[] message_body_ptr;
-    }
     this->request = request_message;
     bytes_to_write = request_message.getBodySize();
     bytes_written = 0;
@@ -109,8 +106,14 @@ bool Server::sendComplete() {
 
 void Server::clearResponse() {
     response.clear();
-    delete response_ptr;
+    if (response_ptr != NULL) {
+        delete response_ptr;
+    }
     response_ptr = NULL;
+    if (message_body_ptr != NULL) {
+        delete message_body_ptr;
+    }
+    message_body_ptr = NULL;
     bytes_sent = 0;
     bytes_to_send = 0;
 }

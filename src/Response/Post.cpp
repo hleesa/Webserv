@@ -34,7 +34,7 @@ HttpResponseMessage Post::makeHttpResponseMessage(){
 	}
 
 	if (_status_code == 0) {
-		saveToFile(request->getMessageBodyPtr());
+		saveToFile();
 	}
 
 	make_post_response();
@@ -114,7 +114,7 @@ void Post::check_header_content_length(std::map<std::string, std::vector<std::st
 	}
 }
 
-void Post::saveToFile(std::string message_body) {
+void Post::saveToFile() {
 	std::string filename;
 	if (abs_path.find(".", 1) == std::string::npos) {
 		filename = generateFileName();
@@ -125,12 +125,12 @@ void Post::saveToFile(std::string message_body) {
 	std::string data_path = abs_path + "/" + filename;
 	std::ofstream file_write(data_path, std::ios::app);
 
-	if (message_body.size() != content_length) {
+	if (request->getBodySize() != content_length) {
 		// 헤더 콘텐츠 길이와 실제 바디의 글자수가 다를경우
 		throw 411;
 	}
 	if (file_write.is_open()) {
-		file_write << message_body;
+		file_write << request->getMessageBodyPtr();
 		file_write.close();
 		_status_code = 200;
 	} else {

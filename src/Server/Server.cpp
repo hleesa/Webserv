@@ -23,8 +23,8 @@ Server& Server::operator=(const Server& other) {
             response_ptr = NULL;
         }
         if (other.response_ptr != NULL) {
-            response_ptr = new char[other.bytes_to_send + 1];
-            strcpy(response_ptr, other.response_ptr);
+            response_ptr = new unsigned char[other.bytes_to_send];
+            std::memmove(response_ptr, other.response_ptr, other.bytes_to_send);
         }
 
         bytes_to_send = other.bytes_to_send;
@@ -72,9 +72,8 @@ void Server::setResponse(std::string http_response) {
     bytes_sent = 0;
     if (!http_response.empty())
         bytes_to_send = http_response.length();
-    response_ptr = new char[bytes_to_send + 1];
-    std::strcpy(response_ptr, http_response.c_str());
-//    response_ptr[bytes_to_send] = '\0';
+    response_ptr = new unsigned char[bytes_to_send];
+    std::memmove(response_ptr, http_response.c_str(), bytes_to_send);
     return;
 }
 
@@ -120,7 +119,7 @@ void Server::clearResponse() {
     bytes_to_send = 0;
 }
 
-char* Server::getResponsePtr() {
+unsigned char* Server::getResponsePtr() {
     return response_ptr + bytes_sent;
 }
 

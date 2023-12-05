@@ -12,7 +12,7 @@ private:
     HttpRequestMessage request;
     std::string response;
 
-    char* response_ptr;
+    unsigned char* response_ptr;
     size_t bytes_to_send;
     size_t bytes_sent;
 
@@ -50,7 +50,7 @@ public:
     char* getMessageBodyPtr() const;
     size_t getBytesToWrite();
 
-    char* getResponsePtr();
+    unsigned char* getResponsePtr();
     size_t getBytesToSend();
 
 };

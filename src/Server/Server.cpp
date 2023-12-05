@@ -35,8 +35,8 @@ Server& Server::operator=(const Server& other) {
             message_body_ptr = NULL;
         }
         if (other.message_body_ptr != NULL) {
-            message_body_ptr = new char[other.bytes_to_write + 1];
-            strcpy(message_body_ptr, other.message_body_ptr);
+            message_body_ptr = new unsigned char[other.bytes_to_write];
+            std::memmove(message_body_ptr, other.message_body_ptr, other.bytes_to_write);
         }
 
         bytes_to_write = other.bytes_to_write;
@@ -63,8 +63,8 @@ void Server::setRequest(const HttpRequestMessage& request_message) {
     this->request = request_message;
     bytes_to_write = request_message.getBodySize();
     bytes_written = 0;
-    message_body_ptr = new char[bytes_to_write + 1];
-    strcpy(message_body_ptr, request_message.getMessageBodyPtr());
+    message_body_ptr = new unsigned char[bytes_to_write];
+    std::memmove(message_body_ptr, request_message.getMessageBodyPtr(), bytes_to_write);
 }
 
 void Server::setResponse(std::string http_response) {
@@ -119,7 +119,7 @@ void Server::clearResponse() {
     bytes_to_send = 0;
 }
 
-unsigned char* Server::getResponsePtr() {
+unsigned char* Server::getResponsePtr() const{
     return response_ptr + bytes_sent;
 }
 
@@ -152,7 +152,7 @@ void Server::clearRequestBodyPtr() {
     bytes_written = 0;
 }
 
-char* Server::getMessageBodyPtr() const {
+unsigned char* Server::getMessageBodyPtr() const {
     return message_body_ptr + bytes_written;
 }
 

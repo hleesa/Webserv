@@ -18,7 +18,7 @@ private:
 
     void updateByteToSend(ssize_t new_bytes_sent);
 
-    char* message_body_ptr;
+    unsigned char* message_body_ptr;
     size_t bytes_to_write;
     size_t bytes_written;
     void updateBytesToWrite(ssize_t new_bytes_written);
@@ -47,10 +47,10 @@ public:
     bool writeComplete();
     void clearRequestBodyPtr();
 
-    char* getMessageBodyPtr() const;
+    unsigned char* getMessageBodyPtr() const;
     size_t getBytesToWrite();
 
-    unsigned char* getResponsePtr();
+    unsigned char* getResponsePtr() const;
     size_t getBytesToSend();
 
 };

@@ -24,10 +24,10 @@ ServerManager::ServerManager(const std::vector<Config>* configs) : default_confi
 ServerManager::~ServerManager() {}
 
 void ServerManager::setConfigByServerName(const std::vector<Config>* configs) {
-	std::vector<Config>::const_iterator itr = (*configs).begin();
+	std::vector<Config>::const_iterator itr = configs->begin();
     std::map<int, bool> is_used_ports;
 
-    for (;itr != (*configs).end(); itr++) {
+    for (;itr != configs->end(); itr++) {
 		int port = itr->getPort();
 		if (!is_used_ports[port]) {
             is_used_ports[port] = true;

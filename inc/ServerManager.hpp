@@ -16,11 +16,10 @@
 #define TIMEOUT_SEC 30
 #define ERROR -1
 
-typedef struct kevent k_event;
-
 class ServerManager {
 	private:
 		int kq;
+        typedef struct kevent k_event;
 		std::vector<k_event> change_list;
 		k_event event_list[NUMBER_OF_EVENT];
 

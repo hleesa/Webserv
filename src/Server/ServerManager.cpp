@@ -14,7 +14,7 @@
 ServerManager::ServerManager(const std::vector<Config>* configs) : default_config(&configs->front()){
 	setConfigByServerName(configs);
     addListenEvent();
-    memset((void*)event_list, 0, sizeof(struct kevent) * NUMBER_OF_EVENT);
+    memset((void*)event_list, 0, sizeof(k_event) * NUMBER_OF_EVENT);
     kq = kqueue();
     if (kq == ERROR) {
         throw (strerror(errno));
@@ -102,7 +102,7 @@ void ServerManager::run() {
 
 void ServerManager::processEvents(const int events) {
     for (int idx = 0; idx < events; idx++) {
-        struct kevent* event = event_list + idx;
+        k_event* event = event_list + idx;
 		try {
 			processEvent(event);
 		}
@@ -115,7 +115,7 @@ void ServerManager::processEvents(const int events) {
 	}
 }
 
-EventType ServerManager::getEventType(const struct kevent* event){
+EventType ServerManager::getEventType(const k_event* event){
     if (event->flags & EV_ERROR) {
         return EVENT_ERROR;
     }
@@ -155,13 +155,13 @@ EventType ServerManager::getEventType(const struct kevent* event){
     return event_type;
 }
 
-void ServerManager::assignParsedRequest(const struct kevent* event) {
+void ServerManager::assignParsedRequest(const k_event* event) {
     HttpRequestMessage request = parser.getHttpRequestMessage(event->ident);
     servers[event->ident].setRequest(request);
     parser.clear(event->ident);
 }
 
-void ServerManager::processCgiOrMakeResponse(const struct kevent* event) {
+void ServerManager::processCgiOrMakeResponse(const k_event* event) {
     HttpRequestMessage* request = servers[event->ident].getRequestPtr();
     if (request->getStatusCode() != 0) {
         change_list.push_back(makeEvent(event->ident, EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, NULL));
@@ -186,8 +186,10 @@ void ServerManager::processCgiOrMakeResponse(const struct kevent* event) {
     }
 }
 
-void ServerManager::processEvent(const struct kevent* event) {
+void ServerManager::processEvent(const k_event* event) {
     EventType event_type = getEventType(event);
+
+//    typedef void (*EventHandlerFunction)(Event*)
 
     switch (event_type) {
         case EVENT_ERROR:
@@ -226,7 +228,7 @@ void ServerManager::processEvent(const struct kevent* event) {
     }
 }
 
-void ServerManager::processTimeoutCgiEvent(const struct kevent* event) {
+void ServerManager::processTimeoutCgiEvent(const k_event* event) {
     CgiData* cgi_data = reinterpret_cast<CgiData*>(event->udata);
     close(cgi_data->getReadPipeFd());
     close(cgi_data->getWritePipeFd());
@@ -234,7 +236,7 @@ void ServerManager::processTimeoutCgiEvent(const struct kevent* event) {
     disconnectWithClient(event);
 }
 
-void ServerManager::processCgiEnd(const struct kevent* event) {
+void ServerManager::processCgiEnd(const k_event* event) {
     CgiData* cgi_data = reinterpret_cast<CgiData*>(event->udata);
     if (cgi_data->cgiDied()) {
         processCgiTermination(cgi_data);
@@ -266,7 +268,7 @@ void ServerManager::processCgiTermination(CgiData* cgi_data) {
     delete cgi_data;
 }
 
-void ServerManager::processReadPipeEvent(const struct kevent* event) {
+void ServerManager::processReadPipeEvent(const k_event* event) {
     char buff[BUFFER_SIZE];
     memset(buff, 0, BUFFER_SIZE);
     ssize_t bytes_read = read(event->ident, &buff, BUFFER_SIZE);
@@ -294,7 +296,7 @@ void ServerManager::processReadPipeEvent(const struct kevent* event) {
     }
 }
 
-void ServerManager::processWritePipeEvent(const struct kevent* event) {
+void ServerManager::processWritePipeEvent(const k_event* event) {
     CgiData* cgi_data = reinterpret_cast<CgiData*>(event->udata);
     Server *server = &servers[cgi_data->getConnSocket()];
 
@@ -310,7 +312,7 @@ void ServerManager::processWritePipeEvent(const struct kevent* event) {
     change_list.push_back(makeEvent(cgi_data->getConnSocket(), EVFILT_TIMER, EV_ADD | EV_ONESHOT, NOTE_SECONDS, TIMEOUT_SEC, reinterpret_cast<void*>(cgi_data)));
 }
 
-void ServerManager::processReceiveEvent(const struct kevent* event) {
+void ServerManager::processReceiveEvent(const k_event* event) {
     char buff[BUFFER_SIZE + 1];
     ssize_t bytes_recv = recv(event->ident, &buff, BUFFER_SIZE, 0);
     
@@ -321,7 +323,7 @@ void ServerManager::processReceiveEvent(const struct kevent* event) {
 	parser.run(event->ident, buff);
 }
 
-void ServerManager::processSendEvent(const struct kevent* event) {
+void ServerManager::processSendEvent(const k_event* event) {
     Server *server = &servers[event->ident];
     ssize_t bytes_sent = send(event->ident, server->getResponsePtr(), server->getBytesToSend(), 0);
     if (bytes_sent == ERROR) {
@@ -335,7 +337,7 @@ void ServerManager::processSendEvent(const struct kevent* event) {
     change_list.push_back(makeEvent(event->ident, EVFILT_TIMER, EV_ADD | EV_ONESHOT, NOTE_SECONDS, TIMEOUT_SEC, NULL));
 }
 
-void ServerManager::processListenEvent(const struct kevent* event) {
+void ServerManager::processListenEvent(const k_event* event) {
     struct sockaddr_in client_address;
     socklen_t client_address_len = sizeof(client_address);
     int connection_socket = accept(event->ident, (struct sockaddr*) &client_address, &client_address_len);
@@ -366,26 +368,26 @@ const Config* ServerManager::findConfig(const std::string host, const std::strin
     return config;
 }
 
-void ServerManager::checkEventError(const struct kevent* event) {
+void ServerManager::checkEventError(const k_event* event) {
     // if (configs.find(event.ident) != configs.end())
     if (servers.find(event->ident) != servers.end())
         disconnectWithClient(event);
 }
 
-struct kevent ServerManager::makeEvent(
+k_event ServerManager::makeEvent(
         uintptr_t ident,
         int16_t filter,
         uint16_t flags,
         uint32_t fflags,
         intptr_t data,
         void* udata) const {
-    struct kevent event;
+    k_event event;
 
     EV_SET(&event, ident, filter, flags, fflags, data, udata);
     return event;
 }
 
-void ServerManager::disconnectWithClient(const struct kevent* event) {
+void ServerManager::disconnectWithClient(const k_event* event) {
 //	 struct linger linger;
 	
 //	 linger.l_onoff = 1;

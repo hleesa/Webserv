@@ -60,6 +60,9 @@ int Server::getListenSocket() const {
     return listen_socket;
 }
 void Server::setRequest(const HttpRequestMessage& request_message) {
+    if (message_body_ptr != NULL) { //1
+        delete[] message_body_ptr;
+    }
     this->request = request_message;
     bytes_to_write = request_message.getBodySize();
     bytes_written = 0;
@@ -152,8 +155,6 @@ char* Server::getMessageBodyPtr() const {
 size_t Server::getBytesToWrite() {
     return bytes_to_write;
 }
-
-
 
 std::string Server::getResponse() {
     return response;

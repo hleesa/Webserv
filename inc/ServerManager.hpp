@@ -50,15 +50,15 @@ class ServerManager {
 		void disconnectWithClient(const struct kevent& event);
 		void handleError(const int return_value, const int listen_socket) const;
 
-        void processPipeWriteEvent(const struct kevent &event);
-        void processPipeReadEvent(const struct kevent& event);
+        void processWritePipeEvent(const struct kevent &event);
+        void processReadPipeEvent(const struct kevent& event);
 
         EventType getEventType(const struct kevent* event);
         void assignParsedRequest(const struct kevent* event);
         void processCgiOrMakeResponse(const struct kevent* event);
 
         void processCgiTermination(CgiData* cgi_data);
-        void processTimeoutEvent(const struct kevent* event);
+        void processTimeoutCgiEvent(const struct kevent* event);
         void processCgiEnd(const struct kevent* event);
 
 	public:

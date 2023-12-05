@@ -208,17 +208,17 @@ void ServerManager::processEvent(const struct kevent* event) {
             processSendEvent(*event);
             break;
         case READ_PIPE:
-            processPipeReadEvent(*event);
+            processReadPipeEvent(*event);
             break;
         case WRITE_PIPE:
-            processPipeWriteEvent(*event);
+            processWritePipeEvent(*event);
             break;
         case TIMEOUT:
             std::cout << "time out\n";
             disconnectWithClient(*event);
             break;
         case TIMEOUT_CGI:
-            processTimeoutEvent(event);
+            processTimeoutCgiEvent(event);
             break;
         case CGI_END:
             processCgiEnd(event);
@@ -226,7 +226,7 @@ void ServerManager::processEvent(const struct kevent* event) {
     }
 }
 
-void ServerManager::processTimeoutEvent(const struct kevent* event) {
+void ServerManager::processTimeoutCgiEvent(const struct kevent* event) {
     CgiData* cgi_data = reinterpret_cast<CgiData*>(event->udata);
     close(cgi_data->getReadPipeFd());
     close(cgi_data->getWritePipeFd());
@@ -266,7 +266,7 @@ void ServerManager::processCgiTermination(CgiData* cgi_data) {
     delete cgi_data;
 }
 
-void ServerManager::processPipeReadEvent(const struct kevent& event) {
+void ServerManager::processReadPipeEvent(const struct kevent& event) {
     char buff[BUFFER_SIZE];
     memset(buff, 0, BUFFER_SIZE);
     ssize_t bytes_read = read(event.ident, &buff, BUFFER_SIZE);
@@ -294,7 +294,7 @@ void ServerManager::processPipeReadEvent(const struct kevent& event) {
     }
 }
 
-void ServerManager::processPipeWriteEvent(const struct kevent& event) {
+void ServerManager::processWritePipeEvent(const struct kevent& event) {
     CgiData* cgi_data = reinterpret_cast<CgiData*>(event.udata);
     Server *server = &servers[cgi_data->getConnSocket()];
 

@@ -95,6 +95,15 @@ std::string Server::makeResponse(const Config* config) {
     return HttpResponseMessage().toString();
 }
 
+void Server::updateBytesSent(ssize_t new_bytes_sent) {
+    bytes_to_send -= static_cast<size_t>(new_bytes_sent);
+    bytes_sent += static_cast<size_t>(new_bytes_sent);
+}
+
+bool Server::sendComplete() {
+    return bytes_to_send == 0;
+}
+
 void Server::clearResponse() {
     response.clear();
     delete response_ptr;
@@ -103,17 +112,12 @@ void Server::clearResponse() {
     bytes_to_send = 0;
 }
 
-bool Server::sendComplete() {
-    return bytes_to_send == 0;
+char* Server::getResponsePtr() {
+    return response_ptr + bytes_sent;
 }
 
-std::string Server::getResponse() {
-    return response;
-}
-
-void Server::updateResponse(ssize_t new_bytes_sent) {
-    bytes_to_send -= static_cast<size_t>(new_bytes_sent);
-    bytes_sent += static_cast<size_t>(new_bytes_sent);
+size_t Server::getBytesToSend() {
+    return bytes_to_send;
 }
 
 void Server::appendResponse(const char* buffer, size_t size) {
@@ -125,7 +129,7 @@ HttpRequestMessage* Server::getRequestPtr() {
     return &this->request;
 }
 
-void Server::updateRequestBody(ssize_t new_bytes_written) {
+void Server::updateBytesWritten(ssize_t new_bytes_written) {
     bytes_to_write -= static_cast<size_t>(new_bytes_written);
     bytes_written  += static_cast<size_t>(new_bytes_written);
 }
@@ -134,7 +138,7 @@ bool Server::writeComplete() {
     return bytes_to_write == 0;
 }
 
-void Server::clearRequestBody() {
+void Server::clearRequestBodyPtr() {
     delete[] message_body_ptr;
     message_body_ptr = NULL;
     bytes_to_write = 0;
@@ -149,10 +153,9 @@ size_t Server::getBytesToWrite() {
     return bytes_to_write;
 }
 
-char* Server::getResponsePtr() {
-    return response_ptr + bytes_sent;
+
+
+std::string Server::getResponse() {
+    return response;
 }
 
-size_t Server::getBytesToSend() {
-    return bytes_to_send;
-}

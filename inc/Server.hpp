@@ -34,7 +34,7 @@ public:
     void setResponse(std::string http_response);
 
     std::string getResponse();
-    void updateResponse(ssize_t bytes_sent);
+    void updateBytesSent(ssize_t bytes_sent);
     bool sendComplete();
     void clearResponse();
 
@@ -43,9 +43,9 @@ public:
     void appendResponse(const char* buffer, size_t size);
     HttpRequestMessage* getRequestPtr();
 
-    void updateRequestBody(ssize_t bytes_written);
+    void updateBytesWritten(ssize_t bytes_written);
     bool writeComplete();
-    void clearRequestBody();
+    void clearRequestBodyPtr();
 
     char* getMessageBodyPtr() const;
     size_t getBytesToWrite();

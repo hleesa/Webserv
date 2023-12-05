@@ -307,9 +307,9 @@ void ServerManager::processPipeWriteEvent(const struct kevent& event) {
     if (bytes_written == ERROR) {
         return;
     }
-    server->updateRequestBody(bytes_written);
+    server->updateBytesWritten(bytes_written);
     if (server->writeComplete()) {
-        server->clearRequestBody();
+        server->clearRequestBodyPtr();
         close(cgi_data->getWritePipeFd());
     }
     change_list.push_back(makeEvent(cgi_data->getConnSocket(), EVFILT_TIMER, EV_ADD | EV_ONESHOT, NOTE_SECONDS, TIMEOUT_SEC, reinterpret_cast<void*>(cgi_data)));
@@ -332,7 +332,7 @@ void ServerManager::processSendEvent(const struct kevent& event) {
     if (bytes_sent == ERROR) {
         return;
     }
-    server->updateResponse(bytes_sent);
+    server->updateBytesSent(bytes_sent);
     if (server->sendComplete()) {
         server->clearResponse();
         change_list.push_back(makeEvent(event.ident, EVFILT_WRITE, EV_DISABLE, 0, 0, NULL));

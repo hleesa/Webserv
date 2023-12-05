@@ -9,12 +9,7 @@
 #include "RequestParser.hpp"
 #include "EventType.hpp"
 #include "CgiData.hpp"
-
-#define NUMBER_OF_EVENT 200
-#define NUMBER_OF_BACKLOG 2000
-#define BUFFER_SIZE 25000
-#define TIMEOUT_SEC 30
-#define ERROR -1
+#include "Constants.hpp"
 
 typedef struct kevent k_event;
 
@@ -36,13 +31,7 @@ class ServerManager {
 		void setConfigByServerName(const std::vector<Config>* configs);
 		int openListenSocket(const int port) const;
 		void addListenEvent(void);
-		k_event makeEvent(
-			uintptr_t ident,
-			int16_t filter,
-			uint16_t flags,
-			uint32_t fflags,
-			intptr_t data,
-			void* udata) const;
+		k_event makeEvent(uintptr_t ident, int16_t filter, uint16_t flags, uint32_t fflags, intptr_t data, void* udata) const;
 
 		const Config* findConfig(const std::string host, const std::string url);
         void handleError(const int return_value, const int listen_socket) const;

@@ -1,4 +1,4 @@
-
+#include "../../inc/Constants.hpp"
 #include "../../inc/CgiData.hpp"
 
 CgiData::CgiData() : pipe_child_parent(NULL), pipe_parent_child(NULL), child_pid(-1), conn_socket(-1), cgi_died(false) {

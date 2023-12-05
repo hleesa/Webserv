@@ -1,9 +1,9 @@
 #include "../../inc/RequestParser.hpp"
+#include "../../inc/Constants.hpp"
 #include <vector>
 #include <string>
 #include <sstream>
 #include <algorithm>
-
 #include <iostream>
 
 RequestParser::RequestParser() {}
@@ -327,7 +327,7 @@ std::vector<std::string> tokenizeRequestLine(const std::string& request_line) {
 
 void validateMethod(const std::string& method) {
     std::string allow_method_list[] = {"GET", "POST", "DELETE", "HEAD"};
-    std::vector<std::string> allow_method(allow_method_list, allow_method_list + NUM_OF_ALLOW_METHOD);
+    std::vector<std::string> allow_method(allow_method_list, allow_method_list + NUMBER_OF_METHOD);
     if (std::find(allow_method.begin(), allow_method.end(), method) == allow_method.end()) {
 		throw 501;
     }
@@ -336,7 +336,7 @@ void validateMethod(const std::string& method) {
 
 void validateHttpVersion(const std::string& http_version) {
     std::string http_version_list[] = {"HTTP/1.1", "HTTP/1.0", "HTTP/0.9"};
-    std::vector<std::string> versions(http_version_list, http_version_list + NUM_OF_VERSION);
+    std::vector<std::string> versions(http_version_list, http_version_list + NUMBER_OF_VERSION);
     if (std::find(versions.begin(), versions.end(), http_version) == versions.end()) {
 		throw 505;
 	}

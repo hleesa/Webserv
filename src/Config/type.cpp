@@ -1,6 +1,5 @@
 #include <string>
-
-#define NUMBER_OF_METHOD 4
+#include "../../inc/Constants.hpp"
 
 bool isHttpMethod(const std::string& method) {
 	std::string allow_methods[NUMBER_OF_METHOD] = {"GET", "POST", "DELETE", "HEAD"};

@@ -14,7 +14,7 @@
 ServerManager::ServerManager(const std::vector<Config>* configs) : default_config(&configs->front()){
 	setConfigByServerName(configs);
     addListenEvent();
-    memset((void*)event_list, 0, sizeof(k_event) * NUMBER_OF_EVENT);
+    memset((void*) event_list, 0, sizeof(k_event) * NUMBER_OF_EVENT);
     kq = kqueue();
     if (kq == ERROR) {
         throw (strerror(errno));
@@ -84,8 +84,7 @@ void ServerManager::addListenEvent() {
 void ServerManager::run() {
     while (true) {
 		try {
-			int events = kevent(kq, &(change_list[0]), change_list.size(), event_list, NUMBER_OF_EVENT, 0);
-
+            int events = kevent(kq, &(change_list[0]), change_list.size(), event_list, NUMBER_OF_EVENT, 0);
 			if (events == ERROR)
 				throw (strerror(errno));
 			change_list.clear();

@@ -189,38 +189,40 @@ void ServerManager::processCgiOrMakeResponse(const struct kevent* event) {
 void ServerManager::processEvent(const struct kevent* event) {
     EventType event_type = getEventType(event);
 
-    if (event_type == ERROR) {
-        std::cout << "error " << strerror(event->data) << '\n';
-//        checkEventError(*event);
-    }
-    else if (event_type == LISTEN) {
-        processListenEvent(*event);
-    }
-    else if (event_type == PARSE_REQUEST) {
-        processReceiveEvent(*event);
-        if (parser.getReadingStatus(event->ident) == END) {
-            assignParsedRequest(event);
-            processCgiOrMakeResponse(event);
-        }
-    }
-    else if (event_type == READ_PIPE) {
-        processPipeReadEvent(*event);
-    }
-    else if (event_type == SEND_RESPONSE) {
-        processSendEvent(*event);
-    }
-    else if (event_type == WRITE_PIPE) {
-        processPipeWriteEvent(*event);
-    }
-    else if (event_type == TIMEOUT) {
-        std::cout << "time out\n";
-        disconnectWithClient(*event);
-    }
-    else if (event_type == TIMEOUT_CGI) {
-        processTimeoutEvent(event);
-    }
-    else if (CGI_END) {
-        processCgiEnd(event);
+    switch (event_type) {
+        case EVENT_ERROR:
+            std::cout << "error " << strerror(event->data) << '\n';
+//            checkEventError(*event);
+            break;
+        case LISTEN:
+            processListenEvent(*event);
+            break;
+        case PARSE_REQUEST:
+            processReceiveEvent(*event);
+            if (parser.getReadingStatus(event->ident) == END) {
+                assignParsedRequest(event);
+                processCgiOrMakeResponse(event);
+            }
+            break;
+        case SEND_RESPONSE:
+            processSendEvent(*event);
+            break;
+        case READ_PIPE:
+            processPipeReadEvent(*event);
+            break;
+        case WRITE_PIPE:
+            processPipeWriteEvent(*event);
+            break;
+        case TIMEOUT:
+            std::cout << "time out\n";
+            disconnectWithClient(*event);
+            break;
+        case TIMEOUT_CGI:
+            processTimeoutEvent(event);
+            break;
+        case CGI_END:
+            processCgiEnd(event);
+            break;
     }
 }
 

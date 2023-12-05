@@ -4,7 +4,6 @@
 
 typedef enum EventType {
     EVENT_ERROR = -1,
-    NONE,
     LISTEN,
     PARSE_REQUEST,
     SEND_RESPONSE,

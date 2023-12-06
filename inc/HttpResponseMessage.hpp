@@ -15,6 +15,8 @@ private:
     std::string response;
     size_t response_size;
     unsigned char* response_ptr;
+    size_t bytes_to_send;
+    size_t bytes_sent;
 
 public:
 	HttpResponseMessage();
@@ -28,7 +30,14 @@ public:
     unsigned char* getResponsePtr() const;
     std::string& getResponseRef();
     std::string getResponse();
-  
+
+    void* getSendBuffer();
+    void updateBytesSent(ssize_t new_bytes_sent);
+    bool sendComplete() const;
+    void clear();
+    size_t getBytesSent() const;
+    size_t getBytesToSend() const;
+
 };
 
 #endif //WEBSERV_HTTPRESPONSEMESSAGE_HPP

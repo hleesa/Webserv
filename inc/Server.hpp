@@ -12,12 +12,8 @@ private:
     HttpRequestMessage request;
     HttpResponseMessage response;
 
-    size_t bytes_to_send;
-    size_t bytes_sent;
-    void updateByteToSend(ssize_t new_bytes_sent);
     size_t bytes_to_write;
     size_t bytes_written;
-    void updateBytesToWrite(ssize_t new_bytes_written);
 
 public:
     Server();
@@ -28,8 +24,8 @@ public:
     int getListenSocket() const;
     void setRequest(const HttpRequestMessage& msg);
     void setResponse(HttpResponseMessage http_response);
-
-    std::string getResponse();
+    std::string getResponseStr();
+//    HttpResponseMessage getResponse();
     void updateBytesSent(ssize_t bytes_sent);
     bool sendComplete();
     void clearResponse();
@@ -46,7 +42,7 @@ public:
     unsigned char* getMessageBodyPtr() const;
     size_t getBytesToWrite();
 
-    unsigned char* getResponsePtr() const;
+    HttpResponseMessage* getResponsePtr();
     size_t getBytesToSend();
 
 };

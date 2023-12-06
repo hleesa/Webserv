@@ -10,12 +10,13 @@ HttpRequestMessage::HttpRequestMessage(std::vector<std::string> request_line,
                                        std::map<std::string, std::vector<std::string> > header_fields,
                                        std::string message_body, int status_code) :
         request_line(request_line), header_fields(header_fields), status_code(status_code), body_size(0),
-        bytes_to_write(0), bytes_written(0) {
+        request_body(NULL), bytes_written(0) {
 
-    if (!message_body.empty())
+    if (!message_body.empty()) {
         this->body_size = message_body.length();
-    this->request_body = new unsigned char[this->body_size];
-    std::memmove(this->request_body, message_body.c_str(), body_size);
+        this->request_body = new unsigned char[this->body_size];
+        std::memmove(this->request_body, message_body.c_str(), body_size);
+    }
     bytes_to_write = body_size;
 }
 

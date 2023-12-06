@@ -13,10 +13,11 @@ HttpResponseMessage::HttpResponseMessage(int status_code, std::map<std::string, 
         response_ptr(NULL), bytes_to_send(0), bytes_sent(0) {
 
     response = toString();
-    if (!response.empty())
+    if (!response.empty()){
         response_size = response.size();
-    this->response_ptr = new unsigned char[this->response_size];
-    std::memmove(this->response_ptr, response.c_str(), response_size);
+        this->response_ptr = new unsigned char[this->response_size];
+        std::memmove(this->response_ptr, response.c_str(), response_size);
+    }
     bytes_to_send = response_size;
 }
 
@@ -70,6 +71,10 @@ size_t HttpResponseMessage::getBytesToSend() const {
 }
 
 void HttpResponseMessage::clear() {
+    if (response_ptr != NULL) {
+        delete[] response_ptr;
+        response_ptr = NULL;
+    }
     response.clear();
 }
 

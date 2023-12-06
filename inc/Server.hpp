@@ -10,14 +10,11 @@ class Server {
 private:
     int listen_socket;
     HttpRequestMessage request;
-    std::string response;
+    HttpResponseMessage response;
 
-    unsigned char* response_ptr;
     size_t bytes_to_send;
     size_t bytes_sent;
-
     void updateByteToSend(ssize_t new_bytes_sent);
-
     size_t bytes_to_write;
     size_t bytes_written;
     void updateBytesToWrite(ssize_t new_bytes_written);
@@ -30,14 +27,14 @@ public:
 
     int getListenSocket() const;
     void setRequest(const HttpRequestMessage& msg);
-    void setResponse(std::string http_response);
+    void setResponse(HttpResponseMessage http_response);
 
     std::string getResponse();
     void updateBytesSent(ssize_t bytes_sent);
     bool sendComplete();
     void clearResponse();
 
-    std::string makeResponse(const Config* config);
+    HttpResponseMessage makeResponse(const Config* config);
 
     void appendResponse(const char* buffer, size_t size);
     HttpRequestMessage* getRequestPtr();

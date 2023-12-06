@@ -109,7 +109,7 @@ void ServerManager::processEvents(const int events) {
 			std::map<std::string, std::string> header = Method::makeHeaderFields();
 			header["Connection"] = "close";
 			header["Content-length"] = "0";
-            servers[event->ident].setResponse(HttpResponseMessage(status_code, header, "").toString());
+            servers[event->ident].setResponse(HttpResponseMessage(status_code, header, ""));
 		}
 	}
 }
@@ -164,7 +164,7 @@ void ServerManager::processCgiOrMakeResponse(const k_event* event) {
     HttpRequestMessage* request = servers[event->ident].getRequestPtr();
     if (request->getStatusCode() != 0) {
         change_list.push_back(makeEvent(event->ident, EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, NULL));
-        servers[event->ident].setResponse(ErrorPage::makeErrorPageResponse(request->getStatusCode(), default_config).toString());
+        servers[event->ident].setResponse(ErrorPage::makeErrorPageResponse(request->getStatusCode(), default_config));
         change_list.push_back(makeEvent(event->ident, EVFILT_TIMER, EV_ADD | EV_ONESHOT, NOTE_SECONDS, TIMEOUT_SEC, NULL));
         return;
     } 
@@ -282,7 +282,7 @@ void ServerManager::processReadPipeEvent(const k_event* event) {
 		server->appendResponse(buff, bytes_read);
     }
     else { // EOF
-        server->setResponse(PostCgi::makeResponse(server->getResponse()).toString());
+        server->setResponse(PostCgi::makeResponse(server->getResponse()));
         close(cgi_data->getReadPipeFd());
         change_list.push_back(makeEvent(cgi_data->getConnSocket(), EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, NULL));
         if (cgi_data->cgiDied()) {

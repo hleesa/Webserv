@@ -3,11 +3,11 @@
 #include "../../inc/ErrorPage.hpp"
 #include "../../inc/Resource.hpp"
 
-Server::Server() : listen_socket(-1), response_ptr(NULL), bytes_to_send(0),
+Server::Server() : listen_socket(-1), bytes_to_send(0),
                    bytes_sent(0), bytes_to_write(0), bytes_written(0) {
 }
 
-Server::Server(const int listen_socket) : listen_socket(listen_socket), response_ptr(NULL), bytes_to_send(0),
+Server::Server(const int listen_socket) : listen_socket(listen_socket), bytes_to_send(0),
                                           bytes_sent(0), bytes_to_write(0), bytes_written(0) {
 //    response.clear();
 }
@@ -17,15 +17,6 @@ Server& Server::operator=(const Server& other) {
         listen_socket = other.listen_socket;
         request = other.request;
         response = other.response;
-
-        if (response_ptr != NULL) {
-            delete[] response_ptr;
-            response_ptr = NULL;
-        }
-        if (other.response_ptr != NULL) {
-            response_ptr = new unsigned char[other.bytes_to_send];
-            std::memmove(response_ptr, other.response_ptr, other.bytes_to_send);
-        }
 
         bytes_to_send = other.bytes_to_send;
         bytes_sent = other.bytes_sent;
@@ -38,10 +29,6 @@ Server& Server::operator=(const Server& other) {
 
 Server::~Server() {
     std::cout << "~Server()\n";
-    if (response_ptr != NULL) {
-        delete[] response_ptr;
-        response_ptr = NULL;
-    }
 }
 
 int Server::getListenSocket() const {
@@ -53,17 +40,14 @@ void Server::setRequest(const HttpRequestMessage& request_message) {
     bytes_written = 0;
 }
 
-void Server::setResponse(std::string http_response) {
+void Server::setResponse(HttpResponseMessage http_response) {
     response = http_response;
     bytes_sent = 0;
-    if (!http_response.empty())
-        bytes_to_send = http_response.length();
-    response_ptr = new unsigned char[bytes_to_send];
-    std::memmove(response_ptr, http_response.c_str(), bytes_to_send);
+    bytes_to_send = http_response.getResponseRef().length();
     return;
 }
 
-std::string Server::makeResponse(const Config* config) {
+HttpResponseMessage Server::makeResponse(const Config* config) {
     Method *method = Method::generate(request.getMethod(), &request, config);
     try {
 		if (request.getStatusCode()) {
@@ -71,15 +55,15 @@ std::string Server::makeResponse(const Config* config) {
 			throw (request.getStatusCode());
 		}
 		method->checkAllowed(request.getMethod());
-        std::string response_message = method->makeHttpResponseMessage().toString();
+        HttpResponseMessage response_message = method->makeHttpResponseMessage();
         delete method;
         return response_message;
     }
     catch (const int status_code) {
         delete method;
-        return ErrorPage::makeErrorPageResponse(status_code, config).toString();
+        return ErrorPage::makeErrorPageResponse(status_code, config);
     }
-    return HttpResponseMessage().toString();
+    return HttpResponseMessage();
 }
 
 void Server::updateBytesSent(ssize_t new_bytes_sent) {
@@ -92,17 +76,12 @@ bool Server::sendComplete() {
 }
 
 void Server::clearResponse() {
-    response.clear();
-    if (response_ptr != NULL) {
-        delete response_ptr;
-    }
-    response_ptr = NULL;
     bytes_sent = 0;
     bytes_to_send = 0;
 }
 
 unsigned char* Server::getResponsePtr() const{
-    return response_ptr + bytes_sent;
+    return response.getResponsePtr() + bytes_sent;
 }
 
 size_t Server::getBytesToSend() {
@@ -111,7 +90,7 @@ size_t Server::getBytesToSend() {
 
 void Server::appendResponse(const char* buffer, size_t size) {
     bytes_to_send += size;
-	response.append(buffer, size);
+    response.getResponseRef().append(buffer, size);
 }
 
 HttpRequestMessage* Server::getRequestPtr() {
@@ -141,6 +120,5 @@ size_t Server::getBytesToWrite() {
 }
 
 std::string Server::getResponse() {
-    return response;
+    return response.getResponseRef();
 }
-

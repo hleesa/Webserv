@@ -1,11 +1,7 @@
-
-#include "../../inc/GetCgi.hpp"
 #include <map>
 #include <unistd.h>
-
-#define ERROR -1
-#define READ 0
-#define WRITE 1
+#include "../../inc/GetCgi.hpp"
+#include "../../inc/Constants.hpp"
 
 GetCgi::GetCgi(const HttpRequestMessage* request, const Config* config) : Method(request, config) {
 }

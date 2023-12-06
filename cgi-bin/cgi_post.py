@@ -7,8 +7,7 @@ input_string = sys.stdin.read()
 params = input_string.split('=')
 param = params[1] if len(params) > 1 else ""
 
-response_body = f"""
-    <!DOCTYPE html>
+response_body = f"""Status: 200 OK\r\nContent-Type: text/html; charset=utf-8\r\n\r\n<!DOCTYPE html>
     <html lang="en">
     <head>
         <meta charset="UTF-8">
@@ -23,3 +22,6 @@ response_body = f"""
     """
 
 print(response_body)
+
+
+#//"Status: 200 OK\r\nContent-Type: text/html; charset=utf-8\r\n\r\nINPUT=HELLO"...

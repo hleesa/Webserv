@@ -1,10 +1,11 @@
 #include "../../inc/PostCgi.hpp"
 #include "../../inc/MediaType.hpp"
 #include "../../inc/Location.hpp"
-#include <fcntl.h>
-#include <iostream>
 #include "../../inc/CgiData.hpp"
 #include "../../inc/ToString.hpp"
+#include "../../inc/Constants.hpp"
+#include <fcntl.h>
+#include <iostream>
 
 PostCgi::PostCgi(const HttpRequestMessage* request, const Config* config) : request(request), config(config) {
 	this->location_key = findLocationKey(config, request);
@@ -92,7 +93,7 @@ void PostCgi::check_header_content_type(std::map<std::string, std::vector<std::s
 
 void PostCgi::check_header_content_length(std::map<std::string, std::vector<std::string> > header_field) {
 	if (header_field.find("transfer-encoding") != header_field.end() && header_field["transfer-encoding"].front() == "chunked") {
-		content_length = request->getMessageBody().size();
+		content_length = request->getBodySize();
 	} else if ((header_field.find("content-length") != header_field.end()) && (header_field["content-length"].size() == 1)) {
 		std::stringstream ss(header_field["content-length"][0]);
 		if (!(ss >> content_length)) {
@@ -153,7 +154,7 @@ char** PostCgi::postCgiEnv() {
 	std::stringstream port_string;
 	std::stringstream content_length_string;
 	port_string << config->getPort();
-	content_length_string << request->getMessageBody().size();
+	content_length_string << request->getBodySize();
 	env["REQUEST_METHOD"] = "POST";
 	env["CONTENT_LENGTH"] = content_length_string.str();
 	env["CONTENT_TYPE"] = request->getHeaderFields()["content-type"][0];
@@ -192,7 +193,9 @@ HttpResponseMessage PostCgi::makeResponse(const std::string cgi_response) {
 	int status_code = findStatusCode(ss);
 	parseHeaderLine(ss, header_fields);
 	std::string body;
-	ss >> body;
+	size_t pos;
+	pos = cgi_response.find("\r\n\r\n");
+	body = cgi_response.substr(pos + 4);
 	header_fields["Content-length"] = to_string(body.length());
 
 	return HttpResponseMessage(status_code, header_fields, body);

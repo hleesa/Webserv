@@ -3,79 +3,90 @@
 #include "../../inc/ErrorPage.hpp"
 #include "../../inc/Resource.hpp"
 
-Server::Server() {}
+Server::Server() : listen_socket(0), bytes_to_write(0), bytes_written(0) {
+}
 
-Server::Server(const int listen_socket) {
-    this->listen_socket = listen_socket;
-    response.clear();
-    bytes_to_send = 0;
-	bytes_sent = 0;
-    request_body.clear();
-    bytes_to_write = 0;
-    bytes_written = 0;
+Server::Server(const int listen_socket) : listen_socket(listen_socket), bytes_to_write(0), bytes_written(0) {
+}
+
+Server& Server::operator=(const Server& other) {
+    if (&other != this) {
+        listen_socket = other.listen_socket;
+        request = other.request;
+        response = other.response;
+
+//        bytes_to_send = other.bytes_to_send;
+//        bytes_sent = other.bytes_sent;
+
+        bytes_to_write = other.bytes_to_write;
+        bytes_written = other.bytes_written;
+    }
+    return *this;
+}
+
+Server::~Server() {
+    std::cout << "~Server()\n";
 }
 
 int Server::getListenSocket() const {
     return listen_socket;
 }
-
 void Server::setRequest(const HttpRequestMessage& request_message) {
     this->request = request_message;
-    request_body = request_message.getMessageBody();
-    bytes_to_write = 0;
-    bytes_written = request_message.getMessageBody().length();
+    bytes_to_write = request_message.getBodySize();
+    bytes_written = 0;
 }
 
-void Server::setResponse(std::string http_response) {
+void Server::setResponse(HttpResponseMessage http_response) {
     response = http_response;
-    bytes_sent = 0;
-    bytes_to_send = http_response.length();
+//    bytes_sent = 0;
+//    bytes_to_send = http_response.getResponseRef().length();
     return;
 }
 
-std::string Server::makeResponse(const Config* config) {
+HttpResponseMessage Server::makeResponse(const Config* config) {
+    Method *method = Method::generate(request.getMethod(), &request, config);
     try {
 		if (request.getStatusCode()) {
+            delete method;
 			throw (request.getStatusCode());
 		}
-		Method *method = Method::generate(request.getMethod(), &request, config);
 		method->checkAllowed(request.getMethod());
-        std::string response_message = method->makeHttpResponseMessage().toString();
+        HttpResponseMessage response_message = method->makeHttpResponseMessage();
         delete method;
         return response_message;
     }
     catch (const int status_code) {
-        return ErrorPage::makeErrorPageResponse(status_code, config).toString();
+        delete method;
+        return ErrorPage::makeErrorPageResponse(status_code, config);
     }
-    return HttpResponseMessage().toString();
+    return HttpResponseMessage();
 }
+
+//void Server::updateBytesSent(ssize_t new_bytes_sent) {
+//    bytes_to_send -= static_cast<size_t>(new_bytes_sent);
+//    bytes_sent += static_cast<size_t>(new_bytes_sent);
+//}
+
+//bool Server::sendComplete() {
+//    return bytes_to_send == 0;
+//}
 
 void Server::clearResponse() {
-    response.clear();
-    bytes_sent = 0;
-    bytes_to_send = 0;
+    response.getResponseRef().clear();
 }
 
-bool Server::isSendComplete() {
-    return bytes_sent == bytes_to_send;
+HttpResponseMessage* Server::getResponsePtr() {
+    return &response;
 }
 
-void Server::updateByteSend(ssize_t new_bytes_sent) {
-    this->bytes_sent += static_cast<size_t>(new_bytes_sent);
-}
-
-std::string Server::getResponse() {
-    return response;
-}
-
-void Server::updateResponse(ssize_t new_bytes_sent) {
-    updateByteSend(new_bytes_sent);
-    response = response.substr(new_bytes_sent);
-}
+//size_t Server::getBytesToSend() {
+//    return bytes_to_send;
+//}
 
 void Server::appendResponse(const char* buffer, size_t size) {
-    bytes_to_send += size;
-	response.append(buffer, size);
+//    bytes_to_send += size;
+    response.getResponseRef().append(buffer, size);
 }
 
 HttpRequestMessage* Server::getRequestPtr() {
@@ -83,20 +94,27 @@ HttpRequestMessage* Server::getRequestPtr() {
 }
 
 void Server::updateBytesWritten(ssize_t new_bytes_written) {
-    this->bytes_written += static_cast<size_t>(new_bytes_written);
-}
-
-void Server::updateRequestBody(ssize_t new_bytes_written) {
-    updateBytesWritten(new_bytes_written);
-    request_body = request_body.substr(new_bytes_written);
+    bytes_to_write -= static_cast<size_t>(new_bytes_written);
+    bytes_written  += static_cast<size_t>(new_bytes_written);
 }
 
 bool Server::writeComplete() {
-    return bytes_written == bytes_to_write;
+    return bytes_to_write == 0;
 }
 
-void Server::clearRequestBody() {
-    request_body.clear();
+void Server::clearRequestBodyPtr() {
     bytes_to_write = 0;
     bytes_written = 0;
+}
+
+unsigned char* Server::getMessageBodyPtr() const {
+    return request.getMessageBodyPtr() + bytes_written;
+}
+
+size_t Server::getBytesToWrite() {
+    return bytes_to_write;
+}
+
+std::string Server::getResponseStr() {
+    return response.getResponseRef();
 }

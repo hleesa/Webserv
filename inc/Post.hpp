@@ -39,7 +39,7 @@ class Post : public Method {
 		void check_header_content_length(std::map<std::string, std::vector<std::string> > header_field);
 
 //save string and make reponse
-		void saveToFile(std::string message_body);
+		void saveToFile();
 		std::string generateFileName();
 		void make_post_response();
 };

@@ -3,8 +3,6 @@
 #define WEBSERV_CGIDATA_HPP
 
 #include <unistd.h>
-#define READ 0
-#define WRITE 1
 
 class CgiData {
 
@@ -29,6 +27,7 @@ public:
     int getChildPid() const;
     int getConnSocket() const;
     bool cgiDied() const;
+    void closePipes();
 };
 
 #endif //WEBSERV_CGIDATA_HPP

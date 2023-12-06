@@ -22,9 +22,9 @@ HttpResponseMessage Post::makeHttpResponseMessage(){
 	}
 	if (request->getMethod() != "POST") {
 		_status_code = 300;
-	} else if (request->getMessageBody().empty()) {
+	} else if (request->getBodySize() == 0) {
 		_status_code = 300;
-	} else if (limit_body_size > 0 && request->getMessageBody().size() > static_cast<size_t>(limit_body_size)) {
+	} else if (limit_body_size > 0 && request->getBodySize() > static_cast<size_t>(limit_body_size)) {
 		throw 413;
 	} else {
 		//요청 url 형태 및 실행 가능 여부 확인
@@ -34,7 +34,7 @@ HttpResponseMessage Post::makeHttpResponseMessage(){
 	}
 
 	if (_status_code == 0) {
-		saveToFile(request->getMessageBody());
+		saveToFile();
 	}
 
 	make_post_response();
@@ -103,7 +103,7 @@ void Post::check_header_content_type(std::map<std::string, std::vector<std::stri
 
 void Post::check_header_content_length(std::map<std::string, std::vector<std::string> > header_field) {
 	if (header_field.find("transfer-encoding") != header_field.end() && header_field["transfer-encoding"].front() == "chunked") {
-		content_length=request->getMessageBody().size();
+        content_length = request->getBodySize();
 	} else if ((header_field.find("content-length") != header_field.end()) && (header_field["content-length"].size() == 1)) {
 		std::stringstream ss(header_field["content-length"][0]);
 		if (!(ss >> content_length)) {
@@ -114,7 +114,7 @@ void Post::check_header_content_length(std::map<std::string, std::vector<std::st
 	}
 }
 
-void Post::saveToFile(std::string message_body) {
+void Post::saveToFile() {
 	std::string filename;
 	if (abs_path.find(".", 1) == std::string::npos) {
 		filename = generateFileName();
@@ -125,12 +125,15 @@ void Post::saveToFile(std::string message_body) {
 	std::string data_path = abs_path + "/" + filename;
 	std::ofstream file_write(data_path, std::ios::app);
 
-	if (message_body.size() != content_length) {
+	if (request->getBodySize() != content_length) {
 		// 헤더 콘텐츠 길이와 실제 바디의 글자수가 다를경우
 		throw 411;
 	}
 	if (file_write.is_open()) {
-		file_write << message_body;
+		char body[request->getBodySize() + 1];
+		body[request->getBodySize()] = '\0';
+		std::memmove(body,request->getMessageBodyPtr(), request->getBodySize());
+		file_write << body;
 		file_write.close();
 		_status_code = 200;
 	} else {

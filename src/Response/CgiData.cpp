@@ -1,4 +1,4 @@
-
+#include "../../inc/Constants.hpp"
 #include "../../inc/CgiData.hpp"
 
 CgiData::CgiData() : pipe_child_parent(NULL), pipe_parent_child(NULL), child_pid(-1), conn_socket(-1), cgi_died(false) {
@@ -37,7 +37,22 @@ bool CgiData::cgiDied() const {
     return cgi_died;
 }
 
+void CgiData::closePipes() {
+    if (pipe_child_parent != NULL) {
+        close(pipe_child_parent[READ]);
+    }
+    if (pipe_parent_child != NULL) {
+        close(pipe_parent_child[WRITE]);
+    }
+}
+
 CgiData::~CgiData() {
-    delete[] pipe_child_parent;
-    delete[] pipe_parent_child;
+    if (pipe_child_parent != NULL) {
+        delete[] pipe_child_parent;
+    }
+    if (pipe_parent_child != NULL) {
+        delete[] pipe_parent_child;
+    }
+    pipe_child_parent = NULL;
+    pipe_parent_child = NULL;
 }

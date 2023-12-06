@@ -18,7 +18,6 @@ private:
 
     void updateByteToSend(ssize_t new_bytes_sent);
 
-    unsigned char* message_body_ptr;
     size_t bytes_to_write;
     size_t bytes_written;
     void updateBytesToWrite(ssize_t new_bytes_written);

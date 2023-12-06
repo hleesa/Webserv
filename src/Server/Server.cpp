@@ -4,11 +4,11 @@
 #include "../../inc/Resource.hpp"
 
 Server::Server() : listen_socket(-1), response_ptr(NULL), bytes_to_send(0),
-                   bytes_sent(0), message_body_ptr(NULL), bytes_to_write(0), bytes_written(0) {
+                   bytes_sent(0), bytes_to_write(0), bytes_written(0) {
 }
 
 Server::Server(const int listen_socket) : listen_socket(listen_socket), response_ptr(NULL), bytes_to_send(0),
-                                          bytes_sent(0), message_body_ptr(NULL), bytes_to_write(0), bytes_written(0) {
+                                          bytes_sent(0), bytes_to_write(0), bytes_written(0) {
 //    response.clear();
 }
 
@@ -30,15 +30,6 @@ Server& Server::operator=(const Server& other) {
         bytes_to_send = other.bytes_to_send;
         bytes_sent = other.bytes_sent;
 
-        if (message_body_ptr != NULL) {
-            delete[] message_body_ptr;
-            message_body_ptr = NULL;
-        }
-        if (other.message_body_ptr != NULL) {
-            message_body_ptr = new unsigned char[other.bytes_to_write];
-            std::memmove(message_body_ptr, other.message_body_ptr, other.bytes_to_write);
-        }
-
         bytes_to_write = other.bytes_to_write;
         bytes_written = other.bytes_written;
     }
@@ -46,13 +37,10 @@ Server& Server::operator=(const Server& other) {
 }
 
 Server::~Server() {
+    std::cout << "~Server()\n";
     if (response_ptr != NULL) {
         delete[] response_ptr;
         response_ptr = NULL;
-    }
-    if (message_body_ptr != NULL) {
-        delete[] message_body_ptr;
-        message_body_ptr = NULL;
     }
 }
 
@@ -63,8 +51,6 @@ void Server::setRequest(const HttpRequestMessage& request_message) {
     this->request = request_message;
     bytes_to_write = request_message.getBodySize();
     bytes_written = 0;
-    message_body_ptr = new unsigned char[bytes_to_write];
-    std::memmove(message_body_ptr, request_message.getMessageBodyPtr(), bytes_to_write);
 }
 
 void Server::setResponse(std::string http_response) {
@@ -111,10 +97,6 @@ void Server::clearResponse() {
         delete response_ptr;
     }
     response_ptr = NULL;
-    if (message_body_ptr != NULL) {
-        delete message_body_ptr;
-    }
-    message_body_ptr = NULL;
     bytes_sent = 0;
     bytes_to_send = 0;
 }
@@ -146,14 +128,12 @@ bool Server::writeComplete() {
 }
 
 void Server::clearRequestBodyPtr() {
-    delete[] message_body_ptr;
-    message_body_ptr = NULL;
     bytes_to_write = 0;
     bytes_written = 0;
 }
 
 unsigned char* Server::getMessageBodyPtr() const {
-    return message_body_ptr + bytes_written;
+    return request.getMessageBodyPtr() + bytes_written;
 }
 
 size_t Server::getBytesToWrite() {

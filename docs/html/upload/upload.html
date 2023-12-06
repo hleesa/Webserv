@@ -3,42 +3,49 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>이미지 업로드 페이지</title>
+    <title>파일 업로드 페이지</title>
 </head>
 <body>
-    <h1>이미지 업로드 페이지</h1>
+    <h1>파일 업로드 페이지</h1>
 
-    <form id="uploadForm" enctype="image/jpeg">
-        <label for="imageInput">이미지 선택:</label>
-        <input type="file" id="imageInput" name="imageInput" accept="image/*, .jpg, .jpeg, .gif, .txt"><!-- 이미지 파일만 허용 -->
+    <form id="uploadForm" enctype="text/plain">
+        <label for="fileInput">파일 선택:</label>
+        <input type="file" id="fileInput" name="fileInput" accept=".txt"><!-- 파일 파일만 허용 -->
 
-        <button type="button" onclick="uploadImage()">이미지 업로드</button>
+        <button type="button" onclick="uploadFile()">파일 업로드</button>
     </form>
 
     <div id="result"></div>
 
     <script>
-        function uploadImage() {
-            var imageInput = document.getElementById('imageInput');
-            var image = imageInput.files[0];
+        function uploadFile() {
+            var fileInput = document.getElementById('fileInput');
+            var file = fileInput.files[0];
 
-            if (image) {
-                var formData = new FormData();
-                formData.append('image', image);
-
-                var xhr = new XMLHttpRequest();
-                xhr.open('POST', '/docs/html/upload/', true); // 서버 측 업로드 스크립트의 경로로 변경 필요
-                xhr.onload = function() {
-                    if (xhr.status === 200) {
-                        document.getElementById('result').innerHTML = '이미지가 성공적으로 업로드되었습니다.';
-                    } else {
-                        document.getElementById('result').innerHTML = '이미지 업로드에 실패했습니다. 다시 시도해주세요.';
-                    }
+            if (file) {
+                var reader = new FileReader();
+                reader.onload = function(e) {
+                    var fileContent = e.target.result;
+                    sendFileContent(fileContent);
                 };
-                xhr.send(formData);
+                reader.readAsText(file);
             } else {
-                document.getElementById('result').innerHTML = '이미지를 선택하세요.';
+                document.getElementById('result').innerHTML = '파일을 선택하세요.';
             }
+        }
+
+        function sendFileContent(fileContent) {
+            var xhr = new XMLHttpRequest();
+            xhr.open('POST', '/upload', true); // 서버 측 업로드 스크립트의 경로로 변경 필요
+            xhr.setRequestHeader('Content-Type', 'text/plain');
+            xhr.onload = function() {
+                if (xhr.status === 200) {
+                    document.getElementById('result').innerHTML = '파일이 성공적으로 업로드되었습니다.';
+                } else {
+                    document.getElementById('result').innerHTML = '파일 업로드에 실패했습니다. 다시 시도해주세요.';
+                }
+            };
+            xhr.send(fileContent);
         }
     </script>
 </body>

@@ -41,9 +41,7 @@ HttpResponseMessage& HttpResponseMessage::operator=(const HttpResponseMessage& o
     return *this;
 }
 
-#include <iostream>
 HttpResponseMessage::~HttpResponseMessage() {
-    std::cout << "~HttpResponseMessage()\n";
     if (response_ptr != NULL) {
         delete[] response_ptr;
         response_ptr = NULL;

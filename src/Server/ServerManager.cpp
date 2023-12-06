@@ -299,15 +299,14 @@ void ServerManager::processReadPipeEvent(const k_event* event) {
 
 void ServerManager::processWritePipeEvent(const k_event* event) {
     CgiData* cgi_data = reinterpret_cast<CgiData*>(event->udata);
-    Server *server = &servers[cgi_data->getConnSocket()];
+    HttpRequestMessage* request = servers[cgi_data->getConnSocket()].getRequestPtr();
 
-    ssize_t bytes_written = write(event->ident, server->getMessageBodyPtr(), server->getBytesToWrite());
+    ssize_t bytes_written = write(event->ident, request->getWriteBuffer(), request->getBytesToWrite());
     if (bytes_written == ERROR) {
         return;
     }
-    server->updateBytesWritten(bytes_written);
-    if (server->writeComplete()) {
-        server->clearRequestBodyPtr();
+    request->updateBytesWritten(bytes_written);
+    if (request->writeComplete()) {
         close(cgi_data->getWritePipeFd());
     }
     change_list.push_back(makeEvent(cgi_data->getConnSocket(), EVFILT_TIMER, EV_ADD | EV_ONESHOT, NOTE_SECONDS, TIMEOUT_SEC, reinterpret_cast<void*>(cgi_data)));
@@ -326,7 +325,7 @@ void ServerManager::processReceiveEvent(const k_event* event) {
 }
 
 void ServerManager::processSendEvent(const k_event* event) {
-    HttpResponseMessage* response = reinterpret_cast<HttpResponseMessage*>(servers[event->ident].getResponsePtr());
+    HttpResponseMessage* response = servers[event->ident].getResponsePtr();
 
     ssize_t bytes_sent = send(event->ident, response->getSendBuffer(), response->getBytesToSend(), 0);
     if (bytes_sent == ERROR) {

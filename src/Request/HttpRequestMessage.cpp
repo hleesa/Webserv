@@ -1,23 +1,25 @@
 
 #include "../../inc/HttpRequestMessage.hpp"
 
-HttpRequestMessage::HttpRequestMessage() : status_code(0), body_size(0), request_body(NULL) {
+HttpRequestMessage::HttpRequestMessage()
+        : request_line(), header_fields(), status_code(0), body_size(0), request_body(NULL), bytes_to_write(0),
+          bytes_written(0) {
 }
 
 HttpRequestMessage::HttpRequestMessage(std::vector<std::string> request_line,
                                        std::map<std::string, std::vector<std::string> > header_fields,
                                        std::string message_body, int status_code) :
-        request_line(request_line), header_fields(header_fields), status_code(status_code), body_size(0) {
+        request_line(request_line), header_fields(header_fields), status_code(status_code), body_size(0),
+        bytes_to_write(0), bytes_written(0) {
 
     if (!message_body.empty())
         this->body_size = message_body.length();
     this->request_body = new unsigned char[this->body_size];
     std::memmove(this->request_body, message_body.c_str(), body_size);
+    bytes_to_write = body_size;
 }
 
-#include <iostream>
 HttpRequestMessage::~HttpRequestMessage() {
-    std::cout << "~HttpRequestMessage()\n";
     if (request_body != NULL){
         delete[] request_body;
         request_body = NULL;
@@ -38,6 +40,8 @@ HttpRequestMessage &HttpRequestMessage::operator=(const HttpRequestMessage &othe
             request_body = new unsigned char[other.getBodySize()];
             std::memmove(request_body, other.getMessageBodyPtr(), other.getBodySize());
         }
+        bytes_to_write = other.bytes_to_write;
+        bytes_written = other.bytes_written;
     }
     return *this;
 }
@@ -72,4 +76,21 @@ unsigned char* HttpRequestMessage::getMessageBodyPtr() const {
 
 size_t HttpRequestMessage::getBodySize() const {
     return this->body_size;
+}
+
+void HttpRequestMessage::updateBytesWritten(ssize_t new_bytes_written) {
+    bytes_to_write -= static_cast<size_t>(new_bytes_written);
+    bytes_written  += static_cast<size_t>(new_bytes_written);
+}
+
+bool HttpRequestMessage::writeComplete() {
+    return bytes_to_write == 0;
+}
+
+void* HttpRequestMessage::getWriteBuffer() {
+    return request_body + bytes_written;
+}
+
+size_t HttpRequestMessage::getBytesToWrite() {
+    return bytes_to_write;
 }

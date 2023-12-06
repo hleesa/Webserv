@@ -3,10 +3,10 @@
 #include "../../inc/ErrorPage.hpp"
 #include "../../inc/Resource.hpp"
 
-Server::Server() : listen_socket(0), bytes_to_write(0), bytes_written(0) {
+Server::Server() : listen_socket(0) {
 }
 
-Server::Server(const int listen_socket) : listen_socket(listen_socket), bytes_to_write(0), bytes_written(0) {
+Server::Server(const int listen_socket) : listen_socket(listen_socket) {
 }
 
 Server& Server::operator=(const Server& other) {
@@ -14,18 +14,11 @@ Server& Server::operator=(const Server& other) {
         listen_socket = other.listen_socket;
         request = other.request;
         response = other.response;
-
-//        bytes_to_send = other.bytes_to_send;
-//        bytes_sent = other.bytes_sent;
-
-        bytes_to_write = other.bytes_to_write;
-        bytes_written = other.bytes_written;
     }
     return *this;
 }
 
 Server::~Server() {
-    std::cout << "~Server()\n";
 }
 
 int Server::getListenSocket() const {
@@ -33,14 +26,10 @@ int Server::getListenSocket() const {
 }
 void Server::setRequest(const HttpRequestMessage& request_message) {
     this->request = request_message;
-    bytes_to_write = request_message.getBodySize();
-    bytes_written = 0;
 }
 
 void Server::setResponse(HttpResponseMessage http_response) {
     response = http_response;
-//    bytes_sent = 0;
-//    bytes_to_send = http_response.getResponseRef().length();
     return;
 }
 
@@ -63,56 +52,16 @@ HttpResponseMessage Server::makeResponse(const Config* config) {
     return HttpResponseMessage();
 }
 
-//void Server::updateBytesSent(ssize_t new_bytes_sent) {
-//    bytes_to_send -= static_cast<size_t>(new_bytes_sent);
-//    bytes_sent += static_cast<size_t>(new_bytes_sent);
-//}
-
-//bool Server::sendComplete() {
-//    return bytes_to_send == 0;
-//}
-
-void Server::clearResponse() {
-    response.getResponseRef().clear();
-}
-
 HttpResponseMessage* Server::getResponsePtr() {
     return &response;
 }
 
-//size_t Server::getBytesToSend() {
-//    return bytes_to_send;
-//}
-
 void Server::appendResponse(const char* buffer, size_t size) {
-//    bytes_to_send += size;
     response.getResponseRef().append(buffer, size);
 }
 
 HttpRequestMessage* Server::getRequestPtr() {
     return &this->request;
-}
-
-void Server::updateBytesWritten(ssize_t new_bytes_written) {
-    bytes_to_write -= static_cast<size_t>(new_bytes_written);
-    bytes_written  += static_cast<size_t>(new_bytes_written);
-}
-
-bool Server::writeComplete() {
-    return bytes_to_write == 0;
-}
-
-void Server::clearRequestBodyPtr() {
-    bytes_to_write = 0;
-    bytes_written = 0;
-}
-
-unsigned char* Server::getMessageBodyPtr() const {
-    return request.getMessageBodyPtr() + bytes_written;
-}
-
-size_t Server::getBytesToWrite() {
-    return bytes_to_write;
 }
 
 std::string Server::getResponseStr() {

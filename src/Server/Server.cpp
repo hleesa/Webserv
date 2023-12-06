@@ -76,6 +76,7 @@ bool Server::sendComplete() {
 }
 
 void Server::clearResponse() {
+    response.getResponseRef().clear();
     bytes_sent = 0;
     bytes_to_send = 0;
 }

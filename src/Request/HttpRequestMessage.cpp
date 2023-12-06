@@ -18,8 +18,10 @@ HttpRequestMessage::HttpRequestMessage(std::vector<std::string> request_line,
 #include <iostream>
 HttpRequestMessage::~HttpRequestMessage() {
     std::cout << "~HttpRequestMessage()\n";
-    if (request_body != NULL)
+    if (request_body != NULL){
         delete[] request_body;
+        request_body = NULL;
+    }
 }
 
 HttpRequestMessage &HttpRequestMessage::operator=(const HttpRequestMessage &other) {

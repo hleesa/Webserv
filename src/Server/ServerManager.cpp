@@ -229,8 +229,9 @@ void ServerManager::processEvent(const k_event* event) {
 
 void ServerManager::processTimeoutCgiEvent(const k_event* event) {
     CgiData* cgi_data = reinterpret_cast<CgiData*>(event->udata);
-    close(cgi_data->getReadPipeFd());
-    close(cgi_data->getWritePipeFd());
+    cgi_data->closePipes();
+//    close(cgi_data->getReadPipeFd());
+//    close(cgi_data->getWritePipeFd());
     processCgiTermination(cgi_data);
     disconnectWithClient(event);
 }

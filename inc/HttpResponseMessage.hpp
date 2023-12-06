@@ -27,6 +27,7 @@ public:
     std::string toString();
     unsigned char* getResponsePtr() const;
     std::string& getResponseRef();
+    std::string getResponse();
   
 };
 

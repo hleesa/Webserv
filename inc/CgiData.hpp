@@ -27,6 +27,7 @@ public:
     int getChildPid() const;
     int getConnSocket() const;
     bool cgiDied() const;
+    void closePipes();
 };
 
 #endif //WEBSERV_CGIDATA_HPP

@@ -3,7 +3,8 @@
 #include "../../inc/CodeToReason.hpp"
 #include <sstream>
 
-HttpResponseMessage::HttpResponseMessage() : response_size(0), response_ptr(NULL) {
+HttpResponseMessage::HttpResponseMessage() : status_code(0), header_fields(), message_body(), response(),
+                                             response_size(0), response_ptr(NULL) {
 }
 
 HttpResponseMessage::HttpResponseMessage(int status_code, std::map<std::string, std::string> header_fields,
@@ -36,7 +37,9 @@ HttpResponseMessage& HttpResponseMessage::operator=(const HttpResponseMessage& o
     return *this;
 }
 
+#include <iostream>
 HttpResponseMessage::~HttpResponseMessage() {
+    std::cout << "~HttpResponseMessage()\n";
     if (response_ptr != NULL) {
         delete[] response_ptr;
         response_ptr = NULL;
@@ -44,6 +47,10 @@ HttpResponseMessage::~HttpResponseMessage() {
 }
 
 std::string& HttpResponseMessage::getResponseRef() {
+    return response;
+}
+
+std::string HttpResponseMessage::getResponse() {
     return response;
 }
 

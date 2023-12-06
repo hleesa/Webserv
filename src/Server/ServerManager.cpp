@@ -273,14 +273,14 @@ void ServerManager::processReadPipeEvent(const k_event* event) {
     memset(buff, 0, BUFFER_SIZE);
     ssize_t bytes_read = read(event->ident, &buff, BUFFER_SIZE);
     CgiData* cgi_data = reinterpret_cast<CgiData*>(event->udata);
-	Server *server = &servers[cgi_data->getConnSocket()];
+    Server* server = &servers[cgi_data->getConnSocket()];
+    HttpResponseMessage* response = server->getResponsePtr();
 
     if (bytes_read == ERROR) {
-//        std::cout << errno << " " <<  strerror(errno) << '\n';
         return;
     }
     else if (bytes_read > 0) {
-		server->appendResponse(buff, bytes_read);
+        response->append(buff, bytes_read);
     }
     else { // EOF
         server->setResponse(PostCgi::makeResponse(server->getResponseStr()));

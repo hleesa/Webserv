@@ -52,14 +52,6 @@ std::string& HttpResponseMessage::getResponseRef() {
     return response;
 }
 
-std::string HttpResponseMessage::getResponse() {
-    return response;
-}
-
-unsigned char* HttpResponseMessage::getResponsePtr() const {
-    return response_ptr;
-}
-
 void HttpResponseMessage::updateBytesSent(ssize_t new_bytes_sent) {
     bytes_to_send -= static_cast<size_t>(new_bytes_sent);
     bytes_sent += static_cast<size_t>(new_bytes_sent);
@@ -73,16 +65,16 @@ bool HttpResponseMessage::sendComplete() const {
     return bytes_to_send == 0;
 }
 
-size_t HttpResponseMessage::getBytesSent() const {
-    return bytes_sent;
-}
-
 size_t HttpResponseMessage::getBytesToSend() const {
     return bytes_to_send;
 }
 
 void HttpResponseMessage::clear() {
     response.clear();
+}
+
+void HttpResponseMessage::append(const char* buffer, size_t size) {
+    response.append(buffer, size);
 }
 
 std::string HttpResponseMessage::toString() {

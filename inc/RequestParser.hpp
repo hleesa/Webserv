@@ -41,7 +41,7 @@ class RequestParser {
 };
 
 void convertLowerCase(std::string& string);
-bool isIntegerLiteral(std::string literal);
+bool isHexadecimal(const std::string& literal);
 bool isVisibleString(const std::string& str);
 
 #endif

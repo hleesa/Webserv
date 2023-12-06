@@ -4,7 +4,6 @@
 #include <string>
 #include <sstream>
 #include <algorithm>
-#include <iostream>
 
 RequestParser::RequestParser() {}
 
@@ -137,17 +136,17 @@ ReadingStatus RequestParser::processEncoding(Body& body, std::string& buffer) {
 	int size;
 	int pos;
 	std::string line;
-
+	
 	while ((size = getChunkedSize(buffer, size_pos)) > 0) {
-		pos = buffer.substr(size_pos + 1).find("\n");
+		pos = buffer.substr(size_pos + 2).find("\r\n");
 		if (static_cast<unsigned long>(pos) == std::string::npos) {
 			return BODY;
 		}
-		line = buffer.substr(size_pos + 1, pos);
+		line = buffer.substr(size_pos + 2, pos);
 		trimCarriageReturn(line);
-		buffer = buffer.substr(size_pos + pos + 2);
+		buffer = buffer.substr(size_pos + pos + 3);
 		if (line.size() != static_cast<unsigned long>(size)) {
-			//throw 400;
+			// throw 400;
 		}
 		body.content += line;
 	}
@@ -155,13 +154,13 @@ ReadingStatus RequestParser::processEncoding(Body& body, std::string& buffer) {
 		return BODY;
 	}
 	// size == 0
-	pos = buffer.substr(size_pos + 1).find("\n");
+	pos = buffer.substr(size_pos + 2).find("\r\n");
 	if (static_cast<unsigned long>(pos) == std::string::npos) {
 		return BODY;
 	}
-	line = buffer.substr(size_pos + 1, pos);
+	line = buffer.substr(size_pos + 2, pos);
 	trimCarriageReturn(line);
-	buffer = buffer.substr(size_pos + pos + 2);
+	buffer = buffer.substr(size_pos + pos + 3);
 	if (!line.empty()) {
 		throw 400;
 	}
@@ -174,17 +173,18 @@ int hexToDecimal(const std::string& hexString) {
     iss >> std::hex >> decimalValue;
     return decimalValue;
 }
+
 int RequestParser::getChunkedSize(std::string& buffer, int& pos) {
     std::string line;
-    pos = buffer.find("\n");
+    pos = buffer.find("\r\n");
     if (static_cast<unsigned long>(pos) == std::string::npos) {
        return -1;
     }
     line = buffer.substr(0, pos);
     trimCarriageReturn(line);
-//  if (!isIntegerLiteral(line)) {
-//     throw 400;
-//  }
+	if (!isHexadecimal(line)) {
+ 	   throw 400;
+	}
     return hexToDecimal(line.c_str());
 }
 
@@ -279,15 +279,15 @@ void convertLowerCase(std::string& string) {
 	}
 }
 
-bool	isIntegerLiteral(std::string literal) {
+bool isHexadecimal(const std::string& literal) {
 	int	idx = 0;
 	int	size = literal.size();
-
-	while (idx < size && isdigit(literal[idx]))
+	
+	while (idx < size && std::isxdigit(literal[idx])) {
 		idx++;
-	return idx == size;
+	}
+    return idx == size;
 }
-
 
 /* parse */
 

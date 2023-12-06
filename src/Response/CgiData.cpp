@@ -37,6 +37,10 @@ bool CgiData::cgiDied() const {
     return cgi_died;
 }
 
+bool CgiData::deleteDate() const {
+    return pipe_child_parent == NULL;
+}
+
 CgiData::~CgiData() {
     if (pipe_child_parent != NULL) {
         close(pipe_child_parent[READ]);

@@ -250,23 +250,30 @@ void ServerManager::processCgiTermination(CgiData* cgi_data) {
     int status;
     change_list.push_back(makeEvent(cgi_data->getChildPid(), EVFILT_TIMER, EV_DELETE, NOTE_SECONDS, TIMEOUT_SEC, reinterpret_cast<void*>(cgi_data)));
     if (waitpid(cgi_data->getChildPid(), &status, 0) == ERROR) {
-        if (cgi_data->cgiDied())
+        if (cgi_data->deleteDate()){
             delete cgi_data;
+        }
         throw 500;
     }
     if (WIFEXITED(status)) { // 자식 종료
         int exit_status = WEXITSTATUS(status);
         if (exit_status == EXIT_FAILURE) { // 비정상 종료
-            delete cgi_data;
+            if (cgi_data->deleteDate()) {
+                delete cgi_data;
+            }
             throw 500;
         }
     }
     else {
         kill(cgi_data->getChildPid(), SIGTERM);
-        delete cgi_data;
+        if (cgi_data->deleteDate()) {
+            delete cgi_data;
+        }
         throw 500;
     }
-    delete cgi_data;
+    if (cgi_data->deleteDate()) {
+        delete cgi_data;
+    }
 }
 
 void ServerManager::processReadPipeEvent(const k_event* event) {

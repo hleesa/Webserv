@@ -144,9 +144,9 @@ ReadingStatus RequestParser::processEncoding(Body& body, std::string& buffer) {
 		}
 		line = buffer.substr(size_pos + 2, pos);
 		trimCarriageReturn(line);
-		buffer = buffer.substr(size_pos + pos + 3);
+		buffer = buffer.substr(size_pos + pos + 4);
 		if (line.size() != static_cast<unsigned long>(size)) {
-			// throw 400;
+			throw 400;
 		}
 		body.content += line;
 	}
@@ -160,7 +160,7 @@ ReadingStatus RequestParser::processEncoding(Body& body, std::string& buffer) {
 	}
 	line = buffer.substr(size_pos + 2, pos);
 	trimCarriageReturn(line);
-	buffer = buffer.substr(size_pos + pos + 3);
+	buffer = buffer.substr(size_pos + pos + 4);
 	if (!line.empty()) {
 		throw 400;
 	}

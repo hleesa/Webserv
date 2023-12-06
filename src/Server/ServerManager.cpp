@@ -14,7 +14,7 @@
 ServerManager::ServerManager(const std::vector<Config>* configs) : default_config(&configs->front()){
 	setConfigByServerName(configs);
     addListenEvent();
-    memset((void*)event_list, 0, sizeof(struct kevent) * NUMBER_OF_EVENT);
+    memset((void*) event_list, 0, sizeof(k_event) * NUMBER_OF_EVENT);
     kq = kqueue();
     if (kq == ERROR) {
         throw (strerror(errno));
@@ -24,10 +24,10 @@ ServerManager::ServerManager(const std::vector<Config>* configs) : default_confi
 ServerManager::~ServerManager() {}
 
 void ServerManager::setConfigByServerName(const std::vector<Config>* configs) {
-	std::vector<Config>::const_iterator itr = (*configs).begin();
+	std::vector<Config>::const_iterator itr = configs->begin();
     std::map<int, bool> is_used_ports;
 
-    for (;itr != (*configs).end(); itr++) {
+    for (;itr != configs->end(); itr++) {
 		int port = itr->getPort();
 		if (!is_used_ports[port]) {
             is_used_ports[port] = true;
@@ -84,8 +84,7 @@ void ServerManager::addListenEvent() {
 void ServerManager::run() {
     while (true) {
 		try {
-			int events = kevent(kq, &(change_list[0]), change_list.size(), event_list, NUMBER_OF_EVENT, 0);
-
+            int events = kevent(kq, &(change_list[0]), change_list.size(), event_list, NUMBER_OF_EVENT, 0);
 			if (events == ERROR)
 				throw (strerror(errno));
 			change_list.clear();
@@ -102,7 +101,7 @@ void ServerManager::run() {
 
 void ServerManager::processEvents(const int events) {
     for (int idx = 0; idx < events; idx++) {
-        struct kevent* event = event_list + idx;
+        k_event* event = event_list + idx;
 		try {
 			processEvent(event);
 		}
@@ -115,11 +114,11 @@ void ServerManager::processEvents(const int events) {
 	}
 }
 
-EventType ServerManager::getEventType(const struct kevent* event){
+EventType ServerManager::getEventType(const k_event* event){
     if (event->flags & EV_ERROR) {
         return EVENT_ERROR;
     }
-    EventType event_type = NONE;
+    EventType event_type = EVENT_ERROR;
     switch (event->filter) {
         case EVFILT_READ:
             if (listen_sockets.find(event->ident) != listen_sockets.end()) {
@@ -155,13 +154,13 @@ EventType ServerManager::getEventType(const struct kevent* event){
     return event_type;
 }
 
-void ServerManager::assignParsedRequest(const struct kevent* event) {
+void ServerManager::assignParsedRequest(const k_event* event) {
     HttpRequestMessage request = parser.getHttpRequestMessage(event->ident);
     servers[event->ident].setRequest(request);
     parser.clear(event->ident);
 }
 
-void ServerManager::processCgiOrMakeResponse(const struct kevent* event) {
+void ServerManager::processCgiOrMakeResponse(const k_event* event) {
     HttpRequestMessage* request = servers[event->ident].getRequestPtr();
     if (request->getStatusCode() != 0) {
         change_list.push_back(makeEvent(event->ident, EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, NULL));
@@ -186,78 +185,93 @@ void ServerManager::processCgiOrMakeResponse(const struct kevent* event) {
     }
 }
 
-void ServerManager::processEvent(const struct kevent* event) {
+void ServerManager::processEvent(const k_event* event) {
     EventType event_type = getEventType(event);
 
-    if (event_type == ERROR) {
-        std::cout << "error " << strerror(event->data) << '\n';
-//        checkEventError(*event);
-    }
-    else if (event_type == LISTEN) {
-        processListenEvent(*event);
-    }
-    else if (event_type == PARSE_REQUEST) {
-        processReceiveEvent(*event);
-        if (parser.getReadingStatus(event->ident) == END) {
-            assignParsedRequest(event);
-            processCgiOrMakeResponse(event);
-        }
-    }
-    else if (event_type == READ_PIPE) {
-        processPipeReadEvent(*event);
-    }
-    else if (event_type == SEND_RESPONSE) {
-        processSendEvent(*event);
-    }
-    else if (event_type == WRITE_PIPE) {
-        processPipeWriteEvent(*event);
-    }
-    else if (event_type == TIMEOUT) {
-        std::cout << "time out\n";
-        disconnectWithClient(*event);
-    }
-    else if (event_type == TIMEOUT_CGI) {
-        CgiData* cgi_data = reinterpret_cast<CgiData*>(event->udata);
-        close(cgi_data->getReadPipeFd());
-        close(cgi_data->getWritePipeFd());
-        kill(cgi_data->getChildPid(), SIGTERM);
-        delete cgi_data;
-        disconnectWithClient(*event);
-    }
-    else if (CGI_END) {
-        CgiData* cgi_data = reinterpret_cast<CgiData*>(event->udata);
-        if (cgi_data->cgiDied()) {
-            int status;
-            if (waitpid(cgi_data->getChildPid(), &status, 0) == ERROR) {
-                delete cgi_data;
-                throw 500;
+//    typedef void (*EventHandlerFunction)(Event*)
+
+    switch (event_type) {
+        case EVENT_ERROR:
+            std::cout << "error " << strerror(event->data) << '\n';
+//            checkEventError(*event);
+            break;
+        case LISTEN:
+            processListenEvent(event);
+            break;
+        case PARSE_REQUEST:
+            processReceiveEvent(event);
+            if (parser.getReadingStatus(event->ident) == END) {
+                assignParsedRequest(event);
+                processCgiOrMakeResponse(event);
             }
-            if (WIFEXITED(status)) { // 자식 종료
-                int exit_status = WEXITSTATUS(status);
-                if (exit_status == EXIT_FAILURE) { // 비정상 종료
-                    delete cgi_data;
-                    throw 500;
-                }
-            }
-            else {
-                kill(cgi_data->getChildPid(), SIGTERM);
-                delete cgi_data;
-                throw 500;
-            }
-            delete cgi_data;;
-        }
-        else {
-            cgi_data->setCgiDie(true);
-            change_list.push_back(makeEvent(cgi_data->getReadPipeFd(), EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, reinterpret_cast<void*>(cgi_data)));
-        }
+            break;
+        case SEND_RESPONSE:
+            processSendEvent(event);
+            break;
+        case READ_PIPE:
+            processReadPipeEvent(event);
+            break;
+        case WRITE_PIPE:
+            processWritePipeEvent(event);
+            break;
+        case TIMEOUT:
+            std::cout << "time out\n";
+            disconnectWithClient(event);
+            break;
+        case TIMEOUT_CGI:
+            processTimeoutCgiEvent(event);
+            break;
+        case CGI_END:
+            processCgiEnd(event);
+            break;
     }
 }
 
-void ServerManager::processPipeReadEvent(const struct kevent& event) {
+void ServerManager::processTimeoutCgiEvent(const k_event* event) {
+    CgiData* cgi_data = reinterpret_cast<CgiData*>(event->udata);
+    close(cgi_data->getReadPipeFd());
+    close(cgi_data->getWritePipeFd());
+    processCgiTermination(cgi_data);
+    disconnectWithClient(event);
+}
+
+void ServerManager::processCgiEnd(const k_event* event) {
+    CgiData* cgi_data = reinterpret_cast<CgiData*>(event->udata);
+    if (cgi_data->cgiDied()) {
+        processCgiTermination(cgi_data);
+    }
+    else {
+        cgi_data->setCgiDie(true);
+        change_list.push_back(makeEvent(cgi_data->getReadPipeFd(), EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, reinterpret_cast<void*>(cgi_data)));
+    }
+}
+
+void ServerManager::processCgiTermination(CgiData* cgi_data) {
+    int status;
+    if (waitpid(cgi_data->getChildPid(), &status, 0) == ERROR) {
+        delete cgi_data;
+        throw 500;
+    }
+    if (WIFEXITED(status)) { // 자식 종료
+        int exit_status = WEXITSTATUS(status);
+        if (exit_status == EXIT_FAILURE) { // 비정상 종료
+            delete cgi_data;
+            throw 500;
+        }
+    }
+    else {
+        kill(cgi_data->getChildPid(), SIGTERM);
+        delete cgi_data;
+        throw 500;
+    }
+    delete cgi_data;
+}
+
+void ServerManager::processReadPipeEvent(const k_event* event) {
     char buff[BUFFER_SIZE];
     memset(buff, 0, BUFFER_SIZE);
-    ssize_t bytes_read = read(event.ident, &buff, BUFFER_SIZE);
-    CgiData* cgi_data = reinterpret_cast<CgiData*>(event.udata);
+    ssize_t bytes_read = read(event->ident, &buff, BUFFER_SIZE);
+    CgiData* cgi_data = reinterpret_cast<CgiData*>(event->udata);
 	Server *server = &servers[cgi_data->getConnSocket()];
 
     if (bytes_read == ERROR) {
@@ -270,57 +284,81 @@ void ServerManager::processPipeReadEvent(const struct kevent& event) {
     else { // EOF
         server->setResponse(PostCgi::makeResponse(server->getResponse()).toString());
         close(cgi_data->getReadPipeFd());
-//        change_list.push_back(makeEvent(cgi_data->getReadPipeFd(), EVFILT_READ, EV_DISABLE, 0, 0, NULL));
         change_list.push_back(makeEvent(cgi_data->getConnSocket(), EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, NULL));
         if (cgi_data->cgiDied()) {
-            int status;
-            if (waitpid(cgi_data->getChildPid(), &status, 0) == ERROR) {
-                delete cgi_data;
-                throw 500;
-            }
-            if (WIFEXITED(status)) { // 자식 종료
-                int exit_status = WEXITSTATUS(status);
-                if (exit_status == EXIT_FAILURE) { // 비정상 종료
-                    delete cgi_data;
-                    throw 500;
-                }
-            }
-            else {
-                kill(cgi_data->getChildPid(), SIGTERM);
-                delete cgi_data;
-                throw 500;
-            }
-            delete cgi_data;
+            processCgiTermination(cgi_data);
         }
         else {
             cgi_data->setCgiDie(true);
             change_list.push_back(makeEvent(cgi_data->getChildPid(), EVFILT_PROC, EV_ADD | EV_ONESHOT, NOTE_EXIT, 0, reinterpret_cast<void*>(cgi_data)));
         }
     }
+    change_list.push_back(makeEvent(event->ident, EVFILT_TIMER, EV_ADD | EV_ONESHOT, NOTE_SECONDS, TIMEOUT_SEC, reinterpret_cast<void*>(cgi_data)));
 }
 
-void ServerManager::processPipeWriteEvent(const struct kevent& event) {
-    CgiData* cgi_data = reinterpret_cast<CgiData*>(event.udata);
+void ServerManager::processWritePipeEvent(const k_event* event) {
+    CgiData* cgi_data = reinterpret_cast<CgiData*>(event->udata);
     Server *server = &servers[cgi_data->getConnSocket()];
 
-    ssize_t bytes_written = write(event.ident, server->getMessageBodyPtr(), server->getBytesToWrite());
-//    printf("Address: %p\n", static_cast<void*>(server->getMessageBodyPtr()));
+    ssize_t bytes_written = write(event->ident, server->getMessageBodyPtr(), server->getBytesToWrite());
     if (bytes_written == ERROR) {
         return;
     }
-    server->updateRequestBody(bytes_written);
+    server->updateBytesWritten(bytes_written);
     if (server->writeComplete()) {
-        server->clearRequestBody();
+        server->clearRequestBodyPtr();
         close(cgi_data->getWritePipeFd());
     }
     change_list.push_back(makeEvent(cgi_data->getConnSocket(), EVFILT_TIMER, EV_ADD | EV_ONESHOT, NOTE_SECONDS, TIMEOUT_SEC, reinterpret_cast<void*>(cgi_data)));
 }
 
+void ServerManager::processReceiveEvent(const k_event* event) {
+    char buff[BUFFER_SIZE + 1];
+    ssize_t bytes_recv = recv(event->ident, &buff, BUFFER_SIZE, 0);
+    
+	if (bytes_recv == ERROR) {
+       return;
+    }
+    buff[bytes_recv] = '\0';
+	parser.run(event->ident, buff);
+    change_list.push_back(makeEvent(event->ident, EVFILT_TIMER, EV_ADD | EV_ONESHOT, NOTE_SECONDS, TIMEOUT_SEC, NULL));
+}
+
+void ServerManager::processSendEvent(const k_event* event) {
+    Server *server = &servers[event->ident];
+    ssize_t bytes_sent = send(event->ident, server->getResponsePtr(), server->getBytesToSend(), 0);
+    if (bytes_sent == ERROR) {
+        return;
+    }
+    server->updateBytesSent(bytes_sent);
+    if (server->sendComplete()) {
+        server->clearResponse();
+        change_list.push_back(makeEvent(event->ident, EVFILT_WRITE, EV_DISABLE, 0, 0, NULL));
+    }
+    change_list.push_back(makeEvent(event->ident, EVFILT_TIMER, EV_ADD | EV_ONESHOT, NOTE_SECONDS, TIMEOUT_SEC, NULL));
+}
+
+void ServerManager::processListenEvent(const k_event* event) {
+    struct sockaddr_in client_address;
+    socklen_t client_address_len = sizeof(client_address);
+    int connection_socket = accept(event->ident, (struct sockaddr*) &client_address, &client_address_len);
+
+    if (connection_socket == ERROR) {
+        throw (strerror(errno));
+    }
+    if (fcntl(connection_socket, F_SETFL, O_NONBLOCK, FD_CLOEXEC) == ERROR) {
+        throw (strerror(errno));
+    }
+    servers[connection_socket] = Server(event->ident);
+    change_list.push_back(makeEvent(connection_socket, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, NULL));
+    change_list.push_back(makeEvent(connection_socket, EVFILT_TIMER, EV_ADD | EV_ONESHOT, NOTE_SECONDS, TIMEOUT_SEC, NULL));
+}
+
 const Config* ServerManager::findConfig(const std::string host, const std::string url) {
-	if (server_name_to_config.find(host) == server_name_to_config.end()) {
-		return default_config;
-	}
-	std::vector<const Config*>::iterator itr = server_name_to_config[host].begin();
+    if (server_name_to_config.find(host) == server_name_to_config.end()) {
+        return default_config;
+    }
+    std::vector<const Config*>::iterator itr = server_name_to_config[host].begin();
     for (;itr != server_name_to_config[host].end(); itr++) {
         const Config* config = *itr;
         if (config->hasLocationOf(url)) {
@@ -331,72 +369,31 @@ const Config* ServerManager::findConfig(const std::string host, const std::strin
     return config;
 }
 
-void ServerManager::checkEventError(const struct kevent& event) {
+void ServerManager::checkEventError(const k_event* event) {
     // if (configs.find(event.ident) != configs.end())
-    if (servers.find(event.ident) != servers.end())
+    if (servers.find(event->ident) != servers.end())
         disconnectWithClient(event);
 }
 
-void ServerManager::processListenEvent(const struct kevent& event) {
-    struct sockaddr_in client_address;
-    socklen_t client_address_len = sizeof(client_address);
-    int connection_socket = accept(event.ident, (struct sockaddr*) &client_address, &client_address_len);
-
-    if (connection_socket == ERROR) {
-        throw (strerror(errno));
-	}
-	if (fcntl(connection_socket, F_SETFL, O_NONBLOCK, FD_CLOEXEC) == ERROR) {
-        throw (strerror(errno));
-	}
-    servers[connection_socket] = Server(event.ident);
-    change_list.push_back(makeEvent(connection_socket, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, NULL));
-    change_list.push_back(makeEvent(connection_socket, EVFILT_TIMER, EV_ADD | EV_ONESHOT, NOTE_SECONDS, TIMEOUT_SEC, NULL));
-}
-
-void ServerManager::processReceiveEvent(const struct kevent& event) {
-    char buff[BUFFER_SIZE + 1];
-    ssize_t bytes_recv = recv(event.ident, &buff, BUFFER_SIZE, 0);
-    
-	if (bytes_recv == ERROR) {
-       return;
-    }
-    buff[bytes_recv] = '\0';
-	parser.run(event.ident, buff);
-}
-
-void ServerManager::processSendEvent(const struct kevent& event) {
-    Server *server = &servers[event.ident];
-    ssize_t bytes_sent = send(event.ident, server->getResponse().c_str(), server->getResponse().length(), 0);
-    if (bytes_sent == ERROR) {
-        return;
-    }
-    server->updateResponse(bytes_sent);
-    if (server->isSendComplete()) {
-        server->clearResponse();
-        change_list.push_back(makeEvent(event.ident, EVFILT_WRITE, EV_DISABLE, 0, 0, NULL));
-    }
-    change_list.push_back(makeEvent(event.ident, EVFILT_TIMER, EV_ADD | EV_ONESHOT, NOTE_SECONDS, TIMEOUT_SEC, NULL));
-}
-
-struct kevent ServerManager::makeEvent(
+k_event ServerManager::makeEvent(
         uintptr_t ident,
         int16_t filter,
         uint16_t flags,
         uint32_t fflags,
         intptr_t data,
         void* udata) const {
-    struct kevent event;
+    k_event event;
 
     EV_SET(&event, ident, filter, flags, fflags, data, udata);
     return event;
 }
 
-void ServerManager::disconnectWithClient(const struct kevent& event) {
+void ServerManager::disconnectWithClient(const k_event* event) {
 //	 struct linger linger;
 	
 //	 linger.l_onoff = 1;
 //	 linger.l_linger = 0;
 //	 setsockopt(event.ident, SOL_SOCKET, SO_LINGER, &linger, sizeof(linger)); // Linger option
-    close(event.ident);
-    servers.erase(event.ident);
+    close(event->ident);
+    servers.erase(event->ident);
 }

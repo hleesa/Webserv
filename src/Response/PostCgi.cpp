@@ -1,10 +1,11 @@
 #include "../../inc/PostCgi.hpp"
 #include "../../inc/MediaType.hpp"
 #include "../../inc/Location.hpp"
-#include <fcntl.h>
-#include <iostream>
 #include "../../inc/CgiData.hpp"
 #include "../../inc/ToString.hpp"
+#include "../../inc/Constants.hpp"
+#include <fcntl.h>
+#include <iostream>
 
 PostCgi::PostCgi(const HttpRequestMessage* request, const Config* config) : request(request), config(config) {
 	this->location_key = findLocationKey(config, request);

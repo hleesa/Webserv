@@ -6,9 +6,6 @@
 #include "HttpRequestMessage.hpp"
 #include "ParsingData.hpp"
 
-#define NUM_OF_ALLOW_METHOD 4
-#define NUM_OF_VERSION 3
-
 class RequestParser {
 	private:
 		std::map<int, ParsingData> parsing_data;

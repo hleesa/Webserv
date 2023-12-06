@@ -13,8 +13,8 @@ HttpRequestMessage::HttpRequestMessage(std::vector<std::string> request_line,
     this->status_code = status_code;
     if (!message_body.empty())
         this->body_size = message_body.length();
-    this->message_body = new char[this->body_size + 1];
-    std::strcpy(this->message_body, message_body.c_str());
+    this->message_body = new unsigned char[this->body_size];
+    std::memmove(this->message_body, message_body.c_str(), body_size);
 }
 
 HttpRequestMessage::~HttpRequestMessage() {
@@ -28,9 +28,13 @@ HttpRequestMessage &HttpRequestMessage::operator=(const HttpRequestMessage &othe
         header_fields = other.header_fields;
         status_code = other.status_code;
         body_size = other.body_size;
-        if (other.message_body) {
-            message_body = new char[other.getBodySize()];
-            std::strcpy(message_body, other.getMessageBodyPtr());
+        if (message_body != NULL) {
+            delete[] message_body;
+            message_body = NULL;
+        }
+        if (other.message_body != NULL) {
+            message_body = new unsigned char[other.getBodySize()];
+            std::memmove(message_body, other.getMessageBodyPtr(), other.getBodySize());
         }
     }
     return *this;
@@ -60,7 +64,7 @@ std::string HttpRequestMessage::getHost() {
     return *this->header_fields["host"].begin();
 }
 
-char* HttpRequestMessage::getMessageBodyPtr() const {
+unsigned char* HttpRequestMessage::getMessageBodyPtr() const {
     return this->message_body;
 }
 

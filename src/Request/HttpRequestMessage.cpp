@@ -1,25 +1,27 @@
 
 #include "../../inc/HttpRequestMessage.hpp"
 
-HttpRequestMessage::HttpRequestMessage() : message_body(NULL), body_size(0) {
+HttpRequestMessage::HttpRequestMessage() : status_code(0), body_size(0), request_body(NULL) {
 }
-
 
 HttpRequestMessage::HttpRequestMessage(std::vector<std::string> request_line,
                                        std::map<std::string, std::vector<std::string> > header_fields,
-                                       std::string message_body, int status_code) : body_size(0){
-    this->request_line = request_line;
-    this->header_fields = header_fields;
-    this->status_code = status_code;
+                                       std::string message_body, int status_code) :
+        request_line(request_line), header_fields(header_fields), status_code(status_code), body_size(0) {
+
     if (!message_body.empty())
         this->body_size = message_body.length();
-    this->message_body = new unsigned char[this->body_size];
-    std::memmove(this->message_body, message_body.c_str(), body_size);
+    this->request_body = new unsigned char[this->body_size];
+    std::memmove(this->request_body, message_body.c_str(), body_size);
 }
 
+#include <iostream>
 HttpRequestMessage::~HttpRequestMessage() {
-    if (message_body != NULL)
-        delete[] message_body;
+    std::cout << "~HttpRequestMessage()\n";
+    if (request_body != NULL){
+        delete[] request_body;
+        request_body = NULL;
+    }
 }
 
 HttpRequestMessage &HttpRequestMessage::operator=(const HttpRequestMessage &other) {
@@ -28,13 +30,13 @@ HttpRequestMessage &HttpRequestMessage::operator=(const HttpRequestMessage &othe
         header_fields = other.header_fields;
         status_code = other.status_code;
         body_size = other.body_size;
-        if (message_body != NULL) {
-            delete[] message_body;
-            message_body = NULL;
+        if (request_body != NULL) {
+            delete[] request_body;
+            request_body = NULL;
         }
-        if (other.message_body != NULL) {
-            message_body = new unsigned char[other.getBodySize()];
-            std::memmove(message_body, other.getMessageBodyPtr(), other.getBodySize());
+        if (other.request_body != NULL) {
+            request_body = new unsigned char[other.getBodySize()];
+            std::memmove(request_body, other.getMessageBodyPtr(), other.getBodySize());
         }
     }
     return *this;
@@ -65,7 +67,7 @@ std::string HttpRequestMessage::getHost() {
 }
 
 unsigned char* HttpRequestMessage::getMessageBodyPtr() const {
-    return this->message_body;
+    return this->request_body;
 }
 
 size_t HttpRequestMessage::getBodySize() const {

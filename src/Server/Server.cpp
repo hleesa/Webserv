@@ -3,13 +3,10 @@
 #include "../../inc/ErrorPage.hpp"
 #include "../../inc/Resource.hpp"
 
-Server::Server() : listen_socket(-1), response_ptr(NULL), bytes_to_send(0),
-                   bytes_sent(0), message_body_ptr(NULL), bytes_to_write(0), bytes_written(0) {
+Server::Server() : listen_socket(0), bytes_to_write(0), bytes_written(0) {
 }
 
-Server::Server(const int listen_socket) : listen_socket(listen_socket), response_ptr(NULL), bytes_to_send(0),
-                                          bytes_sent(0), message_body_ptr(NULL), bytes_to_write(0), bytes_written(0) {
-//    response.clear();
+Server::Server(const int listen_socket) : listen_socket(listen_socket), bytes_to_write(0), bytes_written(0) {
 }
 
 Server& Server::operator=(const Server& other) {
@@ -18,26 +15,8 @@ Server& Server::operator=(const Server& other) {
         request = other.request;
         response = other.response;
 
-        if (response_ptr != NULL) {
-            delete[] response_ptr;
-            response_ptr = NULL;
-        }
-        if (other.response_ptr != NULL) {
-            response_ptr = new unsigned char[other.bytes_to_send];
-            std::memmove(response_ptr, other.response_ptr, other.bytes_to_send);
-        }
-
-        bytes_to_send = other.bytes_to_send;
-        bytes_sent = other.bytes_sent;
-
-        if (message_body_ptr != NULL) {
-            delete[] message_body_ptr;
-            message_body_ptr = NULL;
-        }
-        if (other.message_body_ptr != NULL) {
-            message_body_ptr = new unsigned char[other.bytes_to_write];
-            std::memmove(message_body_ptr, other.message_body_ptr, other.bytes_to_write);
-        }
+//        bytes_to_send = other.bytes_to_send;
+//        bytes_sent = other.bytes_sent;
 
         bytes_to_write = other.bytes_to_write;
         bytes_written = other.bytes_written;
@@ -46,14 +25,7 @@ Server& Server::operator=(const Server& other) {
 }
 
 Server::~Server() {
-    if (response_ptr != NULL) {
-        delete[] response_ptr;
-        response_ptr = NULL;
-    }
-    if (message_body_ptr != NULL) {
-        delete[] message_body_ptr;
-        message_body_ptr = NULL;
-    }
+    std::cout << "~Server()\n";
 }
 
 int Server::getListenSocket() const {
@@ -63,21 +35,16 @@ void Server::setRequest(const HttpRequestMessage& request_message) {
     this->request = request_message;
     bytes_to_write = request_message.getBodySize();
     bytes_written = 0;
-    message_body_ptr = new unsigned char[bytes_to_write];
-    std::memmove(message_body_ptr, request_message.getMessageBodyPtr(), bytes_to_write);
 }
 
-void Server::setResponse(std::string http_response) {
+void Server::setResponse(HttpResponseMessage http_response) {
     response = http_response;
-    bytes_sent = 0;
-    if (!http_response.empty())
-        bytes_to_send = http_response.length();
-    response_ptr = new unsigned char[bytes_to_send];
-    std::memmove(response_ptr, http_response.c_str(), bytes_to_send);
+//    bytes_sent = 0;
+//    bytes_to_send = http_response.getResponseRef().length();
     return;
 }
 
-std::string Server::makeResponse(const Config* config) {
+HttpResponseMessage Server::makeResponse(const Config* config) {
     Method *method = Method::generate(request.getMethod(), &request, config);
     try {
 		if (request.getStatusCode()) {
@@ -85,51 +52,41 @@ std::string Server::makeResponse(const Config* config) {
 			throw (request.getStatusCode());
 		}
 		method->checkAllowed(request.getMethod());
-        std::string response_message = method->makeHttpResponseMessage().toString();
+        HttpResponseMessage response_message = method->makeHttpResponseMessage();
         delete method;
         return response_message;
     }
     catch (const int status_code) {
         delete method;
-        return ErrorPage::makeErrorPageResponse(status_code, config).toString();
+        return ErrorPage::makeErrorPageResponse(status_code, config);
     }
-    return HttpResponseMessage().toString();
+    return HttpResponseMessage();
 }
 
-void Server::updateBytesSent(ssize_t new_bytes_sent) {
-    bytes_to_send -= static_cast<size_t>(new_bytes_sent);
-    bytes_sent += static_cast<size_t>(new_bytes_sent);
-}
+//void Server::updateBytesSent(ssize_t new_bytes_sent) {
+//    bytes_to_send -= static_cast<size_t>(new_bytes_sent);
+//    bytes_sent += static_cast<size_t>(new_bytes_sent);
+//}
 
-bool Server::sendComplete() {
-    return bytes_to_send == 0;
-}
+//bool Server::sendComplete() {
+//    return bytes_to_send == 0;
+//}
 
 void Server::clearResponse() {
-    response.clear();
-    if (response_ptr != NULL) {
-        delete response_ptr;
-    }
-    response_ptr = NULL;
-    if (message_body_ptr != NULL) {
-        delete message_body_ptr;
-    }
-    message_body_ptr = NULL;
-    bytes_sent = 0;
-    bytes_to_send = 0;
+    response.getResponseRef().clear();
 }
 
-unsigned char* Server::getResponsePtr() const{
-    return response_ptr + bytes_sent;
+HttpResponseMessage* Server::getResponsePtr() {
+    return &response;
 }
 
-size_t Server::getBytesToSend() {
-    return bytes_to_send;
-}
+//size_t Server::getBytesToSend() {
+//    return bytes_to_send;
+//}
 
 void Server::appendResponse(const char* buffer, size_t size) {
-    bytes_to_send += size;
-	response.append(buffer, size);
+//    bytes_to_send += size;
+    response.getResponseRef().append(buffer, size);
 }
 
 HttpRequestMessage* Server::getRequestPtr() {
@@ -146,21 +103,18 @@ bool Server::writeComplete() {
 }
 
 void Server::clearRequestBodyPtr() {
-    delete[] message_body_ptr;
-    message_body_ptr = NULL;
     bytes_to_write = 0;
     bytes_written = 0;
 }
 
 unsigned char* Server::getMessageBodyPtr() const {
-    return message_body_ptr + bytes_written;
+    return request.getMessageBodyPtr() + bytes_written;
 }
 
 size_t Server::getBytesToWrite() {
     return bytes_to_write;
 }
 
-std::string Server::getResponse() {
-    return response;
+std::string Server::getResponseStr() {
+    return response.getResponseRef();
 }
-

@@ -11,9 +11,10 @@ class HttpRequestMessage {
 private:
     std::vector<std::string> request_line;
     std::map<std::string, std::vector<std::string> > header_fields;
-    unsigned char* message_body;
-    size_t body_size;
     int status_code;
+    size_t body_size;
+    unsigned char* request_body;
+
 
 public:
 	HttpRequestMessage();

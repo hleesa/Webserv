@@ -109,7 +109,7 @@ void ServerManager::processEvents(const int events) {
 			std::map<std::string, std::string> header = Method::makeHeaderFields();
 			header["Connection"] = "close";
 			header["Content-length"] = "0";
-            servers[event->ident].setResponse(HttpResponseMessage(status_code, header, "").toString());
+            servers[event->ident].setResponse(HttpResponseMessage(status_code, header, ""));
 		}
 	}
 }
@@ -164,7 +164,7 @@ void ServerManager::processCgiOrMakeResponse(const k_event* event) {
     HttpRequestMessage* request = servers[event->ident].getRequestPtr();
     if (request->getStatusCode() != 0) {
         change_list.push_back(makeEvent(event->ident, EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, NULL));
-        servers[event->ident].setResponse(ErrorPage::makeErrorPageResponse(request->getStatusCode(), default_config).toString());
+        servers[event->ident].setResponse(ErrorPage::makeErrorPageResponse(request->getStatusCode(), default_config));
         change_list.push_back(makeEvent(event->ident, EVFILT_TIMER, EV_ADD | EV_ONESHOT, NOTE_SECONDS, TIMEOUT_SEC, NULL));
         return;
     } 
@@ -229,8 +229,9 @@ void ServerManager::processEvent(const k_event* event) {
 
 void ServerManager::processTimeoutCgiEvent(const k_event* event) {
     CgiData* cgi_data = reinterpret_cast<CgiData*>(event->udata);
-    close(cgi_data->getReadPipeFd());
-    close(cgi_data->getWritePipeFd());
+    cgi_data->closePipes();
+//    close(cgi_data->getReadPipeFd());
+//    close(cgi_data->getWritePipeFd());
     processCgiTermination(cgi_data);
     disconnectWithClient(event);
 }
@@ -282,7 +283,7 @@ void ServerManager::processReadPipeEvent(const k_event* event) {
 		server->appendResponse(buff, bytes_read);
     }
     else { // EOF
-        server->setResponse(PostCgi::makeResponse(server->getResponse()).toString());
+        server->setResponse(PostCgi::makeResponse(server->getResponseStr()));
         close(cgi_data->getReadPipeFd());
         change_list.push_back(makeEvent(cgi_data->getConnSocket(), EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, NULL));
         if (cgi_data->cgiDied()) {
@@ -325,14 +326,15 @@ void ServerManager::processReceiveEvent(const k_event* event) {
 }
 
 void ServerManager::processSendEvent(const k_event* event) {
-    Server *server = &servers[event->ident];
-    ssize_t bytes_sent = send(event->ident, server->getResponsePtr(), server->getBytesToSend(), 0);
+    HttpResponseMessage* response = reinterpret_cast<HttpResponseMessage*>(servers[event->ident].getResponsePtr());
+
+    ssize_t bytes_sent = send(event->ident, response->getSendBuffer(), response->getBytesToSend(), 0);
     if (bytes_sent == ERROR) {
         return;
     }
-    server->updateBytesSent(bytes_sent);
-    if (server->sendComplete()) {
-        server->clearResponse();
+    response->updateBytesSent(bytes_sent);
+    if (response->sendComplete()) {
+        response->clear();
         change_list.push_back(makeEvent(event->ident, EVFILT_WRITE, EV_DISABLE, 0, 0, NULL));
     }
     change_list.push_back(makeEvent(event->ident, EVFILT_TIMER, EV_ADD | EV_ONESHOT, NOTE_SECONDS, TIMEOUT_SEC, NULL));

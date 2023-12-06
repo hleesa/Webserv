@@ -1,12 +1,12 @@
 #include "../../inc/Constants.hpp"
 #include "../../inc/CgiData.hpp"
 
-CgiData::CgiData() : pipe_child_parent(NULL), pipe_parent_child(NULL), child_pid(-1), conn_socket(-1), cgi_died(false) {
+CgiData::CgiData() : pipe_child_parent(NULL), pipe_parent_child(NULL), child_pid(0), conn_socket(0), cgi_died(false) {
 }
 
 CgiData::CgiData(int* pipe_child_parent, int* pipe_parent_child, pid_t child_pid) :
         pipe_child_parent(pipe_child_parent), pipe_parent_child(pipe_parent_child), child_pid(child_pid),
-        conn_socket(-1), cgi_died(false) {
+        conn_socket(0), cgi_died(false) {
 }
 
 int CgiData::getReadPipeFd() const {
@@ -37,34 +37,15 @@ bool CgiData::cgiDied() const {
     return cgi_died;
 }
 
-void CgiData::closePipes() {
-    if (pipe_child_parent != NULL) {
-        close(pipe_child_parent[READ]);
-    }
-    if (pipe_parent_child != NULL) {
-        close(pipe_parent_child[WRITE]);
-    }
-}
-
-void CgiData::closeReadPipeFd() {
-    if (pipe_child_parent != NULL) {
-        close(pipe_child_parent[READ]);
-    }
-}
-
-void CgiData::closeWritePipeFd() {
-    if (pipe_parent_child[WRITE]) {
-        close(pipe_parent_child[WRITE]);
-    }
-}
-
 CgiData::~CgiData() {
     if (pipe_child_parent != NULL) {
+        close(pipe_child_parent[READ]);
         delete[] pipe_child_parent;
+        pipe_child_parent = NULL;
     }
     if (pipe_parent_child != NULL) {
+        close(pipe_parent_child[WRITE]);
         delete[] pipe_parent_child;
+        pipe_parent_child = NULL;
     }
-    pipe_child_parent = NULL;
-    pipe_parent_child = NULL;
 }

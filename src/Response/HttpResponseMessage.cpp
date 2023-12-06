@@ -41,9 +41,7 @@ HttpResponseMessage& HttpResponseMessage::operator=(const HttpResponseMessage& o
     return *this;
 }
 
-#include <iostream>
 HttpResponseMessage::~HttpResponseMessage() {
-    std::cout << "~HttpResponseMessage()\n";
     if (response_ptr != NULL) {
         delete[] response_ptr;
         response_ptr = NULL;
@@ -52,14 +50,6 @@ HttpResponseMessage::~HttpResponseMessage() {
 
 std::string& HttpResponseMessage::getResponseRef() {
     return response;
-}
-
-std::string HttpResponseMessage::getResponse() {
-    return response;
-}
-
-unsigned char* HttpResponseMessage::getResponsePtr() const {
-    return response_ptr;
 }
 
 void HttpResponseMessage::updateBytesSent(ssize_t new_bytes_sent) {
@@ -75,16 +65,16 @@ bool HttpResponseMessage::sendComplete() const {
     return bytes_to_send == 0;
 }
 
-size_t HttpResponseMessage::getBytesSent() const {
-    return bytes_sent;
-}
-
 size_t HttpResponseMessage::getBytesToSend() const {
     return bytes_to_send;
 }
 
 void HttpResponseMessage::clear() {
     response.clear();
+}
+
+void HttpResponseMessage::append(const char* buffer, size_t size) {
+    response.append(buffer, size);
 }
 
 std::string HttpResponseMessage::toString() {

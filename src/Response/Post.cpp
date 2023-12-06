@@ -130,7 +130,10 @@ void Post::saveToFile() {
 		throw 411;
 	}
 	if (file_write.is_open()) {
-		file_write << request->getMessageBodyPtr();
+		char body[request->getBodySize() + 1];
+		body[request->getBodySize()] = '\0';
+		std::memmove(body,request->getMessageBodyPtr(), request->getBodySize());
+		file_write << body;
 		file_write.close();
 		_status_code = 200;
 	} else {

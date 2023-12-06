@@ -15,15 +15,9 @@ PostCgi::PostCgi(const HttpRequestMessage* request, const Config* config) : requ
 }
 
 CgiData* PostCgi::cgipost() {
-	//요청 url 형태 및 실행 가능 여부 확인
 	check_request_line(request->getRequestLine());
-	//헤더 필드 확인 -> body가 있는 경우이기 때문에 필수 헤더 확인
 	check_header_field(request->getHeaderFields());
 
-	//파일 권한 안주면 실패됨
-	// if (access(abs_path.c_str(), F_OK | X_OK) == -1) {
-	// 	throw 400;
-	// }
 	int* pipe_ptoc = new int[2];
 	int* pipe_ctop = new int[2];
 	if (pipe(pipe_ptoc) == -1 || pipe(pipe_ctop) == -1) {
@@ -57,14 +51,12 @@ CgiData* PostCgi::cgipost() {
 void PostCgi::check_request_line(std::vector<std::string> request_line) {
 	std::string url_path = request_line[1];
 
-	//request URL_path -> rel_path 값찾아내기
 	if (url_path.find(location_key) == 0) {
 		rel_path = url_path.substr(location_key.size());
 	} else {
 		rel_path = url_path;
 	}
 
-	//abs_path 를 기준에 따라서 완성
 	if (config->getLocations()[location_key].getRoot() == "") {
 		if (config->getRoot() != "") {
 			abs_path = config->getRoot() + '/' + url_path;
@@ -141,6 +133,12 @@ void PostCgi::child_write_py(int* pipe_ptoc, int* pipe_ctop, Location location) 
 	if (dup2(pipe_ptoc[0], STDIN_FILENO) == -1 || dup2(pipe_ctop[1], STDOUT_FILENO) == -1) {
 		exit(EXIT_FAILURE);
 	}
+	if (fcntl(pipe_ptoc[0], F_SETFL, O_NONBLOCK, FD_CLOEXEC) == ERROR) {
+		throw (strerror(errno));
+	}
+	if (fcntl(pipe_ptoc[0], F_SETFL, O_NONBLOCK, FD_CLOEXEC) == ERROR) {
+		throw (strerror(errno));
+	}
 	if (close(pipe_ptoc[0]) == -1 || close(pipe_ctop[1]) == -1) {
 		exit(EXIT_FAILURE);
 	}
@@ -152,8 +150,10 @@ void PostCgi::child_write_py(int* pipe_ptoc, int* pipe_ctop, Location location) 
 char** PostCgi::postCgiEnv() {
 	std::map<std::string, std::string> env;
 	std::stringstream port_string;
+	std::stringstream host_string;
 	std::stringstream content_length_string;
 	port_string << config->getPort();
+	host_string << config->getHost();
 	content_length_string << request->getBodySize();
 	env["REQUEST_METHOD"] = "POST";
 	env["CONTENT_LENGTH"] = content_length_string.str();
@@ -161,7 +161,7 @@ char** PostCgi::postCgiEnv() {
 	env["SERVER_NAME"] = request->getHeaderFields()["host"][0];
 	env["GATEWAY_INTERFACE"] = "CGI/1.1";
 	env["PATH_INFO"] = abs_path;
-	env["PATH_TRANSLATED"] = "http://localhost:" + port_string.str() + request->getURL();
+	env["PATH_TRANSLATED"] = "http://" + host_string.str() + ":" + port_string.str() + request->getURL();
 	env["QUERY_STRING"] = "";
 	env["SERVER_PROTOCOL"] = "HTTP/1.1";
 	env["SERVER_NAME"] = "webserv";
@@ -187,9 +187,9 @@ HttpResponseMessage PostCgi::makeResponse(const std::string cgi_response) {
 	std::istringstream ss(cgi_response);
 	std::map<std::string, std::string> header_fields;
 	
-	//if (cgiResponse == "") {
-	//	throw 400;
-	//}
+	if (cgi_response == "") {
+		throw 400;
+	}
 	int status_code = findStatusCode(ss);
 	parseHeaderLine(ss, header_fields);
 	std::string body;

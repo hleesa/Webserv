@@ -18,16 +18,13 @@ public:
     Server& operator=(const Server& other);
     ~Server();
 
-    int getListenSocket() const;
     void setRequest(const HttpRequestMessage& msg);
-    void setResponse(HttpResponseMessage http_response);
+    void setResponse(const HttpResponseMessage& new_response);
     std::string getResponseStr();
 
     HttpResponseMessage makeResponse(const Config* config);
 
-    void appendResponse(const char* buffer, size_t size);
     HttpRequestMessage* getRequestPtr();
-
     HttpResponseMessage* getResponsePtr();
 
 };

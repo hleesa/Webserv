@@ -21,16 +21,12 @@ Server& Server::operator=(const Server& other) {
 Server::~Server() {
 }
 
-int Server::getListenSocket() const {
-    return listen_socket;
-}
 void Server::setRequest(const HttpRequestMessage& request_message) {
     this->request = request_message;
 }
 
-void Server::setResponse(HttpResponseMessage http_response) {
-    response = http_response;
-    return;
+void Server::setResponse(const HttpResponseMessage& new_response) {
+    response = new_response;
 }
 
 HttpResponseMessage Server::makeResponse(const Config* config) {
@@ -54,10 +50,6 @@ HttpResponseMessage Server::makeResponse(const Config* config) {
 
 HttpResponseMessage* Server::getResponsePtr() {
     return &response;
-}
-
-void Server::appendResponse(const char* buffer, size_t size) {
-    response.getResponseRef().append(buffer, size);
 }
 
 HttpRequestMessage* Server::getRequestPtr() {

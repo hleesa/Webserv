@@ -229,7 +229,7 @@ void ServerManager::processEvent(const k_event* event) {
 
 void ServerManager::processTimeoutCgiEvent(const k_event* event) {
     CgiData* cgi_data = reinterpret_cast<CgiData*>(event->udata);
-    if(!cgi_data->cgiDied()){
+    if(cgi_data != NULL && !cgi_data->cgiDied()){
         cgi_data->closePipes();
         processCgiTermination(cgi_data);
     }
@@ -284,7 +284,7 @@ void ServerManager::processReadPipeEvent(const k_event* event) {
     }
     else { // EOF
         server->setResponse(PostCgi::makeResponse(server->getResponseStr()));
-        close(cgi_data->getReadPipeFd());
+        cgi_data->closeReadPipeFd();
         change_list.push_back(makeEvent(cgi_data->getConnSocket(), EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, NULL));
         if (cgi_data->cgiDied()) {
             processCgiTermination(cgi_data);
@@ -307,7 +307,7 @@ void ServerManager::processWritePipeEvent(const k_event* event) {
     }
     request->updateBytesWritten(bytes_written);
     if (request->writeComplete()) {
-        close(cgi_data->getWritePipeFd());
+        cgi_data->closeWritePipeFd();
     }
     change_list.push_back(makeEvent(cgi_data->getConnSocket(), EVFILT_TIMER, EV_ADD | EV_ONESHOT, NOTE_SECONDS, TIMEOUT_SEC, reinterpret_cast<void*>(cgi_data)));
 }

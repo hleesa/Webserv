@@ -44,6 +44,22 @@ void CgiData::closePipes() {
     if (pipe_parent_child != NULL) {
         close(pipe_parent_child[WRITE]);
     }
+    pipe_child_parent = NULL;
+    pipe_parent_child = NULL;
+}
+
+void CgiData::closeReadPipeFd() {
+    if (pipe_child_parent != NULL) {
+        close(pipe_child_parent[READ]);
+    }
+    pipe_child_parent = NULL;
+}
+
+void CgiData::closeWritePipeFd() {
+    if (pipe_parent_child[WRITE]) {
+        close(pipe_parent_child[WRITE]);
+    }
+    pipe_parent_child = NULL;
 }
 
 CgiData::~CgiData() {

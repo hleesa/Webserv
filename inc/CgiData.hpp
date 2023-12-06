@@ -28,6 +28,8 @@ public:
     int getConnSocket() const;
     bool cgiDied() const;
     void closePipes();
+    void closeReadPipeFd();
+    void closeWritePipeFd();
 };
 
 #endif //WEBSERV_CGIDATA_HPP

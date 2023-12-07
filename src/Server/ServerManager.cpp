@@ -259,7 +259,6 @@ void ServerManager::processDeleteCgiData(const int connection_socket) {
 
 void ServerManager::processReadPipeEvent(const k_event* event) {
     char buff[BUFFER_SIZE];
-    memset(buff, 0, BUFFER_SIZE);
     ssize_t bytes_read = read(event->ident, &buff, BUFFER_SIZE);
     CgiData* cgi_data = reinterpret_cast<CgiData*>(event->udata);
     Server* server = &servers[cgi_data->getConnSocket()];

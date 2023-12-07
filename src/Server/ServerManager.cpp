@@ -171,7 +171,8 @@ void ServerManager::processCgiOrMakeResponse(const k_event* event) {
 	const Config* config = findConfig(request->getHost(), request->getURL());
     if (isCgi(config, request)) {
         PostCgi post_cgi(request, config);
-        CgiData* cgi_data = post_cgi.cgipost();
+        conn_to_cgiData[event->ident] = post_cgi.cgipost();
+        CgiData* cgi_data = conn_to_cgiData[event->ident];
         cgi_data->setConnSocket(event->ident);
         change_list.push_back(makeEvent(cgi_data->getWritePipeFd(), EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, reinterpret_cast<void*>(cgi_data)));
         change_list.push_back(makeEvent(cgi_data->getReadPipeFd(), EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, reinterpret_cast<void*>(cgi_data)));
@@ -222,57 +223,37 @@ void ServerManager::processEvent(const k_event* event) {
             processTimeoutCgiEvent(event);
             break;
         case CGI_END:
-            processCgiEnd(event);
+            processWaitCgi(event);
             break;
     }
 }
 
 void ServerManager::processTimeoutCgiEvent(const k_event* event) {
-    CgiData* cgi_data = reinterpret_cast<CgiData*>(event->udata);
-    if(cgi_data != NULL && cgi_data->cgiDied()){
-        processCgiTermination(cgi_data);
-    }
+    processDeleteCgiData(event->ident);
     disconnectWithClient(event);
 }
 
-void ServerManager::processCgiEnd(const k_event* event) {
-    CgiData* cgi_data = reinterpret_cast<CgiData*>(event->udata);
-    if (cgi_data->cgiDied()) {
-        processCgiTermination(cgi_data);
-    }
-    else {
-        cgi_data->setCgiDie(true);
-        change_list.push_back(makeEvent(cgi_data->getReadPipeFd(), EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, reinterpret_cast<void*>(cgi_data)));
-    }
-}
-
-void ServerManager::processCgiTermination(CgiData* cgi_data) {
+void ServerManager::processWaitCgi(const k_event *event) {
     int status;
-    change_list.push_back(makeEvent(cgi_data->getChildPid(), EVFILT_TIMER, EV_DELETE, NOTE_SECONDS, TIMEOUT_SEC, reinterpret_cast<void*>(cgi_data)));
-    if (waitpid(cgi_data->getChildPid(), &status, 0) == ERROR) {
-        if (cgi_data->deleteDate()){
-            delete cgi_data;
-        }
+    if (waitpid(event->ident, &status, 0) == ERROR) {
         throw 500;
     }
     if (WIFEXITED(status)) { // 자식 종료
         int exit_status = WEXITSTATUS(status);
         if (exit_status == EXIT_FAILURE) { // 비정상 종료
-            if (cgi_data->deleteDate()) {
-                delete cgi_data;
-            }
             throw 500;
         }
     }
     else {
-        kill(cgi_data->getChildPid(), SIGTERM);
-        if (cgi_data->deleteDate()) {
-            delete cgi_data;
-        }
+        kill(event->ident, SIGTERM);
         throw 500;
     }
-    if (cgi_data->deleteDate()) {
-        delete cgi_data;
+}
+
+void ServerManager::processDeleteCgiData(const int connection_socket) {
+    if (conn_to_cgiData[connection_socket] != NULL) {
+        delete conn_to_cgiData[connection_socket];
+        conn_to_cgiData[connection_socket] = NULL;
     }
 }
 
@@ -294,13 +275,7 @@ void ServerManager::processReadPipeEvent(const k_event* event) {
         server->setResponse(PostCgi::makeResponse(server->getResponseStr()));
         change_list.push_back(makeEvent(cgi_data->getReadPipeFd(), EVFILT_READ, EV_DISABLE, 0, 0, reinterpret_cast<void*>(cgi_data)));
         change_list.push_back(makeEvent(cgi_data->getConnSocket(), EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, NULL));
-        if (cgi_data->cgiDied()) {
-            processCgiTermination(cgi_data);
-        }
-        else {
-            cgi_data->setCgiDie(true);
-            change_list.push_back(makeEvent(cgi_data->getChildPid(), EVFILT_PROC, EV_ADD | EV_ONESHOT, NOTE_EXIT, 0, reinterpret_cast<void*>(cgi_data)));
-        }
+        processDeleteCgiData(cgi_data->getConnSocket());
     }
     change_list.push_back(makeEvent(event->ident, EVFILT_TIMER, EV_ADD | EV_ONESHOT, NOTE_SECONDS, TIMEOUT_SEC, reinterpret_cast<void*>(cgi_data)));
 }

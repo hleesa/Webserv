@@ -16,7 +16,6 @@ typedef struct kevent k_event;
 class ServerManager {
 	private:
 		int kq;
-
 		std::vector<k_event> change_list;
 		k_event event_list[NUMBER_OF_EVENT];
 
@@ -24,6 +23,8 @@ class ServerManager {
 		const Config* default_config;
 		std::map<std::string, std::vector<const Config*> > server_name_to_config;
 		std::map<int, Server> servers;
+        std::map<int, CgiData*> conn_to_cgiData;
+
 		RequestParser parser;
 		
 		ServerManager();
@@ -49,8 +50,9 @@ class ServerManager {
         void processWritePipeEvent(const k_event* event);
 		void disconnectWithClient(const k_event* event);
         void processTimeoutCgiEvent(const k_event* event);
-        void processCgiEnd(const k_event* event);
-        void processCgiTermination(CgiData* cgi_data);
+
+        void processWaitCgi(const k_event *event);
+        void processDeleteCgiData(const int connection_socket);
 
 	public:
 		ServerManager(const std::vector<Config>* configs);

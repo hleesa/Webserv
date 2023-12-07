@@ -2,7 +2,6 @@
 #include "../../inc/MediaType.hpp"
 #include "../../inc/ToString.hpp"
 #include "../../inc/Get.hpp"
-#include "../../inc/GetCgi.hpp"
 #include "../../inc/Post.hpp"
 #include "../../inc/Delete.hpp"
 #include "../../inc/Head.hpp"

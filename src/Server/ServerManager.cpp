@@ -304,7 +304,6 @@ void ServerManager::processReceiveEvent(const k_event* event) {
     }
     buff[bytes_recv] = '\0';
 	parser.run(event->ident, buff);
-    change_list.push_back(makeEvent(event->ident, EVFILT_TIMER, EV_ADD | EV_ONESHOT, NOTE_SECONDS, TIMEOUT_SEC, NULL));
 }
 
 void ServerManager::processSendEvent(const k_event* event) {

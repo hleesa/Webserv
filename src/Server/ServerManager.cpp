@@ -32,7 +32,7 @@ void ServerManager::setConfigByServerName(const std::vector<Config>* configs) {
 		if (!is_used_ports[port]) {
             is_used_ports[port] = true;
 			int socket = openListenSocket(port);
-            listen_sockets.insert(socket);
+            listen_to_port.insert(std::pair<int, int>(socket, port));
 			if (fcntl(socket, F_SETFL, O_NONBLOCK, FD_CLOEXEC) == ERROR) {
 				throw (strerror(errno));
 			}
@@ -41,8 +41,8 @@ void ServerManager::setConfigByServerName(const std::vector<Config>* configs) {
 		std::vector<std::string>::iterator name = server_names.begin();
 		for (; name != server_names.end(); name++) {
 			const Config* config = &*itr;
-            std::string server_name = port == 80 ? *name : *name + ":" + to_string(port);
-			server_name_to_config[server_name].push_back(config);
+            std::string server_name = *name + ":" + to_string(port);
+            server_name_to_config[server_name].push_back(config);
 		}
 	}
 }
@@ -74,10 +74,10 @@ int ServerManager::openListenSocket(const int port) const {
 }
 
 void ServerManager::addListenEvent() {
-    std::set<int>::iterator itr = listen_sockets.begin();
+    std::map<int, int>::const_iterator itr;
 
-    for (; itr != listen_sockets.end(); itr++) {
-        change_list.push_back(makeEvent(*itr, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, NULL));
+    for (itr = listen_to_port.begin(); itr != listen_to_port.end(); itr++) {
+        change_list.push_back(makeEvent(itr->first, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, NULL));
     }
 }
 
@@ -121,7 +121,7 @@ EventType ServerManager::getEventType(const k_event* event){
     EventType event_type = EVENT_ERROR;
     switch (event->filter) {
         case EVFILT_READ:
-            if (listen_sockets.find(event->ident) != listen_sockets.end()) {
+            if (listen_to_port.find(event->ident) != listen_to_port.end()) {
                 event_type = LISTEN;
             }
             else if (servers.find(event->ident) != servers.end()) {
@@ -168,7 +168,7 @@ void ServerManager::processCgiOrMakeResponse(const k_event* event) {
         change_list.push_back(makeEvent(event->ident, EVFILT_TIMER, EV_ADD | EV_ONESHOT, NOTE_SECONDS, TIMEOUT_SEC, NULL));
         return;
     } 
-	const Config* config = findConfig(request->getHost(), request->getURL());
+	const Config* config = findConfig(request->getHost(), request->getURL(), event->ident);
     if (isCgi(config, request)) {
         PostCgi post_cgi(request, config);
         conn_to_cgiData[event->ident] = post_cgi.cgipost();
@@ -337,18 +337,27 @@ void ServerManager::processListenEvent(const k_event* event) {
     change_list.push_back(makeEvent(connection_socket, EVFILT_TIMER, EV_ADD | EV_ONESHOT, NOTE_SECONDS, TIMEOUT_SEC, NULL));
 }
 
-const Config* ServerManager::findConfig(const std::string host, const std::string url) {
-    if (server_name_to_config.find(host) == server_name_to_config.end()) {
+std::string getHostPort(const std::string host, const std::string port) {
+    if (host.find(":") != std::string::npos) {
+        return host;
+    }
+    return host + ":" + port;
+}
+
+const Config* ServerManager::findConfig(const std::string host, const std::string url, const int conn_socket) {
+    const int port = listen_to_port[servers[conn_socket].getListenSocket()];
+    const std::string host_port = getHostPort(host, to_string(port));
+    if (server_name_to_config.find(host_port) == server_name_to_config.end()) {
         return default_config;
     }
-    std::vector<const Config*>::iterator itr = server_name_to_config[host].begin();
-    for (;itr != server_name_to_config[host].end(); itr++) {
+    std::vector<const Config*>::iterator itr = server_name_to_config[host_port].begin();
+    for (;itr != server_name_to_config[host_port].end(); itr++) {
         const Config* config = *itr;
         if (config->hasLocationOf(url)) {
             return config;
         }
     }
-    const Config* config = *server_name_to_config[host].begin();
+    const Config* config = *server_name_to_config[host_port].begin();
     return config;
 }
 

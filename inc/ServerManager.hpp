@@ -19,7 +19,7 @@ class ServerManager {
 		std::vector<k_event> change_list;
 		k_event event_list[NUMBER_OF_EVENT];
 
-		std::set<int> listen_sockets;
+        std::map<int, int> listen_to_port;
 		const Config* default_config;
 		std::map<std::string, std::vector<const Config*> > server_name_to_config;
 		std::map<int, Server> servers;
@@ -34,7 +34,7 @@ class ServerManager {
 		void addListenEvent(void);
 		k_event makeEvent(uintptr_t ident, int16_t filter, uint16_t flags, uint32_t fflags, intptr_t data, void* udata) const;
 
-		const Config* findConfig(const std::string host, const std::string url);
+		const Config* findConfig(const std::string host, const std::string url, const int conn_socket);
         void handleError(const int return_value, const int listen_socket) const;
 
         void processEvents(const int events);

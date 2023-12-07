@@ -24,6 +24,7 @@ public:
 
     HttpResponseMessage makeResponse(const Config* config);
 
+    int getListenSocket();
     HttpRequestMessage* getRequestPtr();
     HttpResponseMessage* getResponsePtr();
 

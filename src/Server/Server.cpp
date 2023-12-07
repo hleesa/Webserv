@@ -48,6 +48,10 @@ HttpResponseMessage Server::makeResponse(const Config* config) {
     return HttpResponseMessage();
 }
 
+int Server::getListenSocket() {
+    return listen_socket;
+}
+
 HttpResponseMessage* Server::getResponsePtr() {
     return &response;
 }

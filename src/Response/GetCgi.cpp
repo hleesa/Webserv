@@ -1,5 +1,6 @@
 #include <map>
 #include <unistd.h>
+#include <fcntl.h>
 #include "../../inc/GetCgi.hpp"
 #include "../../inc/Constants.hpp"
 #include "../../inc/ServerUtils.hpp"
@@ -70,12 +71,17 @@ std::vector<std::string> parseUrl(const std::string url) {
 }
 
 std::string getScriptPath(const std::string url, const std::string root) {
-    size_t idx = url.find("?");
-    if (idx == std::string::npos) {
+    size_t url_end = url.find("?");
+    if (url_end == std::string::npos) {
         throw 400;
     }
-    std::string base_url = root.empty() ? "./" : root;
-    return base_url + url.substr(1, idx - 1);
+    std::string base_url = ".";
+    size_t url_begin = 0;
+    if (root.empty()) {
+        base_url = root;
+        base_url = base_url.length();
+    }
+    return base_url + url.substr(url_begin, url_end);
 }
 
 bool GetCgi::isValidCgiGetUrl() const {
@@ -132,18 +138,21 @@ std::string getQueryString(const std::string url) {
     return url.substr(idx + 1);
 }
 
-void execveCgiScript(int* pipe_fd, const std::string requestUrl, Location cgi_location) {
+void execveCgiScript(int* pipe_child_parent, const std::string requestUrl, Location cgi_location) {
     char** cgi_environ = createCgiEnviron(getQueryString(requestUrl));
     char* python_interpreter = strdup(cgi_location.getCgiPath().c_str());
     char* python_script = strdup(getScriptPath(requestUrl, cgi_location.getRoot()).c_str());
     char* const command[] = {python_interpreter, python_script, NULL};
-    if (close(pipe_fd[READ]) == ERROR) {
+    if (close(pipe_child_parent[READ]) == ERROR) {
         exit(EXIT_FAILURE);
     }
-    if (dup2(pipe_fd[WRITE], STDOUT_FILENO) == ERROR) {
+    if (fcntl(pipe_child_parent[WRITE], F_SETFL, O_NONBLOCK, FD_CLOEXEC) == ERROR) {
+        throw (strerror(errno));
+    }
+    if (dup2(pipe_child_parent[WRITE], STDOUT_FILENO) == ERROR) {
         exit(EXIT_FAILURE);
     }
-    if (close(pipe_fd[WRITE]) == ERROR) {
+    if (close(pipe_child_parent[WRITE]) == ERROR) {
         exit(EXIT_FAILURE);
     }
     if (execve(python_interpreter, command, cgi_environ) == ERROR) {
@@ -152,26 +161,8 @@ void execveCgiScript(int* pipe_fd, const std::string requestUrl, Location cgi_lo
     exit(EXIT_FAILURE);
 }
 
-std::string readCgiResponse(int* pipe_fd, pid_t pid) {
-    std::string body;
-
-    (void) pid;
-//    char rcv_buffer[BUFSIZ];
-//    ssize_t bytes_read;
-//    while ((bytes_read = read(pipe_fd[READ], rcv_buffer, sizeof(rcv_buffer))) > 0) {
-//        body.append(rcv_buffer, bytes_read);
-//    }
-//    if (bytes_read == ERROR) {
-//        throw 500;
-//    }
-    if (close(pipe_fd[READ]) == ERROR) {
-        throw 500;
-    }
-    return body;
-}
-
-// /cgi-bin/cgi_get.py?input=Hello
-CgiData* GetCgi::makeHttpResponseMessage() {
+// /cgi-bin/get_cgi.py?input=Hello
+CgiData* GetCgi::execveCgi() {
     if (!isValidCgiGetUrl()) {
         throw 400;
     }
@@ -191,10 +182,55 @@ CgiData* GetCgi::makeHttpResponseMessage() {
     else {
         execveCgiScript(pipe_child_parent, request->getURL(), config->getLocations()[location_key]);
     }
-    return new CgiData(NULL, pipe_child_parent, pid);
+    if (fcntl(pipe_child_parent[READ], F_SETFL, O_NONBLOCK, FD_CLOEXEC) == ERROR) {
+        throw (strerror(errno));
+    }
+    return new CgiData(pipe_child_parent, NULL, pid);
 }
 
 void GetCgi::checkAllowed(const std::string method) const {
     if (method != "GET")
         throw 405;
+}
+
+int findStatusCode(std::istringstream& ss) {
+    std::string line;
+    std::getline(ss, line);
+
+    return std::atoi(line.substr(8, 3).c_str());
+}
+
+void parseHeaderLine(std::istringstream& ss, std::map<std::string, std::string>& header_fields) {
+    std::string line;
+    std::string key;
+    std::string contents;
+    size_t pos;
+
+    while (std::getline(ss, line) && line != "\r") {
+        pos = line.find(':');
+        key = line.substr(0, pos);
+        contents = line.substr(pos + 1);
+        if (!contents.empty() && *contents.rbegin() == '\r') {
+            contents = contents.substr(0, contents.size() - 1);
+        }
+        header_fields.insert(std::make_pair(key, contents));
+    }
+}
+
+HttpResponseMessage GetCgi::makeResponse(const std::string cgi_response) {
+    std::istringstream ss(cgi_response);
+    std::map<std::string, std::string> header_fields = Method::makeHeaderFields();
+
+    if (cgi_response == "") {
+        throw 400;
+    }
+    int status_code = findStatusCode(ss);
+    parseHeaderLine(ss, header_fields);
+    std::string body;
+    size_t pos;
+    pos = cgi_response.find("\r\n\r\n");
+    body = cgi_response.substr(pos + 4);
+    header_fields["Content-length"] = to_string(body.length());
+
+    return HttpResponseMessage(status_code, header_fields, body);
 }

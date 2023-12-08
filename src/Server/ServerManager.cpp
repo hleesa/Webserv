@@ -2,7 +2,7 @@
 #include "../../inc/ToString.hpp"
 #include "../../inc/ErrorPage.hpp"
 #include "../../inc/Method.hpp"
-// #include "../../inc/GetCgi.hpp"
+ #include "../../inc/GetCgi.hpp"
 #include "../../inc/PostCgi.hpp"
 #include "../../inc/ServerUtils.hpp"
 #include <sys/socket.h>
@@ -171,7 +171,7 @@ void ServerManager::processCgi(const k_event* event, const HttpRequestMessage* r
 	}
 	else if (request->getMethod() == "GET") {
 		GetCgi get_cgi(request, config);
-		conn_to_cgiData[event->ident] = get_cgi.cgiget();
+        conn_to_cgiData[event->ident] = get_cgi.execveCgi();
 		CgiData* cgi_data = conn_to_cgiData[event->ident];
 		cgi_data->setConnSocket(event->ident);
 		change_list.push_back(makeEvent(cgi_data->getReadPipeFd(), EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, reinterpret_cast<void*>(cgi_data)));
@@ -207,7 +207,7 @@ void ServerManager::processEvent(const k_event* event) {
     switch (event_type) {
         case EVENT_ERROR:
             std::cout << "error " << strerror(event->data) << '\n';
-        	checkEventError(event);
+//        	checkEventError(event);
             break;
         case LISTEN:
             processListenEvent(event);

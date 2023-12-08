@@ -8,13 +8,13 @@
 
 class Server {
 private:
-    int listen_socket;
+    int port;
     HttpRequestMessage request;
     HttpResponseMessage response;
 
 public:
     Server();
-    Server(const int listen_socket);
+    Server(const int port);
     Server& operator=(const Server& other);
     ~Server();
 
@@ -23,10 +23,9 @@ public:
     std::string getResponseStr();
 
     HttpResponseMessage makeResponse(const Config* config);
-
-    int getListenSocket();
     HttpRequestMessage* getRequestPtr();
     HttpResponseMessage* getResponsePtr();
+    int getPort() const;
 
 };
 

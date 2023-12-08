@@ -168,7 +168,7 @@ void ServerManager::processCgiOrMakeResponse(const k_event* event) {
         change_list.push_back(makeEvent(event->ident, EVFILT_TIMER, EV_ADD | EV_ONESHOT, NOTE_SECONDS, TIMEOUT_SEC, NULL));
         return;
     } 
-	const Config* config = findConfig(request->getHost(), request->getURL(), event->ident);
+	const Config* config = findConfig(request->getHost(), request->getURL(), servers[event->ident].getPort());
     if (isCgi(config, request)) {
         PostCgi post_cgi(request, config);
         conn_to_cgiData[event->ident] = post_cgi.cgipost();
@@ -331,7 +331,7 @@ void ServerManager::processListenEvent(const k_event* event) {
     if (fcntl(connection_socket, F_SETFL, O_NONBLOCK, FD_CLOEXEC) == ERROR) {
         throw (strerror(errno));
     }
-    servers[connection_socket] = Server(event->ident);
+    servers[connection_socket] = Server(listen_to_port[event->ident]);
     change_list.push_back(makeEvent(connection_socket, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, NULL));
     change_list.push_back(makeEvent(connection_socket, EVFILT_TIMER, EV_ADD | EV_ONESHOT, NOTE_SECONDS, TIMEOUT_SEC, NULL));
 }
@@ -343,8 +343,7 @@ std::string getHostPort(const std::string host, const std::string port) {
     return host + ":" + port;
 }
 
-const Config* ServerManager::findConfig(const std::string host, const std::string url, const int conn_socket) {
-    const int port = listen_to_port[servers[conn_socket].getListenSocket()];
+const Config* ServerManager::findConfig(const std::string host, const std::string url, const int port) {
     const std::string host_port = getHostPort(host, to_string(port));
     if (server_name_to_config.find(host_port) == server_name_to_config.end()) {
         return default_config;

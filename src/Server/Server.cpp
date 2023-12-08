@@ -3,15 +3,15 @@
 #include "../../inc/ErrorPage.hpp"
 #include "../../inc/Resource.hpp"
 
-Server::Server() : listen_socket(0) {
+Server::Server() : port(0), request(), response() {
 }
 
-Server::Server(const int listen_socket) : listen_socket(listen_socket) {
+Server::Server(const int port) : port(port), request(), response() {
 }
 
 Server& Server::operator=(const Server& other) {
     if (&other != this) {
-        listen_socket = other.listen_socket;
+        port = other.port;
         request = other.request;
         response = other.response;
     }
@@ -48,8 +48,8 @@ HttpResponseMessage Server::makeResponse(const Config* config) {
     return HttpResponseMessage();
 }
 
-int Server::getListenSocket() {
-    return listen_socket;
+int Server::getPort() const {
+    return port;
 }
 
 HttpResponseMessage* Server::getResponsePtr() {

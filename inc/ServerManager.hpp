@@ -34,7 +34,7 @@ class ServerManager {
 		void addListenEvent(void);
 		k_event makeEvent(uintptr_t ident, int16_t filter, uint16_t flags, uint32_t fflags, intptr_t data, void* udata) const;
 
-		const Config* findConfig(const std::string host, const std::string url, const int conn_socket);
+		const Config* findConfig(const std::string host, const std::string url, const int port);
         void handleError(const int return_value, const int listen_socket) const;
 
         void processEvents(const int events);

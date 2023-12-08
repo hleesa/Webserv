@@ -7,7 +7,7 @@
 </head>
 <body>
     <h1>텍스트 입력 페이지</h1>
-    <form id="myForm">
+    <form id="myForm" onsubmit="sendData(); return false;">
         <label for="inputText">텍스트 입력:</label>
         <input type="text" id="inputText" name="text" required>
         <button type="button" onclick="sendData()">보내기</button>

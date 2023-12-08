@@ -5,6 +5,7 @@
 #include "../../inc/ToString.hpp"
 #include "../../inc/Constants.hpp"
 #include "../../inc/Method.hpp"
+#include "../../inc/ServerUtils.hpp"
 #include <fcntl.h>
 #include <iostream>
 
@@ -18,6 +19,19 @@ PostCgi::PostCgi(const HttpRequestMessage* request, const Config* config) : requ
 CgiData* PostCgi::cgipost() {
 	check_request_line(request->getRequestLine());
 	check_header_field(request->getHeaderFields());
+
+	Location location = config->getLocations()[location_key];
+	std::string path;
+	if (location_key == "/cgi_bin") {
+		path = (location.getCgiPath()).c_str();
+	}
+	else {
+		path = (location.getRoot() + '/' + location.getCgiPath()).c_str();
+	}
+	std::cout << "path : " << path << std::endl;
+	if (access(path.c_str(), F_OK) == -1) {
+		throw 404;
+	}
 
 	int* pipe_ptoc = new int[2];
 	int* pipe_ctop = new int[2];
@@ -67,6 +81,10 @@ void PostCgi::check_request_line(std::vector<std::string> request_line) {
 	} else {
 		abs_path = config->getLocations()[location_key].getRoot() + '/' + rel_path;
 	}
+	if (access(abs_path.c_str(), F_OK) == -1) {
+		throw 404;
+	}
+	std::cout << "abs_path : " << abs_path << std::endl;
 }
 
 void PostCgi::check_header_field(std::map<std::string, std::vector<std::string> > header_field) {

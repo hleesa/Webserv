@@ -45,6 +45,7 @@ class ServerManager {
 		void processReceiveEvent(const k_event* event);
         void assignParsedRequest(const k_event* event);
         void processCgiOrMakeResponse(const k_event* event);
+		void processCgi(const k_event* event, const HttpRequestMessage* request, const Config* config);
 		void processSendEvent(const k_event* event);
         void processReadPipeEvent(const k_event* event);
         void processWritePipeEvent(const k_event* event);

@@ -169,15 +169,15 @@ void ServerManager::processCgi(const k_event* event, const HttpRequestMessage* r
 		change_list.push_back(makeEvent(cgi_data->getChildPid(), EVFILT_PROC, EV_ADD | EV_ONESHOT, NOTE_EXIT, 0, reinterpret_cast<void*>(cgi_data)));
 		change_list.push_back(makeEvent(event->ident, EVFILT_TIMER, EV_ADD | EV_ONESHOT, NOTE_SECONDS, TIMEOUT_SEC, reinterpret_cast<void*>(cgi_data)));
 	}
-	else if (request->getMethod() == "GET") {
-		GetCgi get_cgi(request, config);
-		conn_to_cgiData[event->ident] = get_cgi.cgiget();
-		CgiData* cgi_data = conn_to_cgiData[event->ident];
-		cgi_data->setConnSocket(event->ident);
-		change_list.push_back(makeEvent(cgi_data->getReadPipeFd(), EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, reinterpret_cast<void*>(cgi_data)));
-		change_list.push_back(makeEvent(cgi_data->getChildPid(), EVFILT_PROC, EV_ADD | EV_ONESHOT, NOTE_EXIT, 0, reinterpret_cast<void*>(cgi_data)));
-		change_list.push_back(makeEvent(event->ident, EVFILT_TIMER, EV_ADD | EV_ONESHOT, NOTE_SECONDS, TIMEOUT_SEC, reinterpret_cast<void*>(cgi_data)));
-	}
+	// else if (request->getMethod() == "GET") {
+	// 	GetCgi get_cgi(request, config);
+	// 	conn_to_cgiData[event->ident] = get_cgi.cgiget();
+	// 	CgiData* cgi_data = conn_to_cgiData[event->ident];
+	// 	cgi_data->setConnSocket(event->ident);
+	// 	change_list.push_back(makeEvent(cgi_data->getReadPipeFd(), EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, reinterpret_cast<void*>(cgi_data)));
+	// 	change_list.push_back(makeEvent(cgi_data->getChildPid(), EVFILT_PROC, EV_ADD | EV_ONESHOT, NOTE_EXIT, 0, reinterpret_cast<void*>(cgi_data)));
+	// 	change_list.push_back(makeEvent(event->ident, EVFILT_TIMER, EV_ADD | EV_ONESHOT, NOTE_SECONDS, TIMEOUT_SEC, reinterpret_cast<void*>(cgi_data)));
+	// }
 }
 
 void ServerManager::processCgiOrMakeResponse(const k_event* event) {
@@ -190,7 +190,15 @@ void ServerManager::processCgiOrMakeResponse(const k_event* event) {
     } 
 	const Config* config = findConfig(request->getHost(), request->getURL(), servers[event->ident].getPort());
     if (isCgi(config, request)) {
-		processCgi(event, request, config);
+		try {
+			processCgi(event, request, config);
+		}
+		catch (const int status_code) {
+        	change_list.push_back(makeEvent(event->ident, EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, NULL));
+        	servers[event->ident].setResponse(ErrorPage::makeErrorPageResponse(status_code, config));
+        	change_list.push_back(makeEvent(event->ident, EVFILT_TIMER, EV_ADD | EV_ONESHOT, NOTE_SECONDS, TIMEOUT_SEC, NULL));
+			return ;
+		}
     }
     else {
         change_list.push_back(makeEvent(event->ident, EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, NULL));
@@ -206,7 +214,7 @@ void ServerManager::processEvent(const k_event* event) {
 
     switch (event_type) {
         case EVENT_ERROR:
-            std::cout << "error " << strerror(event->data) << '\n';
+            // std::cout << "error " << strerror(event->data) << '\n';
         	checkEventError(event);
             break;
         case LISTEN:
@@ -289,9 +297,9 @@ void ServerManager::processReadPipeEvent(const k_event* event) {
 		if (request->getMethod() == "POST") {
 			server->setResponse(PostCgi::makeResponse(server->getResponseStr()));
 		}
-		else if (request->getMethod() == "GET") {
-			server->setResponse(GetCgi::makeResponse(server->getResponseStr()));
-		}
+		// else if (request->getMethod() == "GET") {
+		// 	server->setResponse(GetCgi::makeResponse(server->getResponseStr()));
+		// }
         change_list.push_back(makeEvent(cgi_data->getReadPipeFd(), EVFILT_READ, EV_DISABLE, 0, 0, reinterpret_cast<void*>(cgi_data)));
         change_list.push_back(makeEvent(cgi_data->getConnSocket(), EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, NULL));
         processDeleteCgiData(cgi_data->getConnSocket());
@@ -383,8 +391,9 @@ const Config* ServerManager::findConfig(const std::string host, const std::strin
 }
 
 void ServerManager::checkEventError(const k_event* event) {
-    if (servers.find(event->ident) != servers.end())
+    if (servers.find(event->ident) != servers.end()) {
         disconnectWithClient(event);
+	}
 }
 
 k_event ServerManager::makeEvent(

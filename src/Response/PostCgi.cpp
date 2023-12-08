@@ -225,5 +225,3 @@ void PostCgi::parseHeaderLine(std::istringstream& ss, std::map<std::string, std:
 		header_fields.insert(std::make_pair(key, contents));
 	}
 }
-
-//"Status: 200 OK\r\nContent-Type: text/html; charset=utf-8\r\n\r\nINPUT=HELLO"...

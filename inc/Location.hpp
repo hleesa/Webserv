@@ -54,11 +54,6 @@ public:
 	
 	bool hasReturnValue() const;
 	bool isNotAllowedMethod(const std::string method) const;
-
-	friend std::ostream& operator<<(std::ostream& out, Location& location);
 };
-
-std::ostream& operator<<(std::ostream& out, Location& location);
-
 
 #endif //LOCATION_HPP

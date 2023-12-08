@@ -36,7 +36,6 @@ Config::Config(std::vector< std::vector< std::string> >& server_block)
 		index.push_back("index.html");
 	}
 	setDefaultErrorPage();
-	// print_checker();
 }
 
 Config::Config(const Config& other) {
@@ -179,38 +178,3 @@ void Config::server_token_parser(std::vector<std::string> one_line, std::set<std
 		throw std::invalid_argument("Error: invalid server key\n");
 	}
 }
-
-// 인자 확인하는 함수
-
-// void Config::print_checker(void) {
-// 	std::cout << "============server block=============\n";
-// 	std::cout << "port : " << port << std::endl;
-// 	std::cout << std::endl;
-// 	std::cout << "host : " << host << std::endl;
-// 	std::cout << std::endl;
-// 	for (int i = 0; i < name.size(); i++) {
-// 		std::cout << "name : " << name[i]<< std::endl;
-// 	}
-// 	std::cout << std::endl;
-// 	std::cout << "error_page : " << std::endl;
-// 	print_map(error_page);
-// 	std::cout << std::endl;
-// 	std::cout << "root : " << root << std::endl;
-// 	std::cout << std::endl;
-// 	for (int i = 0; i < index.size(); i++) {
-// 		std::cout << "index : " << index[i]<< std::endl;
-// 	}
-// 	std::cout << std::endl;
-// 	std::cout << "limit_body_size : " << limit_body_size << std::endl;
-// 	std::cout << std::endl;
-// 	std::cout << "locations : " << std::endl;
-// 	print_map(locations);
-// 	std::cout << std::endl;
-// }
-
-// template<typename K, typename V>
-// void Config::print_map(std::map<K, V> &m) {
-// 	for (auto &pair: m) {
-// 		std::cout << "location key : " << pair.first << "\ncontent\n" << pair.second << "\n";
-// 	}
-// }

@@ -24,8 +24,6 @@ class Config {
 		ssize_t limit_body_size;
 		std::map<std::string, Location> locations;
 
-		// void setLocation(std::vector< std::vector<std::string> >& loc_block, const std::string key, bool& hasCgi);
-
 		void setDefaultErrorPage();
 
 	public:
@@ -47,10 +45,6 @@ class Config {
 		std::map<std::string, Location> getLocations() const;
 		bool hasLocationOf(const std::string url) const;
 
-//인자 확인 함수
-		// void print_checker(void);
-		// template<typename K, typename V>
-		// void print_map(std::map<K, V> &m);
 };
 
 

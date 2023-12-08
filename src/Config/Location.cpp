@@ -246,20 +246,3 @@ void Location::parseCgiExt(std::vector<std::string>& line, std::set<std::string>
 	cgi_ext = line[1];
 	duplicated.insert(directive);
 }
-
-std::ostream& operator<<(std::ostream& out, Location& l) {
-	out << "\n-----http methods-----\n";
-	for (std::set<std::string>::iterator itr = l.http_methods.begin(); itr != l.http_methods.end(); itr++)
-		out << *itr << " ";
-	out << "\n-----return-----\n";
-	out << "status code : " << l.return_value.first << "\nstring : " << l.return_value.second << "\n";
-	out << "-----root-----\n" << l.root << "\n";
-	out << "-----index-----\n";
-	for (std::vector<std::string>::iterator itr = l.index.begin(); itr != l.index.end(); itr++)
-		out << *itr << " ";
-	out << "\n-----autoindex-----\n" << std::boolalpha << l.autoindex << std::endl;
-	out << "\n-----autoindex-----\n" << l.limit_body_size << std::endl;
-	out << "\n-----cgi_ext-----\n" << l.cgi_ext << std::endl;
-	out << "\n-----cgi_path-----\n" << l.cgi_path << std::endl;
-	return out;
-}

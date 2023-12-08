@@ -8,8 +8,11 @@ Delete::Delete(const HttpRequestMessage* request, const Config* config) {
 }
 
 HttpResponseMessage Delete::makeHttpResponseMessage() {
-	std::string path = findPath();
+	std::string path = findPathByRoot(request->getURL());
 
+	if (access(path.c_str(), F_OK) == -1) {
+		throw 404;
+	}
 	if (remove(path.c_str()) == -1) {
 		throw 500;
 	}
@@ -22,9 +25,11 @@ void Delete::handleError(const std::string path) const {
 	}
 }
 
-std::string Delete::findPath() const {
+std::string Delete::findPathByRoot(const std::string url) const{
 	std::string root = findRoot();
-	std::string url = request->getURL();
-
-	return root + url;
+	
+	if (config->getLocations()[location_key].getRoot().empty()) {
+		return root + "/" + url;
+	}
+	return root + "/" + url.substr(location_key.size());
 }

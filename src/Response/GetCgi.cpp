@@ -188,11 +188,6 @@ CgiData* GetCgi::execveCgi() {
     return new CgiData(pipe_child_parent, NULL, pid);
 }
 
-void GetCgi::checkAllowed(const std::string method) const {
-    if (method != "GET")
-        throw 405;
-}
-
 int findStatusCode(std::istringstream& ss) {
     std::string line;
     std::getline(ss, line);

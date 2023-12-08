@@ -43,3 +43,8 @@ bool isCgi(const Config* config, const HttpRequestMessage* request) {
     }
     return url.substr(url.size() - extension.size()) == extension;
 }
+
+void checkAllowed(const std::string method) {
+    if (method != method)
+        throw 405;
+}

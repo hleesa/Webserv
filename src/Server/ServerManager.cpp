@@ -160,6 +160,7 @@ void ServerManager::assignParsedRequest(const k_event* event) {
 
 void ServerManager::processCgi(const k_event* event, const HttpRequestMessage* request, const Config* config) {
     std::string method = request->getMethod();
+	checkAllowed(method);
 	if (method == "POST") {
         PostCgi post_cgi(request, config);
         conn_to_cgiData[event->ident] = post_cgi.execveCgi();
@@ -188,7 +189,15 @@ void ServerManager::processCgiOrMakeResponse(const k_event* event) {
     } 
 	const Config* config = findConfig(request->getHost(), request->getURL(), servers[event->ident].getPort());
     if (isCgi(config, request)) {
-		processCgi(event, request, config);
+		try {
+			processCgi(event, request, config);
+		}
+		catch (const int status_code) {
+        	change_list.push_back(makeEvent(event->ident, EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, NULL));
+        	servers[event->ident].setResponse(ErrorPage::makeErrorPageResponse(status_code, config));
+        	change_list.push_back(makeEvent(event->ident, EVFILT_TIMER, EV_ADD | EV_ONESHOT, NOTE_SECONDS, TIMEOUT_SEC, NULL));
+			return ;
+		}
     }
     else {
         change_list.push_back(makeEvent(event->ident, EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, NULL));

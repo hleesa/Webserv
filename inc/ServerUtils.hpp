@@ -7,5 +7,6 @@
 
 std::string findLocationKey(const Config* config, const HttpRequestMessage* request);
 bool isCgi(const Config* config, const HttpRequestMessage* request);
+void checkAllowed(const std::string method);
 
 #endif

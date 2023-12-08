@@ -104,7 +104,7 @@ std::map<std::string, std::string> Get::makeHeaderFields(const std::string& body
 }
 
 bool checkFileExistence(const std::string file_name) {
-	return !access(file_name.c_str(), R_OK);
+	return !access(file_name.c_str(), F_OK | R_OK);
 }
 
 bool isDirectory(const std::string& path) {

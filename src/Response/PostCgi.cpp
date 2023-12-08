@@ -19,6 +19,16 @@ CgiData* PostCgi::cgipost() {
 	check_request_line(request->getRequestLine());
 	check_header_field(request->getHeaderFields());
 
+	if (location_key == "/cgi-bin") {
+		if (access((config->getLocations()[location_key].getCgiPath()).c_str(), F_OK | X_OK) == -1) {
+			throw 400;
+		}
+	} else {
+		if (access((config->getLocations()[location_key].getRoot() + '/' + config->getLocations()[location_key].getCgiPath()).c_str(), F_OK | X_OK) == -1) {
+			throw 400;
+		}
+	}
+
 	int* pipe_ptoc = new int[2];
 	int* pipe_ctop = new int[2];
 	if (pipe(pipe_ptoc) == -1 || pipe(pipe_ctop) == -1) {
@@ -66,6 +76,11 @@ void PostCgi::check_request_line(std::vector<std::string> request_line) {
 		}
 	} else {
 		abs_path = config->getLocations()[location_key].getRoot() + '/' + rel_path;
+	}
+
+	std::ifstream check_file(abs_path.c_str());
+	if (!check_file.good()) {
+		std::ofstream make_file(abs_path.c_str());
 	}
 }
 

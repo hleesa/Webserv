@@ -92,9 +92,7 @@ void ServerManager::run() {
 			change_list.clear();
 			processEvents(events);
 		}
-		catch (const char* error) {
-			std::cout << error << '\n';
-		}
+		catch (const char* error) {}
     }
 }
 
@@ -234,7 +232,6 @@ void ServerManager::processEvent(const k_event* event) {
             processWritePipeEvent(event);
             break;
         case TIMEOUT:
-            std::cout << "time out\n";
             disconnectWithClient(event);
             break;
         case TIMEOUT_CGI:
@@ -410,7 +407,7 @@ void ServerManager::disconnectWithClient(const k_event* event) {
 
     linger.l_onoff = 1;
     linger.l_linger = 0;
-    setsockopt(event->ident, SOL_SOCKET, SO_LINGER, &linger, sizeof(linger)); // Linger option
+    setsockopt(event->ident, SOL_SOCKET, SO_LINGER, &linger, sizeof(linger));
     close(event->ident);
     servers.erase(event->ident);
 }

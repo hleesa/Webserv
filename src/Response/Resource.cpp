@@ -3,7 +3,6 @@
 #include <fstream>
 #include <iostream>
 #include <dirent.h>
-#include <sys/stat.h>
 
 Resource::Resource() {}
 
@@ -71,7 +70,9 @@ std::string Resource::makeDirectoryList() {
 		content += "\t\t<li><a href=\"" + name + "\">" + name + "</a></li>\n";	
 	}
 	content += "\t\t</ul>\n</body>\n</html>\n";
-    closedir(dir);
+    if (closedir(dir) == -1) {
+		throw 500;
+	}
 	this->path += "/.html";
 	return content;
 }
@@ -81,13 +82,4 @@ std::string Resource::make() {
 		return makeDirectoryList();
 	}
 	return read();
-}
-
-bool isDirectory(const std::string& path) {
-    struct stat file_info;
-    
-    if (stat(path.c_str(), &file_info) != 0) {
-        return false;
-    }
-    return S_ISDIR(file_info.st_mode);
 }

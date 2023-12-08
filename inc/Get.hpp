@@ -26,5 +26,6 @@ class Get : public Method {
 };
 
 bool checkFileExistence(const std::string file_name);
+bool isDirectory(const std::string& path);
 
 #endif

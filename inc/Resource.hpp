@@ -24,6 +24,4 @@ class Resource {
 		std::string make();
 };
 
-bool isDirectory(const std::string& path);
-
 #endif

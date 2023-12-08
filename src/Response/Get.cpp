@@ -2,7 +2,7 @@
 #include "../../inc/MediaType.hpp"
 #include "../../inc/CodeToReason.hpp"
 #include <unistd.h>
-#include <ctime>
+#include <sys/stat.h>
 
 Get::Get(const HttpRequestMessage* request, const Config* config) : Method(request, config) {
 }
@@ -84,10 +84,7 @@ std::string Get::findResourcePath() const {
 }
 
 bool Get::isDirectoryList(const std::string path) const {
-	// if (isDirectory(path)) {
-	// 	throw 403;
-	// }
-	if (path.size()) {
+	if (!path.empty()) {
 		return false;
 	}
 	if (!config->getLocations()[location_key].getAutoindex()) {
@@ -108,4 +105,13 @@ std::map<std::string, std::string> Get::makeHeaderFields(const std::string& body
 
 bool checkFileExistence(const std::string file_name) {
 	return !access(file_name.c_str(), R_OK);
+}
+
+bool isDirectory(const std::string& path) {
+    struct stat file_info;
+    
+    if (stat(path.c_str(), &file_info) != 0) {
+        return false;
+    }
+    return S_ISDIR(file_info.st_mode);
 }

@@ -5,7 +5,7 @@
 #include "HttpRequestMessage.hpp"
 #include <string>
 
-std::string findLocationKey(const Config* config, const HttpRequestMessage* request );
+std::string findLocationKey(const Config* config, const HttpRequestMessage* request);
 bool isCgi(const Config* config, const HttpRequestMessage* request);
 
 #endif

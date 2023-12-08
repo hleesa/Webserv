@@ -8,7 +8,7 @@
 
 class ErrorPage {
 	private:
-		static std::string makeDate();
+	
 	public:
 		static HttpResponseMessage makeErrorPageResponse(const int status_code, const Config* config);
 		static std::string findErrorPageFilePath(const int status_code, const Config* config);

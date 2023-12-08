@@ -56,8 +56,6 @@ class ServerManager {
 
 	public:
 		ServerManager(const std::vector<Config>* configs);
-		// ServerManager(const ServerManager& other);
-		// ServerManager operator=(const ServerManager& other);
 		~ServerManager();
 
 		void run();

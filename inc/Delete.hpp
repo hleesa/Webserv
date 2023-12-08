@@ -9,7 +9,6 @@
 
 class Delete : public Method {
 	private:
-		
 		void handleError(const std::string path) const;
 		std::string findPathByRoot(const std::string url) const;
 		

@@ -4,6 +4,7 @@
 #include "../../inc/CgiData.hpp"
 #include "../../inc/ToString.hpp"
 #include "../../inc/Constants.hpp"
+#include "../../inc/Method.hpp"
 #include <fcntl.h>
 #include <iostream>
 
@@ -185,7 +186,7 @@ char** PostCgi::postCgiEnv() {
 
 HttpResponseMessage PostCgi::makeResponse(const std::string cgi_response) {
 	std::istringstream ss(cgi_response);
-	std::map<std::string, std::string> header_fields;
+	std::map<std::string, std::string> header_fields = Method::makeHeaderFields();
 	
 	if (cgi_response == "") {
 		throw 400;

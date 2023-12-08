@@ -159,25 +159,23 @@ void ServerManager::assignParsedRequest(const k_event* event) {
 }
 
 void ServerManager::processCgi(const k_event* event, const HttpRequestMessage* request, const Config* config) {
-	if (request->getMethod() == "POST") {
-		PostCgi post_cgi(request, config);
-		conn_to_cgiData[event->ident] = post_cgi.cgipost();
-		CgiData* cgi_data = conn_to_cgiData[event->ident];
-		cgi_data->setConnSocket(event->ident);
-		change_list.push_back(makeEvent(cgi_data->getWritePipeFd(), EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, reinterpret_cast<void*>(cgi_data)));
-		change_list.push_back(makeEvent(cgi_data->getReadPipeFd(), EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, reinterpret_cast<void*>(cgi_data)));
-		change_list.push_back(makeEvent(cgi_data->getChildPid(), EVFILT_PROC, EV_ADD | EV_ONESHOT, NOTE_EXIT, 0, reinterpret_cast<void*>(cgi_data)));
-		change_list.push_back(makeEvent(event->ident, EVFILT_TIMER, EV_ADD | EV_ONESHOT, NOTE_SECONDS, TIMEOUT_SEC, reinterpret_cast<void*>(cgi_data)));
-	}
-	else if (request->getMethod() == "GET") {
+    std::string method = request->getMethod();
+	if (method == "POST") {
+        PostCgi post_cgi(request, config);
+        conn_to_cgiData[event->ident] = post_cgi.execveCgi();
+    }
+	else if (method == "GET") {
 		GetCgi get_cgi(request, config);
         conn_to_cgiData[event->ident] = get_cgi.execveCgi();
-		CgiData* cgi_data = conn_to_cgiData[event->ident];
-		cgi_data->setConnSocket(event->ident);
-		change_list.push_back(makeEvent(cgi_data->getReadPipeFd(), EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, reinterpret_cast<void*>(cgi_data)));
-		change_list.push_back(makeEvent(cgi_data->getChildPid(), EVFILT_PROC, EV_ADD | EV_ONESHOT, NOTE_EXIT, 0, reinterpret_cast<void*>(cgi_data)));
-		change_list.push_back(makeEvent(event->ident, EVFILT_TIMER, EV_ADD | EV_ONESHOT, NOTE_SECONDS, TIMEOUT_SEC, reinterpret_cast<void*>(cgi_data)));
 	}
+    CgiData* cgi_data = conn_to_cgiData[event->ident];
+    cgi_data->setConnSocket(event->ident);
+    if (method == "POST") {
+        change_list.push_back(makeEvent(cgi_data->getWritePipeFd(), EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, reinterpret_cast<void*>(cgi_data)));
+    }
+    change_list.push_back(makeEvent(cgi_data->getReadPipeFd(), EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, reinterpret_cast<void*>(cgi_data)));
+    change_list.push_back(makeEvent(cgi_data->getChildPid(), EVFILT_PROC, EV_ADD | EV_ONESHOT, NOTE_EXIT, 0, reinterpret_cast<void*>(cgi_data)));
+    change_list.push_back(makeEvent(event->ident, EVFILT_TIMER, EV_ADD | EV_ONESHOT, NOTE_SECONDS, TIMEOUT_SEC, reinterpret_cast<void*>(cgi_data)));
 }
 
 void ServerManager::processCgiOrMakeResponse(const k_event* event) {
@@ -201,8 +199,6 @@ void ServerManager::processCgiOrMakeResponse(const k_event* event) {
 
 void ServerManager::processEvent(const k_event* event) {
     EventType event_type = getEventType(event);
-
-//    typedef void (*EventHandlerFunction)(Event*)
 
     switch (event_type) {
         case EVENT_ERROR:
@@ -276,7 +272,6 @@ void ServerManager::processReadPipeEvent(const k_event* event) {
     CgiData* cgi_data = reinterpret_cast<CgiData*>(event->udata);
     Server* server = &servers[cgi_data->getConnSocket()];
     HttpResponseMessage* response = server->getResponsePtr();
-    HttpRequestMessage* request = server->getRequestPtr();
 
     if (bytes_read == ERROR) {
 		disconnectWithClient(event);
@@ -286,10 +281,11 @@ void ServerManager::processReadPipeEvent(const k_event* event) {
         response->append(buff, bytes_read);
     }
     else { // EOF
-		if (request->getMethod() == "POST") {
+        std::string method = server->getRequestPtr()->getMethod();
+        if (method == "POST") {
 			server->setResponse(PostCgi::makeResponse(server->getResponseStr()));
 		}
-		else if (request->getMethod() == "GET") {
+		else if (method == "GET") {
 			server->setResponse(GetCgi::makeResponse(server->getResponseStr()));
 		}
         change_list.push_back(makeEvent(cgi_data->getReadPipeFd(), EVFILT_READ, EV_DISABLE, 0, 0, reinterpret_cast<void*>(cgi_data)));

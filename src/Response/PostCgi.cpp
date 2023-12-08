@@ -15,7 +15,7 @@ PostCgi::PostCgi(const HttpRequestMessage* request, const Config* config) : requ
 	content_length = 0;
 }
 
-CgiData* PostCgi::cgipost() {
+CgiData* PostCgi::execveCgi() {
 	check_request_line(request->getRequestLine());
 	check_header_field(request->getHeaderFields());
 

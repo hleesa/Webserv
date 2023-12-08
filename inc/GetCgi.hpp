@@ -14,13 +14,10 @@ private:
     const HttpRequestMessage* request;
     const Config* config;
     std::string location_key;
-
-    std::map<std::string, std::string> createHeaderFields(const std::string& body) const;
     bool isValidCgiGetUrl() const;
 
 public:
     GetCgi(const HttpRequestMessage* request, const Config* config);
-
     CgiData* execveCgi();
     void checkAllowed(const std::string method) const;
 

@@ -85,7 +85,7 @@ std::string Method::findRoot() const {
 }
 
 void Method::checkAllowed(const std::string method) const {
-	if (config->getLocations()[location_key].isNotAllowedMethod(method)) {
+	if (!config->getLocations().empty() && config->getLocations()[location_key].isNotAllowedMethod(method)) {
 		throw 405;
 	}
 }

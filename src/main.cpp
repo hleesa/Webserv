@@ -5,8 +5,6 @@
 #define DEFAULT_CONF "ConfigFile/default.conf"
 
 int main(int argc, char *argv[]) {
-    signal(SIGPIPE, SIG_IGN);
-
     try {
 		std::string config_file(DEFAULT_CONF);
 		if (argc > 1) {

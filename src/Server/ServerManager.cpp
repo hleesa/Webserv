@@ -83,6 +83,7 @@ void ServerManager::addListenEvent() {
 }
 
 void ServerManager::run() {
+    signal(SIGPIPE, SIG_IGN);
     while (true) {
 		try {
             int events = kevent(kq, &(change_list[0]), change_list.size(), event_list, NUMBER_OF_EVENT, 0);
@@ -211,8 +212,7 @@ void ServerManager::processEvent(const k_event* event) {
 
     switch (event_type) {
         case EVENT_ERROR:
-            std::cout << "error " << strerror(event->data) << '\n';
-//        	checkEventError(event);
+        	checkEventError(event);
             break;
         case LISTEN:
             processListenEvent(event);
@@ -406,11 +406,11 @@ k_event ServerManager::makeEvent(
 }
 
 void ServerManager::disconnectWithClient(const k_event* event) {
-//	 struct linger linger;
-	
-//	 linger.l_onoff = 1;
-//	 linger.l_linger = 0;
-//	 setsockopt(event.ident, SOL_SOCKET, SO_LINGER, &linger, sizeof(linger)); // Linger option
+	 struct linger linger;
+
+    linger.l_onoff = 1;
+    linger.l_linger = 0;
+    setsockopt(event->ident, SOL_SOCKET, SO_LINGER, &linger, sizeof(linger)); // Linger option
     close(event->ident);
     servers.erase(event->ident);
 }

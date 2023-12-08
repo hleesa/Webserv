@@ -61,7 +61,7 @@ std::string Resource::makeDirectoryList() {
 
 	dir = opendir(path.c_str());
 	if (dir == NULL) {
-		throw 500;
+		throw 404;
 	}
 	while ((entry = readdir(dir)) != NULL) {
 		std::string name(entry->d_name);

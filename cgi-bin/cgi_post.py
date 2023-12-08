@@ -22,6 +22,3 @@ response_body = f"""Status: 200 OK\r\nContent-Type: text/html; charset=utf-8\r\n
     """
 
 print(response_body)
-
-
-#//"Status: 200 OK\r\nContent-Type: text/html; charset=utf-8\r\n\r\nINPUT=HELLO"...

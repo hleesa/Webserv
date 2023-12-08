@@ -166,7 +166,7 @@ CgiData* GetCgi::execveCgi() {
     if (!isValidCgiGetUrl()) {
         throw 400;
     }
-    int pipe_child_parent[2];
+    int* pipe_child_parent = new int[2];
     if (pipe(pipe_child_parent) == ERROR) {
         throw 500;
     }

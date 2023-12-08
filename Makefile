@@ -28,6 +28,7 @@ RESPONSE_SRC = \
 			CodeToReason.cpp \
 			Method.cpp \
 			Get.cpp \
+			GetCgi.cpp \
 			Post.cpp \
 			PostCgi.cpp\
 			CgiData.cpp\

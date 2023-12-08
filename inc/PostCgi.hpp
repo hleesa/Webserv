@@ -27,7 +27,7 @@ class PostCgi {
 
 	public :
 		PostCgi(const HttpRequestMessage* request, const Config* config);
-		CgiData* cgipost();
+		CgiData* execveCgi();
 
 		void check_request_line(std::vector<std::string> request_line);
 		void check_header_field(std::map<std::string, std::vector<std::string> > header_field);

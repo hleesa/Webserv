@@ -2,7 +2,7 @@
 #include "../../inc/ToString.hpp"
 #include "../../inc/ErrorPage.hpp"
 #include "../../inc/Method.hpp"
-// #include "../../inc/GetCgi.hpp"
+ #include "../../inc/GetCgi.hpp"
 #include "../../inc/PostCgi.hpp"
 #include "../../inc/ServerUtils.hpp"
 #include <sys/socket.h>
@@ -83,6 +83,7 @@ void ServerManager::addListenEvent() {
 }
 
 void ServerManager::run() {
+    signal(SIGPIPE, SIG_IGN);
     while (true) {
 		try {
             int events = kevent(kq, &(change_list[0]), change_list.size(), event_list, NUMBER_OF_EVENT, 0);
@@ -159,25 +160,24 @@ void ServerManager::assignParsedRequest(const k_event* event) {
 }
 
 void ServerManager::processCgi(const k_event* event, const HttpRequestMessage* request, const Config* config) {
-	if (request->getMethod() == "POST") {
-		PostCgi post_cgi(request, config);
-		conn_to_cgiData[event->ident] = post_cgi.cgipost();
-		CgiData* cgi_data = conn_to_cgiData[event->ident];
-		cgi_data->setConnSocket(event->ident);
-		change_list.push_back(makeEvent(cgi_data->getWritePipeFd(), EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, reinterpret_cast<void*>(cgi_data)));
-		change_list.push_back(makeEvent(cgi_data->getReadPipeFd(), EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, reinterpret_cast<void*>(cgi_data)));
-		change_list.push_back(makeEvent(cgi_data->getChildPid(), EVFILT_PROC, EV_ADD | EV_ONESHOT, NOTE_EXIT, 0, reinterpret_cast<void*>(cgi_data)));
-		change_list.push_back(makeEvent(event->ident, EVFILT_TIMER, EV_ADD | EV_ONESHOT, NOTE_SECONDS, TIMEOUT_SEC, reinterpret_cast<void*>(cgi_data)));
-	}
-	else if (request->getMethod() == "GET") {
+    std::string method = request->getMethod();
+	checkAllowed(method);
+	if (method == "POST") {
+        PostCgi post_cgi(request, config);
+        conn_to_cgiData[event->ident] = post_cgi.execveCgi();
+    }
+	else if (method == "GET") {
 		GetCgi get_cgi(request, config);
-		conn_to_cgiData[event->ident] = get_cgi.cgiget();
-		CgiData* cgi_data = conn_to_cgiData[event->ident];
-		cgi_data->setConnSocket(event->ident);
-		change_list.push_back(makeEvent(cgi_data->getReadPipeFd(), EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, reinterpret_cast<void*>(cgi_data)));
-		change_list.push_back(makeEvent(cgi_data->getChildPid(), EVFILT_PROC, EV_ADD | EV_ONESHOT, NOTE_EXIT, 0, reinterpret_cast<void*>(cgi_data)));
-		change_list.push_back(makeEvent(event->ident, EVFILT_TIMER, EV_ADD | EV_ONESHOT, NOTE_SECONDS, TIMEOUT_SEC, reinterpret_cast<void*>(cgi_data)));
+        conn_to_cgiData[event->ident] = get_cgi.execveCgi();
 	}
+    CgiData* cgi_data = conn_to_cgiData[event->ident];
+    cgi_data->setConnSocket(event->ident);
+    if (method == "POST") {
+        change_list.push_back(makeEvent(cgi_data->getWritePipeFd(), EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, reinterpret_cast<void*>(cgi_data)));
+    }
+    change_list.push_back(makeEvent(cgi_data->getReadPipeFd(), EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, reinterpret_cast<void*>(cgi_data)));
+    change_list.push_back(makeEvent(cgi_data->getChildPid(), EVFILT_PROC, EV_ADD | EV_ONESHOT, NOTE_EXIT, 0, reinterpret_cast<void*>(cgi_data)));
+    change_list.push_back(makeEvent(event->ident, EVFILT_TIMER, EV_ADD | EV_ONESHOT, NOTE_SECONDS, TIMEOUT_SEC, reinterpret_cast<void*>(cgi_data)));
 }
 
 void ServerManager::processCgiOrMakeResponse(const k_event* event) {
@@ -190,7 +190,15 @@ void ServerManager::processCgiOrMakeResponse(const k_event* event) {
     } 
 	const Config* config = findConfig(request->getHost(), request->getURL(), servers[event->ident].getPort());
     if (isCgi(config, request)) {
-		processCgi(event, request, config);
+		try {
+			processCgi(event, request, config);
+		}
+		catch (const int status_code) {
+        	change_list.push_back(makeEvent(event->ident, EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, NULL));
+        	servers[event->ident].setResponse(ErrorPage::makeErrorPageResponse(status_code, config));
+        	change_list.push_back(makeEvent(event->ident, EVFILT_TIMER, EV_ADD | EV_ONESHOT, NOTE_SECONDS, TIMEOUT_SEC, NULL));
+			return ;
+		}
     }
     else {
         change_list.push_back(makeEvent(event->ident, EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, NULL));
@@ -202,11 +210,8 @@ void ServerManager::processCgiOrMakeResponse(const k_event* event) {
 void ServerManager::processEvent(const k_event* event) {
     EventType event_type = getEventType(event);
 
-//    typedef void (*EventHandlerFunction)(Event*)
-
     switch (event_type) {
         case EVENT_ERROR:
-            std::cout << "error " << strerror(event->data) << '\n';
         	checkEventError(event);
             break;
         case LISTEN:
@@ -276,7 +281,6 @@ void ServerManager::processReadPipeEvent(const k_event* event) {
     CgiData* cgi_data = reinterpret_cast<CgiData*>(event->udata);
     Server* server = &servers[cgi_data->getConnSocket()];
     HttpResponseMessage* response = server->getResponsePtr();
-    HttpRequestMessage* request = server->getRequestPtr();
 
     if (bytes_read == ERROR) {
 		disconnectWithClient(event);
@@ -286,10 +290,11 @@ void ServerManager::processReadPipeEvent(const k_event* event) {
         response->append(buff, bytes_read);
     }
     else { // EOF
-		if (request->getMethod() == "POST") {
+        std::string method = server->getRequestPtr()->getMethod();
+        if (method == "POST") {
 			server->setResponse(PostCgi::makeResponse(server->getResponseStr()));
 		}
-		else if (request->getMethod() == "GET") {
+		else if (method == "GET") {
 			server->setResponse(GetCgi::makeResponse(server->getResponseStr()));
 		}
         change_list.push_back(makeEvent(cgi_data->getReadPipeFd(), EVFILT_READ, EV_DISABLE, 0, 0, reinterpret_cast<void*>(cgi_data)));
@@ -401,11 +406,11 @@ k_event ServerManager::makeEvent(
 }
 
 void ServerManager::disconnectWithClient(const k_event* event) {
-//	 struct linger linger;
-	
-//	 linger.l_onoff = 1;
-//	 linger.l_linger = 0;
-//	 setsockopt(event.ident, SOL_SOCKET, SO_LINGER, &linger, sizeof(linger)); // Linger option
+	 struct linger linger;
+
+    linger.l_onoff = 1;
+    linger.l_linger = 0;
+    setsockopt(event->ident, SOL_SOCKET, SO_LINGER, &linger, sizeof(linger)); // Linger option
     close(event->ident);
     servers.erase(event->ident);
 }

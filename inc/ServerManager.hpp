@@ -53,6 +53,8 @@ class ServerManager {
 
         void processWaitCgi(const k_event *event);
         void processDeleteCgiData(const int connection_socket);
+        void processCgi(const k_event* event, const HttpRequestMessage* request, const Config* config);
+
 
 	public:
 		ServerManager(const std::vector<Config>* configs);

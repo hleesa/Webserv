@@ -27,9 +27,7 @@ HttpResponseMessage Post::makeHttpResponseMessage(){
 	} else if (limit_body_size > 0 && request->getBodySize() > static_cast<size_t>(limit_body_size)) {
 		throw 413;
 	} else {
-		//요청 url 형태 및 실행 가능 여부 확인
 		check_request_line(request->getRequestLine());
-		//헤더 필드 확인 -> body가 있는 경우이기 때문에 필수 헤더 확인
 		check_header_field(request->getHeaderFields());
 	}
 
@@ -57,19 +55,16 @@ void Post::check_request_line(std::vector<std::string> request_line) {
 	} else if (request_line[1][0] == '/') {
 		url_path = request_line[1];
 	} else {
-		//상위 디렉토리 확인의  경우는  제외
 		throw 404;
 		return;
 	}
 
-	//request URL_path -> rel_path 값찾아내기
 	if (url_path.find(location_key) == 0) {
 		rel_path = url_path.substr(location_key.size());
 	} else {
 		rel_path = url_path;
 	}
 
-	//abs_path 를 기준에 따라서 완성
 	if (config->getLocations()[location_key].getRoot() == "") {
 		if (config->getRoot() != "") {
 			abs_path = config->getRoot() + '/' + url_path;
@@ -126,7 +121,6 @@ void Post::saveToFile() {
 	std::ofstream file_write(data_path, std::ios::app);
 
 	if (request->getBodySize() != content_length) {
-		// 헤더 콘텐츠 길이와 실제 바디의 글자수가 다를경우
 		throw 411;
 	}
 	if (file_write.is_open()) {
@@ -137,7 +131,7 @@ void Post::saveToFile() {
 		file_write.close();
 		_status_code = 200;
 	} else {
-		throw 403; // wirte fail
+		throw 403;
 	}
 }
 

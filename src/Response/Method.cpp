@@ -106,10 +106,19 @@ std::string Method::makeDate() {
 	std::string months[12] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
 	std::string date;
 
-	date = day_names[t->tm_wday] + ", ";
-	if (t->tm_mday < 10)
-		date += "0";
-	date += to_string(t->tm_mday) + " " + months[t->tm_mon] + " " + to_string(t->tm_year + 1900)
-			+ " " + to_string(t->tm_hour) + ":" + to_string(t->tm_min) + ":" + to_string(t->tm_sec) + " GMT";
+	date = day_names[t->tm_wday] + ", " 
+			+ convertToFormatted(t->tm_mday)
+			+ " " + months[t->tm_mon] 
+			+ " " + to_string(t->tm_year + 1900)
+			+ " " + to_string(t->tm_hour)
+			+ ":" + convertToFormatted(t->tm_min)
+			+ ":" + convertToFormatted(t->tm_sec) + " GMT";
 	return date;
+}
+
+std::string convertToFormatted(const int number) {
+	if (number / 10 == 0) {
+		return "0" + to_string(number);
+	}
+	return to_string(number);
 }

@@ -29,4 +29,6 @@ class Method {
 		static std::string makeDate();
 };
 
+std::string convertToFormatted(const int number);
+
 #endif

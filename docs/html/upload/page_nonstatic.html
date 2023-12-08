@@ -7,7 +7,7 @@
 </head>
 <body>
     <h1>당신의 42 intra ID를 입력해주세요.</h1>
-    <form id="myForm">
+    <form id="myForm" onsubmit="sendRequest(); return false;">
         <label for="inputText">입력값:</label>
         <input type="text" id="inputText" name="text" required>
         <button type="button" onclick="sendRequest()">요청 메시지 전송</button>

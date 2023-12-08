@@ -8,7 +8,7 @@
 <body>
     <h1>파일 업로드 페이지</h1>
 
-    <form id="uploadForm" enctype="text/plain">
+    <form id="uploadForm" enctype="text/plain" onkeydown="handleKeyDown(event)">
         <label for="fileInput">파일 선택:</label>
         <input type="file" id="fileInput" name="fileInput" accept=".txt"><!-- 파일 파일만 허용 -->
 
@@ -46,6 +46,13 @@
                 }
             };
             xhr.send(fileContent);
+        }
+
+        function handleKeyDown(event) {
+            if (event.key === "Enter") {
+                uploadFile();
+                event.preventDefault(); // prevent the default Enter key behavior
+            }
         }
     </script>
 </body>
